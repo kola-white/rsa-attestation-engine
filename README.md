@@ -209,12 +209,12 @@ Backed by an **X.509 CA hierarchy**:
 
 The Attestation Trust Contract governs:
 
-✅ **What issuers may sign** (role, time, skills, outcomes)
-✅ **Required metadata** (issuer ID, CA chain, key metadata)
-✅ **Subject binding rules** (pubkey, identifier, or both)
-✅ **Validity windows** (`issued_at`, `not_before`, `not_after`)
-✅ **Revocation semantics** (status list entries, reason codes)
-✅ **Verifier responsibilities** (fail-closed behavior, TTL, clock skew)
+✅ **What issuers may sign** (role, time, skills, outcomes).  
+✅ **Required metadata** (issuer ID, CA chain, key metadata).  
+✅ **Subject binding rules** (pubkey, identifier, or both).  
+✅ **Validity windows** (`issued_at`, `not_before`, `not_after`).  
+✅ **Revocation semantics** (status list entries, reason codes).  
+✅ **Verifier responsibilities** (fail-closed behavior, TTL, clock skew).  
 
 DP-1 (Disambiguation Protocol) builds the tie-break logic for large candidate sets but is **non-MVP**.
 
