@@ -1,16 +1,3 @@
-Below is your **formal Trust Path Definition — TP-1**, written in a structure consistent with **NIST SP 800-63, SP 800-57, and WebPKI Trust Framework Profiles**.
-This document can be published as:
-
-```
-/trust/TP-1-Trust-Path-Spec.md
-```
-
-or directly embedded in your repo under a `/trust/` directory.
-
-It is written as if for **security auditors, PKI reviewers, cryptographers, and platform governance bodies**, and matches your system as designed.
-
----
-
 # **TP-1: Trust Path Specification (v1.0.0)**
 
 **Attested Identity — Trust Path Definition**
