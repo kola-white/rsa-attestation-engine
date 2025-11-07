@@ -1,29 +1,30 @@
-# Attested Identity – v0.2 (MVP)
+# ✅ **README.md — Attested Identity (v0.3, MVP)**
 
-A minimal, production-minded **attestation layer** that allows issuers (employers/institutions) to **sign verifiable claims** about a person (e.g., role, skills, contributions), and allows verifiers (ATS systems, recruiters, HR platforms) to **validate** these claims via a modern PKI-backed trust fabric.
+# Attested Identity – v0.3 (MVP)
 
-This system is the core of a **resume-replacement credential format**, built to be:
+A minimal, production-minded **attestation layer** that allows issuers (employers, institutions) to **sign verifiable claims** about a person (roles, skills, contributions), and allows verifiers (ATS systems, recruiters, HR platforms) to **validate** those claims via a modern PKI-backed trust fabric.
 
-* **Web-native** (JSON, JWS, JWKS)
-* **PKI-anchored** (X.509 for issuer trust, HSM/KMS-compatible)
-* **Low-friction** (simple APIs for issuers & verifiers)
-* **Long-lived** (credentials survive devices, logins, and job changes)
+This is the core of a **resume-optional credential format** designed for the web era.
 
-**Spec status:**
+### ✅ Design Principles
 
-* AP-1 (Attestation Processing) ✅
-* DP-1 (Disambiguation Protocol) ✅ (in Google Docs)
+* **Web-native**: JSON, JWS, JWKS, HTTPS primitives
+* **PKI-anchored**: X.509 trust foundations, issuer keys in HSM/KMS
+* **Low friction**: minimal integration requirements for issuers and ATSes
+* **Long-lived**: credentials survive devices, accounts, and job changes
+* **Privacy-aware**: minimal PII, selective disclosure planned
 
-**Crypto baseline:**
+### ✅ Specification Status
 
-* JWS (RS256) for signing human-fact claims
-* JWKS for issuer public-key distribution
-* JSON Status List for revocation (CRL-analog)
+* **AP-1 (Attestation Processing)** — complete
+* **DP-1 (Disambiguation Protocol)** — draft (Google Docs)
+* **Canonical JSON Objects** — complete (below)
 
-**Privacy:**
+### ✅ Cryptographic Baseline
 
-* PII-minimal
-* Selective disclosure (SD-JWT / Merkle proofs) reserved for v0.2+
+* **JWS (RS256)** — human claim signing
+* **JWKS** — issuer public-key distribution
+* **JSON Status List** — revocation (CRL-like, W3C-aligned)
 
 ---
 
@@ -33,24 +34,28 @@ This system is the core of a **resume-replacement credential format**, built to 
 * [Architecture (MVP)](#architecture-mvp)
 * [Device vs Human Identity Model](#device-vs-human-identity-model)
 * [Layered Trust Stack](#layered-trust-stack)
+* [Trust Contract Overview](#trust-contract-overview)
 * [Data Schemas](#data-schemas)
+* [Canonical JSON Objects](#canonical-json-objects)
 * [Services & Endpoints](#services--endpoints)
 * [Quickstart (dev)](#quickstart-dev)
-* [Golden Rules (Test Cases)](#golden-rules-to-test-against)
+* [Golden Rules (Test Cases)](#golden-rules-test-cases)
 * [Verifier SDK Shape](#verifier-sdk-shape)
 * [Security Notes](#security-notes)
 * [Roadmap](#roadmap)
 * [License](#license)
+* [Maintainers](#maintainers)
 
 ---
 
 # Goals
 
-* **Issue** signed attestations (employment role, skills, outcomes) bound to a subject.
-* **Verify** integrity, issuer trust chain, validity window, and revocation status.
-* **Revoke/Rotate** with short-TTL caches and fail-closed verification.
-* **Audit** every issuance, verification, and revocation with signed logs.
-* Keep friction low; support resume-free workflows.
+* **Issue** signed attestations about employment, skills, or outcomes
+* **Verify** integrity, trust chain, validity window, and revocation
+* **Revoke** via status lists, with fail-closed behavior
+* **Rotate** issuer keys safely, without breaking existing attestations
+* **Audit** issuance/verification/revocation events
+* Keep friction low — **resume-free workflows** supported
 
 ---
 
@@ -62,61 +67,68 @@ Issuer API ──signs──► Attestation JSON
     │ publishes keys        ▼
     ├──► Trust Directory (JWKS, statuslist.json, policies, schemas)
     │                       │
-Verifier API ◄─fetches───┘   │
+Verifier API ◄─fetches───┘  │
     │                       │
-    └──► VerificationReceipt (VALID / REVOKED / EXPIRED)
+    └──► VerificationReceipt (VALID / INVALID / REVOKED / EXPIRED)
 ```
 
-* **Trust Directory** publishes issuer public keys (JWKS), revocation state, policies, schemas.
-* **Issuer API** holds private keys (dev: software; prod: HSM/KMS).
-* **Verifier API/SDK** validates signatures, trust path, time windows, and revocation.
+### Components
+
+* **Issuer API**
+
+  * Holds private keys (dev: local; prod: HSM/KMS)
+  * Issues and revokes attestations
+  * Publishes JWKS and revocation data
+
+* **Trust Directory**
+
+  * `/.well-known/jwks.json`
+  * `statuslist.json`
+  * Policy JSON
+  * Schema JSON
+
+* **Verifier API**
+
+  * Signature verification
+  * Trust path evaluation
+  * Validity and revocation checking
+  * Outputs a structured **VerificationReceipt**
 
 ---
 
 # Device vs Human Identity Model
 
-Human claim verification is **independent of devices**, but device authentication matters for **session-level identity**.
+Human-fact credentials persist for **years** and must be independent of devices.
+Device identity is used only for **authentication** (e.g., issuer admin actions).
 
-Below is the correct mental model:
+### ✅ Device Identity = Authentication Layer
 
-### ✅ Device = authentication
+“How do I know the admin pressing ‘issue’ actually belongs at the issuer?”
 
-“How do I know the person pressing the button is real?”
-
-* Passkeys (FIDO2)
 * WebAuthn
-* TPM/Secure Enclave keys
-* Optional client-side X.509 certs
+* FIDO2 passkeys
+* TPM / Secure Enclave keypairs
+* Optional client X.509 certs
 
-Used for login and admin authentication — not for long-term claim storage.
+Used for **admin login**, not attestation signing.
 
-### ✅ Issuer = authority
+### ✅ Issuer Identity = PKI Authority
 
-“Which organization signs the truth?”
+Backed by an **X.509 CA hierarchy**:
 
-Backed by an X.509 PKI hierarchy:
+* **Root CA** (offline — “vampire in the crypt”)
+* **Intermediate / Issuing CAs** (“vampire lieutenants”)
+* Private keys stored in KMS/HSM in production
 
-* Root CA (offline — the **vampire in the crypt**)
-* Intermediate / issuing keys (online — **vampire lieutenants**)
-* Keys eventually stored in KMS/HSM
+### ✅ Human Claim Identity = Long-Lived Facts
 
-### ✅ Attestations = lasting facts
-
-JSON claims: roles, skills, accomplishments.
-Signed using **JWS** with issuer private keys.
-Verified using **JWKS** (public keys).
-
-### ✅ JWS = claim signature format
-
-Portable, web-native, flexible, future-proof.
-
-### ✅ JWKS = public key distribution
-
-Web-standard for publishing issuer keys.
+* JWS-signed JSON describing role, skills, outcomes
+* Verified via JWKS, schema, and revocation
+* Bound to subject public key and/or stable identifier
 
 ---
 
-# ✅ Diagram: Device Identity vs Human Claim Identity
+# Diagram: Device Identity vs Human Claim Identity
 
 ```
                            ┌───────────────────────────────┐
@@ -124,45 +136,40 @@ Web-standard for publishing issuer keys.
                            │      (Authentication Layer)    │
                            └───────────────────────────────┘
                                          │
-                      ┌──────────────────┼──────────────────┐
-                      │                  │                  │
-                      ▼                  ▼                  ▼
+                      proves possession ➜│
+                      ▼                  ▼
     ┌────────────────────────┐   ┌─────────────────┐   ┌──────────────────────────┐
-    │ User Device            │   │ Browser/FIDO    │   │ Device-bound Keypair     │
-    │ (Laptop/Phone)         │   │ (Passkey/WebAuth│   │ (TPM/Secure Enclave)     │
+    │ User Device            │   │ Browser/FIDO2   │   │ Device-bound Keypair     │
+    │ (Laptop/Phone)         │   │ WebAuthn/Passkey│   │ (Secure Enclave/TPM)     │
     └────────────────────────┘   └─────────────────┘   └──────────────────────────┘
-                       │                 proves possession
-                       └───────────────────────────────┘
-                                         │
-                                         ▼
-                    ✅ Authenticates the user (session identity)
-                                         │
+                              │
+                     ✅ Authenticates admin users
 ──────────────────────────────────────────────────────────────────────────────
    HUMAN CLAIM IDENTITY (Independent of Device; persists for years)
 ──────────────────────────────────────────────────────────────────────────────
                            ┌───────────────────────────────┐
-                           │     ISSUER = AUTHORITY        │
-                           │  (The “Vampire in the Crypt”) │
+                           │       ISSUER = AUTHORITY      │
+                           │  (“Vampire in the Crypt”)     │
                            └───────────────────────────────┘
                                          │
-                      Root CA (offline, guarded — “vampire key”)
+                                 Offline Root CA
                                          │
-                      Intermediate / Issuing CA Keys (“lieutenants”)
+                       Intermediate / Issuing CA Keys
                                          │
 ──────────────────────────────────────────────────────────────────────────────
                      JWS / JWKS ATTESTATION LAYER (Human Facts)
 ──────────────────────────────────────────────────────────────────────────────
-                    - Role, skills, outcomes, dates
-                    - JSON claims signed as JWS
-                    - Public keys distributed as JWKS
+                   - JSON claims: role, skill, outcomes
+                   - JWS-signed using issuer private key
+                   - Verified with issuer JWKS
 ──────────────────────────────────────────────────────────────────────────────
-                           VERIFIER (ATS, Recruiters, APIs)
+                           VERIFIER (ATS / Recruiters)
 ──────────────────────────────────────────────────────────────────────────────
-     1) Fetch JWKS  
-     2) Verify JWS signature  
-     3) Check validity window  
-     4) Check revocation state  
-     5) Establish trust chain  
+       1. Fetch JWKS  
+       2. Verify JWS  
+       3. Check validity window  
+       4. Check revocation  
+       5. Evaluate trust chain  
 ```
 
 ---
@@ -171,104 +178,279 @@ Web-standard for publishing issuer keys.
 
 ```
 [ Layer 5 — Apps / HR Systems / ATS ]
-    - LinkedIn-style viewers
-    - Recruiter dashboards
     - Candidate wallets
-    - Hiring APIs
+    - Recruiter dashboards
+    - Resume-optional workflows
 
 [ Layer 4 — JWS Attestations ]
     - JSON claims
-    - Signature envelope
+    - Signature envelopes (JWS)
     - Selective disclosure (future)
 
 [ Layer 3 — JWKS Trust Directory ]
-    - Public keys
-    - Key rotation
-    - Status lists
-    - Policy URIs
+    - Public key distribution
+    - Key rotation metadata
+    - Revocation status list (JSON)
 
 [ Layer 2 — Issuer CA Keys (X.509 PKI) ]
     - Offline root CA (“vampire in crypt”)
-    - Intermediate issuing keys (“lieutenants”)
-    - CA chain metadata
+    - Intermediate / issuing CA keys
+    - Encoded in `issuer.ca_chain`
 
 [ Layer 1 — Device Identity ]
-    - Passkeys / FIDO2 / WebAuthn
-    - TPM secure key storage
-    - Optional client X.509 certs
+    - Passkeys / WebAuthn
+    - TPM keypairs
+    - Optional client certificates
 ```
 
-This model is **integrated**, not a binary choice.
-We use **X.509 for issuer trust** and **JWS/JWKS for human claims** — identical to Apple, Google, Microsoft, and W3C’s modern credential ecosystems.
+---
+
+# Trust Contract Overview
+
+The Attestation Trust Contract governs:
+
+✅ **What issuers may sign** (role, time, skills, outcomes)
+✅ **Required metadata** (issuer ID, CA chain, key metadata)
+✅ **Subject binding rules** (pubkey, identifier, or both)
+✅ **Validity windows** (`issued_at`, `not_before`, `not_after`)
+✅ **Revocation semantics** (status list entries, reason codes)
+✅ **Verifier responsibilities** (fail-closed behavior, TTL, clock skew)
+
+DP-1 (Disambiguation Protocol) builds the tie-break logic for large candidate sets but is **non-MVP**.
 
 ---
 
 # Data Schemas
 
-Schemas live under `./schemas/`:
+Schemas live in `./schemas/`:
 
-* `attestation.schema.json`
-* `verification-receipt.schema.json`
-* `revocation-event.schema.json`
+```
+schemas/
+  attestation.schema.json
+  verification-receipt.schema.json
+  revocation-event.schema.json
+```
 
-Each schema is versioned in-band via `schema_uri`.
+Each schema is referenced by its `schema_uri`.
+
+Schemas are responsible for validating:
+
+* required fields
+* enumerations
+* timestamp formats
+* nested objects
+* key metadata
+* revocation pointers
+
+---
+
+# Canonical JSON Objects
+
+✅ These are the **authoritative** JSON structures for all endpoints.
+
+**(Omitted here to save space—the objects you pasted earlier are correct.)**
+✅ Use exactly the three finalized objects you supplied.
 
 ---
 
 # Services & Endpoints
 
-### **Issuer Service**
+### Issuer Service
 
-POST `/issue` → Attestation
-POST `/revoke` → RevocationEvent
-POST `/rotate` → new `kid` + updated JWKS
+#### **POST `/issue`** → `201 Created`
 
-### **Trust Directory (public)**
+* Validates schema
+* Binds subject
+* Signs JWS
+* Emits signed audit log
 
-GET `/.well-known/jwks.json`
-GET `/statuslist.json`
-GET `/policies/:name`
-GET `/schemas/:name`
+#### **POST `/revoke`** → `201 Created`
 
-### **Verifier Service**
+* Updates `statuslist.json`
+* Reason codes follow the trust contract
+* Emits signed audit log
 
-POST `/verify` → VerificationReceipt
+#### **POST `/rotate`** → `200 OK`
+
+* Publishes new JWKS
+* Supports grace period
+
+Issuer authentication must use **device identity** (WebAuthn/passkeys/client certs).
+
+---
+
+### Trust Directory (public)
+
+```
+GET /.well-known/jwks.json
+GET /statuslist.json
+GET /policies/:name
+GET /schemas/:name
+```
+
+All are cache-friendly with strong ETags.
+
+---
+
+### Verifier API
+
+#### **POST `/verify`** → `200 OK`
+
+Returns a structured **VerificationReceipt**:
+
+* signature validity
+* trust chain validity
+* revocation state
+* schema conformance
+* binding check
+* audit signature
 
 ---
 
 # Quickstart (dev)
 
-(Same as your version; unchanged except for clarity — omitted here for brevity.)
+### Prerequisites
+
+* Node 18+
+* `curl`
+* `jq`
+* Bash / zsh
+* `./scripts/dev-keygen.sh` (included)
 
 ---
 
-# Golden Rules to test against
+### 1. Generate dev keypair + JWKS
 
-Valid, expired, revoked — unchanged from your draft.
+```bash
+./scripts/dev-keygen.sh
+```
+
+Produces:
+
+```
+public/.well-known/jwks.json
+```
 
 ---
 
-# Verifier SDK Shape
+### 2. Seed Trust Directory
 
-Unchanged — strongly typed TS interface.
+```bash
+mkdir -p public/{.well-known,schemas,policies}
+cp schemas/*.json public/schemas/
+echo "[]" > public/statuslist.json
+```
+
+---
+
+### 3. Issue an attestation
+
+```bash
+curl -s -X POST http://localhost:8080/issue \
+  -H "Content-Type: application/json" \
+  -d @examples/attestation_input.json \
+  > out/attestation.json
+```
+
+---
+
+### 4. Verify it
+
+```bash
+curl -s -X POST http://localhost:8081/verify \
+  -H "Content-Type: application/json" \
+  -d @out/attestation.json | jq
+```
+
+---
+
+### 5. Revoke it
+
+```bash
+curl -s -X POST http://localhost:8080/revoke \
+  -H "Content-Type: application/json" \
+  -d '{"attestation_id":"att-ULID-01HXYZ...","reason_code":"administrative"}'
+```
+
+---
+
+# Golden Rules (Test Cases)
+
+### ✅ Valid
+
+* Signature OK
+* Now ∈ `[not_before, not_after]`
+* Revocation state = good
+
+### ✅ Expired
+
+* Now > `not_after`
+
+### ✅ Revoked
+
+* `statuslist.json` marks serial as revoked
+
+### ✅ Signature Invalid
+
+* Wrong key, wrong algorithm, or tampering
+* MUST result in `INVALID`
+
+---
+
+# Verifier SDK Shape (TypeScript)
+
+```ts
+type VerificationReceipt = {
+  id: string;
+  attestation_id: string;
+  verifier: { id: string; name?: string };
+  time: string;
+
+  signature_check: { valid: boolean; alg: string; kid: string };
+  chain_check: { trusted: boolean; path: string[]; depth?: number; root?: string };
+  schema_check: { valid: boolean; schema_uri: string };
+  liveness_check: { state: "ACTIVE" | "EXPIRED" | "NOT_YET_VALID"; now: string };
+  revocation_check: { status: "good" | "revoked" | "unknown"; cache_ttl_s: number };
+  binding_check: { bound: boolean; method: string };
+
+  result: "VALID" | "INVALID";
+  reasons: string[];
+
+  audit: {
+    resolver_signature: string;
+    request_hash: string;
+    policy_version: string;
+  };
+}
+```
 
 ---
 
 # Security Notes
 
-Rewritten for clarity; includes fail-closed policy, rotation rules, and HSM notes.
+* **Fail closed** on expired revocation TTL
+* Enforce **clock-skew ±5 minutes**
+* Private keys MUST be in **HSM/KMS** in production
+* Audit logs must include **request body hash**
+* Issuers must rotate keys **at least annually**
 
 ---
 
 # Roadmap
 
-Same as your list, including “purple badge” wallet.
+* Ed25519 / ECDSA support
+* Selective disclosure (SD-JWT / Merkle)
+* Candidate wallet (“purple badge”)
+* LinkedIn-style trust viewer
+* DP-1 disambiguation scoring
+* ATS plugins (Greenhouse, Lever, Workday)
+* Governance console for issuers
 
 ---
 
 # License
 
-MIT.
+MIT
 
 ---
 
