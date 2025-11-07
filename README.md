@@ -132,8 +132,8 @@ Backed by an **X.509 CA hierarchy**:
 
 ```
                            ┌───────────────────────────────┐
-                           │         DEVICE IDENTITY        │
-                           │      (Authentication Layer)    │
+                           │         DEVICE IDENTITY       │
+                           │      (Authentication Layer)   │
                            └───────────────────────────────┘
                                          │
                       proves possession ➜│
