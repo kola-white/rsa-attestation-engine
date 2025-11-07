@@ -248,8 +248,171 @@ Schemas are responsible for validating:
 
 ✅ These are the **authoritative** JSON structures for all endpoints.
 
-**(Omitted here to save space—the objects you pasted earlier are correct.)**
-✅ Use exactly the three finalized objects you supplied.
+## **1. Attestation (Signed Object)**
+
+```jsonc
+{
+  "id": "string",                         // stable attestation ID (UUID/ULID)
+  "schema_uri": "https://.../skill/v1",   // versioned claim schema
+  "version": "1.0.0",
+
+  "issuer": {
+    "id": "did:org:apple",                // issuer identifier (DID/URI)
+    "name": "Apple Inc.",                 // optional display value
+    "ca_chain": ["urn:ca:root:...", "urn:ca:int:..."] // references to trust anchors
+  },
+
+  "key": {
+    "kid": "apple-key-2025q1",            // key identifier (rotatable)
+    "alg": "RS256"                        // cryptographic algorithm
+  },
+
+  "subject": {
+    "binding": {
+      "type": "pubkey|identifier|both",
+      "pubkey_thumbprint": "BASE64URL...",      // if bound to subject's public key
+      "identifier": "mailto:nick@example.com"   // HR ID, email, DID (PII-minimized)
+    }
+  },
+
+  "claim": {
+    "type": "employment.role",            // claim kind (role, skill.level, outcome.metric)
+    "context": {
+      "org_unit": "Vision Pro",
+      "project": "CV pipeline",
+      "location": "US-CA"
+    },
+    "value": {
+      "title": "Lead Engineer",
+      "skill": "Computer Vision",
+      "level": "L4"
+    }
+  },
+
+  "validity": {
+    "issued_at": "2025-11-06T20:05:00Z",
+    "not_before": "2025-11-06T20:05:00Z",
+    "not_after": "2027-11-06T00:00:00Z"
+  },
+
+  "revocation": {
+    "method": "status-list|endpoint",     // CRL/OCSP-style mechanisms
+    "pointer": "https://issuer.tld/revocations/abcd.json",
+    "serial": "att-3f2c..."
+  },
+
+  "policy": {
+    "policy_uri": "https://issuer.tld/policies/attest-v1",
+    "assurance": "TAL-3"                  // Trust Attestation Level
+  },
+
+  "disclosure": {
+    "mode": "full|sd-jwt|merkle",
+    "merkle_root": "BASE64URL...",        // only if selective disclosure used
+    "disclosed_fields": [
+      "claim.value.title",
+      "claim.value.skill"
+    ]
+  },
+
+  "hash": {
+    "payload_alg": "SHA-256",
+    "payload_hash": "BASE64URL..."        // hash of signed payload for detached signatures
+  },
+
+  "signature": {
+    "mode": "attached|detached",
+    "sig_alg": "RS256",
+    "sig": "BASE64URL..."                 // JWS-style signature blob
+  }
+}
+```
+
+---
+
+## **2. Verification Receipt**
+
+```jsonc
+{
+  "id": "vr-ULID-01HABC...",
+  "attestation_id": "att-ULID-01HXYZ...",
+  "verifier": {
+    "id": "did:org:acme-ats",
+    "name": "Acme ATS"
+  },
+  "time": "2025-11-06T20:06:11Z",
+
+  "signature_check": {
+    "valid": true,
+    "alg": "RS256",
+    "kid": "apple-key-2025q1"
+  },
+
+  "chain_check": {
+    "trusted": true,
+    "path": [
+      "urn:ca:int:apple-issuing-2025",
+      "urn:ca:root:digicert-G3"
+    ]
+  },
+
+  "schema_check": {
+    "valid": true,
+    "schema_uri": "https://.../employment.role/v1"
+  },
+
+  "liveness_check": {
+    "state": "ACTIVE",
+    "now": "2025-11-06T20:06:11Z"
+  },
+
+  "revocation_check": {
+    "status": "good",
+    "source": "https://apple.com/.../statuslist.json",
+    "cache_ttl_s": 3600
+  },
+
+  "binding_check": {
+    "bound": true,
+    "method": "pubkey+identifier"
+  },
+
+  "result": "VALID",
+  "reasons": [],
+
+  "audit": {
+    "resolver_signature": "BASE64URL...",
+    "request_hash": "BASE64URL...",
+    "policy_version": "verify-1.0.0"
+  }
+}
+```
+
+---
+
+## **3. Revocation Event (Issuer Signed CA)**
+
+```jsonc
+{
+  "id": "rev-ULID-01HDEF...",
+  "attestation_id": "att-ULID-01HXYZ...",
+  "issuer": {
+    "id": "did:org:apple"
+  },
+
+  "reason_code": "key_compromise|cessation|superseded|administrative",
+  "reason_text": "Role misattributed; corrected record issued",
+  "time": "2026-04-03T09:22:00Z",
+
+  "supersedes": "att-ULID-OLD123",        // optional: link to replacement attestation
+
+  "signature": {
+    "kid": "apple-key-2026q2",
+    "alg": "RS256",
+    "sig": "BASE64URL..."
+  }
+}
+```
 
 ---
 
