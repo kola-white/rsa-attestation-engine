@@ -1,0 +1,62 @@
+{
+  "id": "att-ULID-01HTZ8M5KX7F2EJ9P4R3C6VB",
+  "schema_uri": "https://issuer.tld/schemas/employment.role/v1",
+  "version": "1.0.0",
+  "issuer": {
+    "id": "did:org:acme-corp",
+    "name": "Acme Corp",
+    "ca_chain": ["urn:ca:root:acme-root-g1", "urn:ca:int:acme-issuing-2024q2"]
+  },
+  "key": {
+    "kid": "acme-key-2024q2",
+    "alg": "RS256"
+  },
+  "subject": {
+    "binding": {
+      "type": "identifier",
+      "pubkey_thumbprint": "",
+      "identifier": "mailto:nick@example.com"
+    }
+  },
+  "claim": {
+    "type": "employment.role",
+    "context": {
+      "org_unit": "R&D",
+      "project": "ML Infra",
+      "location": "US-CA"
+    },
+    "value": {
+      "title": "Senior Engineer",
+      "skill": "MLOps",
+      "level": "L3"
+    }
+  },
+  "validity": {
+    "issued_at": "2023-12-01T12:00:00Z",
+    "not_before": "2023-12-01T12:00:00Z",
+    "not_after": "2025-01-01T00:00:00Z"
+  },
+  "revocation": {
+    "method": "status-list",
+    "pointer": "https://issuer.tld/revocations/statuslist.json",
+    "serial": "att-SN-000045"
+  },
+  "policy": {
+    "policy_uri": "https://issuer.tld/policies/attest-v1",
+    "assurance": "TAL-2"
+  },
+  "disclosure": {
+    "mode": "full",
+    "merkle_root": "",
+    "disclosed_fields": ["claim.value.title", "claim.value.skill"]
+  },
+  "hash": {
+    "payload_alg": "SHA-256",
+    "payload_hash": "S0ZfR2FvZ2N4N2dHR0I2d2N2RGxMeUlkd1ZkR1V0cms"
+  },
+  "signature": {
+    "mode": "attached",
+    "sig_alg": "RS256",
+    "sig": "MThmTnZyc1p1b2ZOMlJNN1RudTdObV9vbk5LRk9aQVM"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "rev-ULID-01HDEF...",
+  "attestation_id": "att-ULID-01HXYZ...",
+  "issuer": { "id": "did:org:apple" },
+  "reason_code": "key_compromise",
+  "reason_text": "Role misattributed; corrected record issued",
+  "time": "2026-04-03T09:22:00Z",
+  "supersedes": "att-ULID-OLD123",
+  "signature": { "kid": "apple-key-2026q2", "alg": "RS256", "sig": "BASE64URL..." }
+}

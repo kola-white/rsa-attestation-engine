@@ -1,0 +1,62 @@
+{
+  "id": "att-ULID-01HREV0KE4X2M9N7Q3B6P1AZ",
+  "schema_uri": "https://issuer.tld/schemas/employment.role/v1",
+  "version": "1.0.0",
+  "issuer": {
+    "id": "did:org:acme-corp",
+    "name": "Acme Corp",
+    "ca_chain": ["urn:ca:root:acme-root-g1", "urn:ca:int:acme-issuing-2025q1"]
+  },
+  "key": {
+    "kid": "acme-key-2025q1",
+    "alg": "RS256"
+  },
+  "subject": {
+    "binding": {
+      "type": "both",
+      "pubkey_thumbprint": "b1Z0eWhhbGp6Q3Y5cUxDMmZURHBQbE1yZ1JMVXhDU2U",
+      "identifier": "mailto:nick@example.com"
+    }
+  },
+  "claim": {
+    "type": "employment.role",
+    "context": {
+      "org_unit": "Platform",
+      "project": "Trust Layer",
+      "location": "US-CA"
+    },
+    "value": {
+      "title": "Staff TPM",
+      "skill": "Trust & Safety",
+      "level": "L5"
+    }
+  },
+  "validity": {
+    "issued_at": "2025-05-10T09:00:00Z",
+    "not_before": "2025-05-10T09:00:00Z",
+    "not_after": "2027-05-10T00:00:00Z"
+  },
+  "revocation": {
+    "method": "status-list",
+    "pointer": "https://issuer.tld/revocations/statuslist.json",
+    "serial": "att-SN-000389"
+  },
+  "policy": {
+    "policy_uri": "https://issuer.tld/policies/attest-v1",
+    "assurance": "TAL-3"
+  },
+  "disclosure": {
+    "mode": "full",
+    "merkle_root": "",
+    "disclosed_fields": ["claim.value.title", "claim.value.skill", "claim.value.level"]
+  },
+  "hash": {
+    "payload_alg": "SHA-256",
+    "payload_hash": "bFdJbEdVdVVkR2duU0Q1aGd0RVRuM0l0UnlVbG9yVXM"
+  },
+  "signature": {
+    "mode": "attached",
+    "sig_alg": "RS256",
+    "sig": "Y1pSb0k3bUxqRzZlZzJrVWRLZzd0U3ZlYjN2R2lEVjE"
+  }
+}

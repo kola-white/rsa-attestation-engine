@@ -1,0 +1,62 @@
+{
+  "id": "att-ULID-01HINVALIDSIG01",
+  "schema_uri": "https://issuer.tld/schemas/employment.role/v1",
+  "version": "1.0.0",
+  "issuer": {
+    "id": "did:org:acme-corp",
+    "name": "Acme Corp",
+    "ca_chain": ["urn:ca:root:acme-root-g1", "urn:ca:int:acme-issuing-2025q4"]
+  },
+  "key": {
+    "kid": "acme-key-2025q4",
+    "alg": "RS256"
+  },
+  "subject": {
+    "binding": {
+      "type": "pubkey",
+      "pubkey_thumbprint": "YWJjZGVmZ2hpamtsbW5vcA",
+      "identifier": null
+    }
+  },
+  "claim": {
+    "type": "employment.role",
+    "context": {
+      "org_unit": "Search",
+      "project": "Indexing Team",
+      "location": "US-WA"
+    },
+    "value": {
+      "title": "Software Engineer",
+      "skill": "Search Ranking",
+      "level": "L4"
+    }
+  },
+  "validity": {
+    "issued_at": "2025-11-07T09:00:00Z",
+    "not_before": "2025-11-07T09:00:00Z",
+    "not_after": "2027-11-07T00:00:00Z"
+  },
+  "revocation": {
+    "method": "status-list",
+    "pointer": "https://issuer.tld/revocations/statuslist.json",
+    "serial": "att-SN-000777"
+  },
+  "policy": {
+    "policy_uri": "https://issuer.tld/policies/attest-v1",
+    "assurance": "TAL-3"
+  },
+  "disclosure": {
+    "mode": "full",
+    "merkle_root": "",
+    "disclosed_fields": ["claim.value.title", "claim.value.skill"]
+  },
+  "hash": {
+    "payload_alg": "SHA-256",
+    "payload_hash": "QUJDREVGR0hJSktMTU5PUA"
+  },
+  "signature": {
+    "mode": "attached",
+    "sig_alg": "RS256",
+    "sig": "THIS_SIGNATURE_IS_INVALID_AND_TAMPERED"
+  }
+}

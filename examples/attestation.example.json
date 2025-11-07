@@ -1,0 +1,62 @@
+{
+  "id": "att-ULID-01HXYZ...",
+  "schema_uri": "https://issuer.tld/schemas/skill/v1",
+  "version": "1.0.0",
+  "issuer": {
+    "id": "did:org:apple",
+    "name": "Apple Inc.",
+    "ca_chain": ["urn:ca:root:...", "urn:ca:int:..."]
+  },
+  "key": {
+    "kid": "apple-key-2025q1",
+    "alg": "RS256"
+  },
+  "subject": {
+    "binding": {
+      "type": "pubkey|identifier|both",
+      "pubkey_thumbprint": "BASE64URL...",
+      "identifier": "mailto:nick@example.com"
+    }
+  },
+  "claim": {
+    "type": "employment.role",
+    "context": {
+      "org_unit": "Vision Pro",
+      "project": "CV pipeline",
+      "location": "US-CA"
+    },
+    "value": {
+      "title": "Lead Engineer",
+      "skill": "Computer Vision",
+      "level": "L4"
+    }
+  },
+  "validity": {
+    "issued_at": "2025-11-06T20:05:00Z",
+    "not_before": "2025-11-06T20:05:00Z",
+    "not_after": "2027-11-06T00:00:00Z"
+  },
+  "revocation": {
+    "method": "status-list|endpoint",
+    "pointer": "https://issuer.tld/revocations/statuslist.json",
+    "serial": "att-3f2c..."
+  },
+  "policy": {
+    "policy_uri": "https://issuer.tld/policies/attest-v1",
+    "assurance": "TAL-3"
+  },
+  "disclosure": {
+    "mode": "full|sd-jwt|merkle",
+    "merkle_root": "BASE64URL...",
+    "disclosed_fields": ["claim.value.title", "claim.value.skill"]
+  },
+  "hash": {
+    "payload_alg": "SHA-256",
+    "payload_hash": "BASE64URL..."
+  },
+  "signature": {
+    "mode": "attached|detached",
+    "sig_alg": "RS256",
+    "sig": "BASE64URL..."
+  }
+}

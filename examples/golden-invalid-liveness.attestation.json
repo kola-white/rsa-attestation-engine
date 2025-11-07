@@ -1,0 +1,62 @@
+{
+  "id": "att-ULID-01HNOTYETVALID01",
+  "schema_uri": "https://issuer.tld/schemas/employment.role/v1",
+  "version": "1.0.0",
+  "issuer": {
+    "id": "did:org:acme-corp",
+    "name": "Acme Corp",
+    "ca_chain": ["urn:ca:root:acme-root", "urn:ca:int:acme-issuing"]
+  },
+  "key": {
+    "kid": "acme-key-future",
+    "alg": "RS256"
+  },
+  "subject": {
+    "binding": {
+      "type": "identifier",
+      "pubkey_thumbprint": "",
+      "identifier": "mailto:nick@example.com"
+    }
+  },
+  "claim": {
+    "type": "employment.role",
+    "context": {
+      "org_unit": "AI",
+      "project": "LLM Infra",
+      "location": "US-CA"
+    },
+    "value": {
+      "title": "AI Engineer",
+      "skill": "Model Ops",
+      "level": "L4"
+    }
+  },
+  "validity": {
+    "issued_at": "2025-12-01T12:00:00Z",
+    "not_before": "2025-12-10T00:00:00Z",
+    "not_after": "2027-12-10T00:00:00Z"
+  },
+  "revocation": {
+    "method": "status-list",
+    "pointer": "https://issuer.tld/revocations/statuslist.json",
+    "serial": "att-SN-000900"
+  },
+  "policy": {
+    "policy_uri": "https://issuer.tld/policies/attest-v1",
+    "assurance": "TAL-3"
+  },
+  "disclosure": {
+    "mode": "full",
+    "merkle_root": "",
+    "disclosed_fields": ["claim.value.title"]
+  },
+  "hash": {
+    "payload_alg": "SHA-256",
+    "payload_hash": "YWJjREVGR0gxMjM0NQ"
+  },
+  "signature": {
+    "mode": "attached",
+    "sig_alg": "RS256",
+    "sig": "VALID_SIGNATURE_BUT_LIVENESS_FAILS"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "kid": "acme-key-2025q4",
+      "alg": "RS256",
+      "use": "sig",
+      "n": "o8R0m7o2Kf9m8m6t7l1b3u9bYq4dS9n4eTqj3pG5Wf8b1I2v7H9Q2r3s5t7u8v9w0x1y2z3A4B5C6D7E8F9G0H1J2K3L4M5N",
+      "e": "AQAB"
+    },
+    {
+      "kty": "RSA",
+      "kid": "acme-key-2024q2",
+      "alg": "RS256",
+      "use": "sig",
+      "n": "s7V2n4Q8P0L3M5N7A9B1C3D5E7F9G1H3J5K7L9M1N3P5Q7R9S1T3U5V7W9X1Y3Z5a7b9c1d3e5f7g9h1j3k5l7m9n1p3q5",
+      "e": "AQAB"
+    }
+  ]
+}

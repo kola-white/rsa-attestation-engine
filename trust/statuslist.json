@@ -1,0 +1,21 @@
+{
+  "issuer": "did:org:acme-corp",
+  "generated_at": "2025-11-07T20:00:00Z",
+  "ttl_s": 900,
+  "entries": [
+    {
+      "serial": "att-SN-000389",
+      "status": "revoked",
+      "reason_code": "administrative",
+      "time": "2025-11-01T09:00:00Z"
+    },
+    {
+      "serial": "att-SN-000777",
+      "status": "good"
+    },
+    {
+      "serial": "att-SN-000045",
+      "status": "good"
+    }
+  ]
+}

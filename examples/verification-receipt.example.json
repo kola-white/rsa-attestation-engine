@@ -1,0 +1,19 @@
+{
+  "id": "vr-ULID-01HABC...",
+  "attestation_id": "att-ULID-01HXYZ...",
+  "verifier": { "id": "did:org:acme-ats", "name": "Acme ATS" },
+  "time": "2025-11-06T20:06:11Z",
+  "signature_check": { "valid": true, "alg": "RS256", "kid": "apple-key-2025q1" },
+  "chain_check": { "trusted": true, "path": ["urn:ca:int:apple-issuing-2025", "urn:ca:root:digicert-G3"] },
+  "schema_check": { "valid": true, "schema_uri": "https://issuer.tld/schemas/employment.role/v1" },
+  "liveness_check": { "state": "ACTIVE", "now": "2025-11-06T20:06:11Z" },
+  "revocation_check": { "status": "good", "source": "https://apple.com/pki/statuslist.json", "cache_ttl_s": 3600 },
+  "binding_check": { "bound": true, "method": "pubkey+identifier" },
+  "result": "VALID",
+  "reasons": [],
+  "audit": {
+    "resolver_signature": "BASE64URL...",
+    "request_hash": "BASE64URL...",
+    "policy_version": "verify-1.0.0"
+  }
+}

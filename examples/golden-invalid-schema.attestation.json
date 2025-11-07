@@ -1,0 +1,19 @@
+{
+  "id": 12345,
+  "schema_uri": "https://issuer.tld/schemas/employment.role/v1",
+  "version": "1.0.0",
+  "issuer": {
+    "id": "did:org:acme-corp"
+  },
+  "claim": {
+    "type": "employment.role",
+    "context": "should-be-object-not-string",
+    "value": {
+      "title": "Engineer"
+    }
+  },
+  "signature": {
+    "sig_alg": "RS256",
+    "sig": ""
+  }
+}

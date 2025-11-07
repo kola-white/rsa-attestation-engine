@@ -1,0 +1,62 @@
+{
+  "id": "att-ULID-01HV1AL2C2E4NQF8Q2J6N0S9",
+  "schema_uri": "https://issuer.tld/schemas/employment.role/v1",
+  "version": "1.0.0",
+  "issuer": {
+    "id": "did:org:acme-corp",
+    "name": "Acme Corp",
+    "ca_chain": ["urn:ca:root:acme-root-g1", "urn:ca:int:acme-issuing-2025q4"]
+  },
+  "key": {
+    "kid": "acme-key-2025q4",
+    "alg": "RS256"
+  },
+  "subject": {
+    "binding": {
+      "type": "pubkey|identifier|both",
+      "pubkey_thumbprint": "X1l0eTg1ZlF0bXJ5Q2tKQnZqV0p3S1Z6",
+      "identifier": "mailto:nick@example.com"
+    }
+  },
+  "claim": {
+    "type": "employment.role",
+    "context": {
+      "org_unit": "Vision Systems",
+      "project": "Perception Stack",
+      "location": "US-CA"
+    },
+    "value": {
+      "title": "Lead Engineer",
+      "skill": "Computer Vision",
+      "level": "L4"
+    }
+  },
+  "validity": {
+    "issued_at": "2025-11-07T10:15:00Z",
+    "not_before": "2025-11-07T10:15:00Z",
+    "not_after": "2027-11-07T00:00:00Z"
+  },
+  "revocation": {
+    "method": "status-list",
+    "pointer": "https://issuer.tld/revocations/statuslist.json",
+    "serial": "att-SN-000001"
+  },
+  "policy": {
+    "policy_uri": "https://issuer.tld/policies/attest-v1",
+    "assurance": "TAL-3"
+  },
+  "disclosure": {
+    "mode": "full",
+    "merkle_root": "",
+    "disclosed_fields": ["claim.value.title", "claim.value.skill", "claim.value.level"]
+  },
+  "hash": {
+    "payload_alg": "SHA-256",
+    "payload_hash": "R0p3T1l3dE5HbGRyc3UxZkJkQTZQTG1ScHhQbXU0RkE"
+  },
+  "signature": {
+    "mode": "attached",
+    "sig_alg": "RS256",
+    "sig": "d0R1bU5qNnZPMXlQb0Z6bTlnR0xjYm5fRHVxV1p0b3g"
+  }
+}
