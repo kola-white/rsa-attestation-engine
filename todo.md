@@ -32,6 +32,7 @@ This file tracks pending work, future tasks, and engineering actions that are **
   - `golden-invalid-signature.attestation.json`
   - `golden-invalid-schema.attestation.json`
   - `golden-notyetvalid.attestation.json`
+  - `golden-invalid-liveness.attestation.json`
 
 ---
 

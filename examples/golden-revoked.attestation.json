@@ -8,7 +8,7 @@
     "ca_chain": ["urn:ca:root:acme-root-g1", "urn:ca:int:acme-issuing-2025q1"]
   },
   "key": {
-    "kid": "acme-key-2025q1",
+    "kid": "issuer-dev-key-1",
     "alg": "RS256"
   },
   "subject": {
@@ -38,7 +38,7 @@
   },
   "revocation": {
     "method": "status-list",
-    "pointer": "https://issuer.tld/revocations/statuslist.json",
+    "pointer": "trust/statuslist.json",
     "serial": "att-SN-000389"
   },
   "policy": {

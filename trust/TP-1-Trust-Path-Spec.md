@@ -151,6 +151,67 @@ Purpose: mark attestations as:
 * `revoked`
 * `unknown`
 
+### Implicit State: `unknown`
+
+The `unknown` status is **not stored** explicitly.  
+A serial is considered **unknown** if it is **absent** from the `entries` list.
+
+---
+
+### Verifier Policy (MVP)
+
+**Fail-open (default):**  
+If a serial is **not found**, treat it as `unknown` → **accept**, and log: status=unknown (not listed).
+
+A future version may switch to **fail-closed** (reject unknown) when every issued serial is required to appear in the list.  
+Any policy change must be recorded in the changelog.
+
+---
+
+### Freshness & Caching
+
+- `ttl_s` defines the maximum cache lifetime.  
+- Verifiers should refetch the list when:
+  - the TTL expires, **or**
+  - `ETag` or `Last-Modified` indicates a newer version.
+
+### Verifier Pseudocode (MVP)
+
+```ts
+// inputs: protectedHeader.kid, payload.serial
+verifySignatureWithJWKS(kid, jwks); // throws if signature or key invalid
+
+const entry = statusList.entries.find(e => e.serial === payload.serial);
+
+// Implicit unknown: not listed → accept (fail-open) but log it
+if (!entry) {
+  log.warn(`status=unknown serial=${payload.serial} (not listed)`);
+  return ACCEPT;
+}
+
+switch (entry.status) {
+  case "good":
+    return ACCEPT;
+
+  case "revoked":
+    // A revoked entry may include reason_code and time
+    return REJECT;
+
+  default:
+    // Defensive coding: unknown status value should be treated as failure
+    log.error(`invalid status value "${entry.status}" for serial ${payload.serial}`);
+    return REJECT;
+}
+
+---
+
+### Versioning
+
+Include:
+
+```json
+"version": 1 at the top of the file. Increment this value on any breaking change (e.g., adding new statuses such as "suspended").
+
 ### **4.6 Policy URIs**
 
 Each attestation references:

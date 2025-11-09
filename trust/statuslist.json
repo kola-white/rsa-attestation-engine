@@ -1,4 +1,5 @@
 {
+  "version": 1,
   "issuer": "did:org:acme-corp",
   "generated_at": "2025-11-07T20:00:00Z",
   "ttl_s": 900,
