@@ -302,7 +302,7 @@ Schemas are responsible for validating:
   },
 
   "policy": {
-    "policy_uri": "https://issuer.tld/policies/attest-v1",
+    "policy_uri": "internal/issuer/issuer-v1.md",
     "assurance": "TAL-3"                  // Trust Attestation Level
   },
 

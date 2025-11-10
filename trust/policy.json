@@ -1,0 +1,4 @@
+{
+  "schema_uri": "schema/employment.role/v1",
+  "allowed_assurance": ["TAL-1", "TAL-2", "TAL-3", "TAL-4"]
+}

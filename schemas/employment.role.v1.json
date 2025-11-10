@@ -1,0 +1,179 @@
+{
+  "$id": "schema/employment.role/v1",
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "title": "Attested Employment Role (v1)",
+  "type": "object",
+  "required": [
+    "id",
+    "schema_uri",
+    "version",
+    "issuer",
+    "claim",
+    "validity",
+    "revocation",
+    "policy",
+    "signature"
+  ],
+  "properties": {
+    "id": { "type": "string" },
+
+    "schema_uri": {
+      "const": "schema/employment.role/v1"
+    },
+
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+
+    "issuer": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "ca_chain": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "key": {
+      "type": "object",
+      "required": ["kid", "alg"],
+      "properties": {
+        "kid": { "type": "string" },
+        "alg": { "type": "string", "enum": ["RS256"] }
+      },
+      "additionalProperties": false
+    },
+
+    "subject": {
+      "type": "object",
+      "properties": {
+        "binding": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["pubkey", "identifier", "both"]
+            },
+            "pubkey_thumbprint": { "type": "string" },
+            "identifier": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "claim": {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": { "const": "employment.role" },
+
+        "context": {
+          "type": "object",
+          "additionalProperties": true
+        },
+
+        "value": {
+          "type": "object",
+          "required": ["title"],
+          "properties": {
+            "title": { "type": "string" },
+            "skill": { "type": "string" },
+            "level": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "validity": {
+      "type": "object",
+      "required": ["issued_at", "not_before", "not_after"],
+      "properties": {
+        "issued_at": { "type": "string", "format": "date-time" },
+        "not_before": { "type": "string", "format": "date-time" },
+        "not_after": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+
+    "revocation": {
+      "type": "object",
+      "required": ["method", "pointer", "serial"],
+      "properties": {
+        "method": { "type": "string", "enum": ["status-list"] },
+        "pointer": { "type": "string" },
+        "serial": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "policy": {
+      "type": "object",
+      "required": ["policy_uri", "assurance"],
+      "properties": {
+        "policy_uri": { "type": "string" },
+        "assurance": {
+          "type": "string",
+          "enum": ["TAL-1", "TAL-2", "TAL-3", "TAL-4"]
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "disclosure": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["full", "selective"]
+        },
+        "merkle_root": { "type": "string" },
+        "disclosed_fields": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "hash": {
+      "type": "object",
+      "properties": {
+        "payload_alg": {
+          "type": "string",
+          "enum": ["SHA-256"]
+        },
+        "payload_hash": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+
+    "signature": {
+      "type": "object",
+      "required": ["mode", "sig_alg", "sig"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["attached"]
+        },
+        "sig_alg": {
+          "type": "string",
+          "enum": ["RS256"]
+        },
+        "sig": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+
+  "additionalProperties": false
+}

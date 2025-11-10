@@ -38,3 +38,4 @@ See `/examples/` for golden vectors:
 - invalid-signature.json
 - invalid-schema.json
 - invalid-liveness.json
+- notyetvalid.json

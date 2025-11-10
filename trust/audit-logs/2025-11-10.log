@@ -1,0 +1,26 @@
+{"ts":"2025-11-10T04:12:26.315Z","stage":"signature","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:12:26.320Z","stage":"shape","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:12:26.320Z","stage":"liveness","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:12:26.320Z","stage":"revocation","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:12:26.320Z","stage":"policy","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:49.634Z","stage":"signature","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:49.638Z","stage":"shape","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:49.638Z","stage":"liveness","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:49.639Z","stage":"revocation","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:49.639Z","stage":"policy","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:49.739Z","stage":"signature","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:49.743Z","stage":"shape","outcome":"REJECT","reason":"missing_required_field"}
+{"ts":"2025-11-10T04:30:49.909Z","stage":"signature","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:49.917Z","stage":"shape","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:49.917Z","stage":"liveness","outcome":"REJECT","reason":"not_yet_valid","details":{"now":"2025-11-10T04:30:49.917Z","not_before":"2025-12-01T00:00:00Z"}}
+{"ts":"2025-11-10T04:30:50.096Z","stage":"signature","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:50.100Z","stage":"shape","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:50.100Z","stage":"liveness","outcome":"REJECT","reason":"not_yet_valid","details":{"now":"2025-11-10T04:30:50.100Z","not_before":"2025-12-10T00:00:00Z"}}
+{"ts":"2025-11-10T04:30:50.205Z","stage":"signature","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:50.209Z","stage":"shape","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:50.209Z","stage":"liveness","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:50.209Z","stage":"revocation","outcome":"REJECT","reason":"revoked","details":{"serial":"att-SN-000389"}}
+{"ts":"2025-11-10T04:30:50.328Z","stage":"signature","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:50.332Z","stage":"shape","outcome":"ACCEPT"}
+{"ts":"2025-11-10T04:30:50.333Z","stage":"liveness","outcome":"REJECT","reason":"expired","details":{"now":"2025-11-10T04:30:50.333Z","not_after":"2025-01-01T00:00:00Z"}}
+{"ts":"2025-11-10T15:39:00.057Z","stage":"signature","outcome":"REJECT","reason":"bad_signature","details":{"err":"no applicable key found in the JSON Web Key Set"}}

@@ -1,6 +1,6 @@
 {
   "id": "att-ULID-01HXYZ...",
-  "schema_uri": "https://issuer.tld/schemas/skill/v1",
+  "schema_uri": "schema/employment.role/v1",
   "version": "1.0.0",
   "issuer": {
     "id": "did:org:apple",
@@ -38,11 +38,11 @@
   },
   "revocation": {
     "method": "status-list|endpoint",
-    "pointer": "https://issuer.tld/revocations/statuslist.json",
+    "pointer": "trust/statuslist.json",
     "serial": "att-3f2c..."
   },
   "policy": {
-    "policy_uri": "https://issuer.tld/policies/attest-v1",
+    "policy_uri": "internal/issuer/issuer-v1.md",
     "assurance": "TAL-3"
   },
   "disclosure": {
