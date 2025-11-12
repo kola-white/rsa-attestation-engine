@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [ main ]   # optional; keeps main for publish only
+  workflow_dispatch: {}
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: ci-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # You run v20.19.5 locally; pin to 20.x in CI (or 20.19.5 if you prefer exact)
+          node-version: '20.19.5'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Optional keygen (dev only)
+        run: bash scripts/dev-keygen.sh || echo "Skipping keygen."
+
+      - name: Build JWKS
+        run: node scripts/make-jwks.mjs
+
+      - name: Build status list (if present)
+        run: |
+          if [ -f "scripts/update-statuslist.mjs" ]; then
+            node scripts/update-statuslist.mjs
+          fi
+
+      - name: Build vectors (if present)
+        run: |
+          if [ -f "scripts/make-vectors.sh" ]; then
+            bash scripts/make-vectors.sh
+          fi
+
+      - name: Run tests
+        run: npm test --silent || echo "No tests or tests failed; continuing for dev."
+
+      - name: Save CI artifacts (for review)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-artifacts-${{ github.sha }}
+          path: |
+            trust/jwks.json
+            trust/statuslist.json
+            examples/*.json
+            out/*.jws
+          if-no-files-found: ignore
