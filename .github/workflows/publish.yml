@@ -108,15 +108,28 @@ jobs:
             --content-type application/json
 
       # Optional CDN purge: only if both a token and endpoint id exist
+      # Convert the secret into a boolean-ish env var first (parser-safe)
+      - name: Detect DO_PAT presence
+        run: |
+          if [ -n "${{ secrets.DO_PAT }}" ]; then
+            echo "HAS_DO_PAT=true" >> "$GITHUB_ENV"
+          else
+            echo "HAS_DO_PAT=false" >> "$GITHUB_ENV"
+          fi
+
       - name: Install doctl
-        if: ${{ secrets.DO_PAT != '' && env.CDN_ENDPOINT_ID != '' }}
+        if: ${{ env.HAS_DO_PAT == 'true' && env.CDN_ENDPOINT_ID != '' }}
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DO_PAT }}
 
       - name: Purge CDN cache
-        if: ${{ secrets.DO_PAT != '' && env.CDN_ENDPOINT_ID != '' }}
+        if: ${{ env.HAS_DO_PAT == 'true' && env.CDN_ENDPOINT_ID != '' }}
         run: |
+          doctl compute cdn flush "$CDN_ENDPOINT_ID" \
+            --files "/trust/jwks.json" \
+            --files "/status/statuslist.json"
+
           doctl compute cdn flush "$CDN_ENDPOINT_ID" \
             --files "/trust/jwks.json" \
             --files "/status/statuslist.json"
