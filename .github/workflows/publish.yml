@@ -1,175 +1,138 @@
-name: CI + Publish to DO Spaces
+name: Publish Trust to DO Spaces
 
 on:
   push:
     branches: [ main ]
-  pull_request:
   workflow_dispatch: {}
 
 env:
-  DO_REGION: ${{ vars.DO_REGION }}              
-  DO_SPACE:  ${{ vars.DO_SPACE }}               
-  DO_ENDPOINT: ${{ vars.DO_ENDPOINT }}         
-  CDN_ENDPOINT_ID: ${{ vars.CDN_ENDPOINT_ID }}  
-  # Per-run publish prefix so every commit is addressable:
-  PUBLISH_PREFIX: attestation-engine/${{ github.sha }}
+  DO_REGION:            ${{ vars.DO_REGION }}             # e.g., nyc3
+  DO_SPACE:             ${{ vars.DO_SPACE }}              # your Space name
+  DO_ENDPOINT:          ${{ vars.DO_ENDPOINT }}           # e.g., https://nyc3.digitaloceanspaces.com
+  CDN_ENDPOINT_ID:      ${{ vars.CDN_ENDPOINT_ID }}       # optional: CDN endpoint UUID
+  PUBLISH_PREFIX:       attestation-engine/${{ github.sha }}
 
 jobs:
-  build-test-publish:
+  publish:
+    # optional: require reviewers via an environment called "production"
+    environment: production
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: publish-main
+      cancel-in-progress: true
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '20.19.5'
           cache: 'npm'
 
       - name: Install deps
         run: npm ci
 
-      # ---- Build your artifacts (re-use your existing scripts) ----
-      # Optional keygen (safe to skip if keys are checked-in for dev)
-      - name: Optional keygen
+      # Rebuild artifacts in a clean runner (reproducible)
+      - name: Optional keygen (dev only)
         run: bash scripts/dev-keygen.sh || echo "Skipping keygen."
 
       - name: Build JWKS
         run: node scripts/make-jwks.mjs
 
-      # If you have a statuslist builder script later, call it here:
       - name: Build status list (if present)
         run: |
           if [ -f "scripts/update-statuslist.mjs" ]; then
             node scripts/update-statuslist.mjs
           fi
 
-      # If you have a vectors builder script later, call it here:
       - name: Build vectors (if present)
         run: |
           if [ -f "scripts/make-vectors.sh" ]; then
             bash scripts/make-vectors.sh
           fi
 
-      # ---- Tests (optional but recommended) ----
-      - name: Run tests
-        run: npm test --silent || echo "No tests or tests failed; continuing for dev."
-
-      # ---- Minimal audit log for this run ----
       - name: Create audit log (JSONL)
         run: |
           mkdir -p audit
-          echo "{\"ts\":\"$(date -u +%FT%TZ)\",\"sha\":\"${{ github.sha }}\",\"event\":\"ci_run\",\"ref\":\"${{ github.ref }}\",\"actor\":\"${{ github.actor }}\"}" >> audit/run.jsonl
+          echo "{\"ts\":\"$(date -u +%FT%TZ)\",\"sha\":\"${{ github.sha }}\",\"event\":\"publish_run\",\"ref\":\"${{ github.ref }}\",\"actor\":\"${{ github.actor }}\"}" >> audit/run.jsonl
 
-      # ---- Install AWS CLI (used for DO Spaces via S3 API) ----
       - name: Install AWS CLI
         run: |
           sudo apt-get update -y
           sudo apt-get install -y awscli
 
-      # ---- Configure Spaces creds (from GitHub SECRETS) ----
       - name: Configure AWS creds for Spaces
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.DO_SPACES_KEY }}
+          AWS_ACCESS_KEY_ID:     ${{ secrets.DO_SPACES_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET }}
         run: |
           aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
           aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
           aws configure set default.region "$DO_REGION"
 
-      # ---- Upload per-commit (versioned) artifacts ----
-      - name: Upload per-commit: jwks/status/vectors/audit
+      - name: Upload per-commit payload (versioned)
         run: |
           set -e
-          # Ensure dirs exist even if empty
           mkdir -p trust status examples out audit
 
-          # JWKS (1h TTL)
+          # JWKS (1h)
           if [ -f trust/jwks.json ]; then
             aws --endpoint-url "$DO_ENDPOINT" s3 cp trust/jwks.json "s3://$DO_SPACE/$PUBLISH_PREFIX/trust/jwks.json" \
-              --content-type application/json \
-              --cache-control "max-age=3600, must-revalidate"
+              --content-type application/json --cache-control "max-age=3600, must-revalidate"
           fi
 
-          # Status list (900s TTL) — supports your ttl_s: 900
+          # Status (900s)
           if [ -f trust/statuslist.json ]; then
             aws --endpoint-url "$DO_ENDPOINT" s3 cp trust/statuslist.json "s3://$DO_SPACE/$PUBLISH_PREFIX/status/statuslist.json" \
-              --content-type application/json \
-              --cache-control "max-age=900, must-revalidate"
+              --content-type application/json --cache-control "max-age=900, must-revalidate"
           fi
 
-          # Golden vectors JSON (immutable, long TTL)
+          # Vectors (immutable)
           if ls examples/*.json >/dev/null 2>&1; then
             aws --endpoint-url "$DO_ENDPOINT" s3 cp examples/ "s3://$DO_SPACE/$PUBLISH_PREFIX/vectors/" --recursive \
-              --exclude "*" --include "*.json" \
-              --content-type application/json \
+              --exclude "*" --include "*.json" --content-type application/json \
               --cache-control "public, max-age=31536000, immutable"
           fi
-
-          # Signed JWS outputs (immutable)
           if ls out/*.jws >/dev/null 2>&1; then
             aws --endpoint-url "$DO_ENDPOINT" s3 cp out/ "s3://$DO_SPACE/$PUBLISH_PREFIX/vectors/" --recursive \
-              --exclude "*" --include "*.jws" \
-              --content-type application/jose \
+              --exclude "*" --include "*.jws" --content-type application/jose \
               --cache-control "public, max-age=31536000, immutable"
           fi
 
-          # Audit log (append-only per run)
+          # Audit
           aws --endpoint-url "$DO_ENDPOINT" s3 cp audit/run.jsonl "s3://$DO_SPACE/$PUBLISH_PREFIX/audit/run.jsonl" \
             --content-type text/plain
 
-      # ---- Publish stable pointers (the URLs your verifier will use) ----
-      - name: Publish stable trust pointers
+      - name: Publish stable copies + latest pointer
         run: |
           set -e
           echo "{\"sha\":\"${{ github.sha }}\",\"prefix\":\"$PUBLISH_PREFIX\"}" > latest.json
 
-          # Copy per-commit to stable paths:
-          # JWKS
           if [ -f trust/jwks.json ]; then
             aws --endpoint-url "$DO_ENDPOINT" s3 cp "s3://$DO_SPACE/$PUBLISH_PREFIX/trust/jwks.json" "s3://$DO_SPACE/trust/jwks.json" \
-              --metadata-directive REPLACE \
-              --content-type application/json \
+              --metadata-directive REPLACE --content-type application/json \
               --cache-control "max-age=3600, must-revalidate"
           fi
 
-          # Status
           if [ -f trust/statuslist.json ]; then
             aws --endpoint-url "$DO_ENDPOINT" s3 cp "s3://$DO_SPACE/$PUBLISH_PREFIX/status/statuslist.json" "s3://$DO_SPACE/status/statuslist.json" \
-              --metadata-directive REPLACE \
-              --content-type application/json \
+              --metadata-directive REPLACE --content-type application/json \
               --cache-control "max-age=900, must-revalidate"
           fi
 
-          # Latest pointer
           aws --endpoint-url "$DO_ENDPOINT" s3 cp latest.json "s3://$DO_SPACE/attestation-engine/latest.json" \
             --content-type application/json
 
-      # ---- Optional: Purge CDN cache (jwks/status) ----
-      - name: Install doctl
-        if: ${{ secrets.DO_PAT && env.CDN_ENDPOINT_ID }}
+      - name: Optional CDN purge (jwks/status)
+        if: ${{ secrets.DO_PAT && vars.CDN_ENDPOINT_ID }}
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DO_PAT }}
 
       - name: Purge CDN cache
-        if: ${{ secrets.DO_PAT && env.CDN_ENDPOINT_ID }}
+        if: ${{ secrets.DO_PAT && vars.CDN_ENDPOINT_ID }}
         run: |
-          doctl compute cdn flush "$CDN_ENDPOINT_ID" \
+          doctl compute cdn flush "${{ vars.CDN_ENDPOINT_ID }}" \
             --files "/trust/jwks.json" \
             --files "/status/statuslist.json"
-
-      # ---- Keep a copy of artifacts in GitHub (traceability) ----
-      - name: Upload CI artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: trust-artifacts-${{ github.sha }}
-          path: |
-            trust/jwks.json
-            trust/statuslist.json
-            examples/*.json
-            out/*.jws
-            audit/run.jsonl
-          if-no-files-found: ignore
