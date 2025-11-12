@@ -1,40 +1,33 @@
-name: Publish Trust to DO Spaces
+name: Publish to DigitalOcean Spaces
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: {}
-
-env:
-  DO_REGION:            ${{ vars.DO_REGION }}             # e.g., nyc3
-  DO_SPACE:             ${{ vars.DO_SPACE }}              # your Space name
-  DO_ENDPOINT:          ${{ vars.DO_ENDPOINT }}           # e.g., https://nyc3.digitaloceanspaces.com
-  CDN_ENDPOINT_ID:      ${{ vars.CDN_ENDPOINT_ID }}       # optional: CDN endpoint UUID
-  PUBLISH_PREFIX:       attestation-engine/${{ github.sha }}
 
 jobs:
   publish:
-    # optional: require reviewers via an environment called "production"
-    environment: production
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    concurrency:
-      group: publish-main
-      cancel-in-progress: true
+    env:
+      DO_REGION: ${{ vars.DO_REGION }}                   # e.g., nyc3
+      DO_SPACE:  ${{ vars.DO_SPACE }}                    # your Space name
+      DO_ENDPOINT: ${{ vars.DO_ENDPOINT }}               # e.g., https://nyc3.digitaloceanspaces.com
+      CDN_ENDPOINT_ID: ${{ vars.CDN_ENDPOINT_ID }}       # optional
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: '20.19.5'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install deps
         run: npm ci
 
-      # Rebuild artifacts in a clean runner (reproducible)
-      - name: Optional keygen (dev only)
+      # --- Build your artifacts ---
+      - name: Optional keygen
         run: bash scripts/dev-keygen.sh || echo "Skipping keygen."
 
       - name: Build JWKS
@@ -52,11 +45,6 @@ jobs:
             bash scripts/make-vectors.sh
           fi
 
-      - name: Create audit log (JSONL)
-        run: |
-          mkdir -p audit
-          echo "{\"ts\":\"$(date -u +%FT%TZ)\",\"sha\":\"${{ github.sha }}\",\"event\":\"publish_run\",\"ref\":\"${{ github.ref }}\",\"actor\":\"${{ github.actor }}\"}" >> audit/run.jsonl
-
       - name: Install AWS CLI
         run: |
           sudo apt-get update -y
@@ -64,75 +52,71 @@ jobs:
 
       - name: Configure AWS creds for Spaces
         env:
-          AWS_ACCESS_KEY_ID:     ${{ secrets.DO_SPACES_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.DO_SPACES_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET }}
         run: |
           aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
           aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
           aws configure set default.region "$DO_REGION"
 
-      - name: Upload per-commit payload (versioned)
+      - name: Upload per-commit (versioned) artifacts
         run: |
           set -e
-          mkdir -p trust status examples out audit
+          PUBLISH_PREFIX="attestation-engine/${{ github.sha }}"
+          echo "Using prefix: $PUBLISH_PREFIX"
 
-          # JWKS (1h)
+          mkdir -p trust status examples out audit
+          echo "{\"ts\":\"$(date -u +%FT%TZ)\",\"sha\":\"${{ github.sha }}\",\"event\":\"publish\"}" >> audit/run.jsonl
+
+          # JWKS
           if [ -f trust/jwks.json ]; then
             aws --endpoint-url "$DO_ENDPOINT" s3 cp trust/jwks.json "s3://$DO_SPACE/$PUBLISH_PREFIX/trust/jwks.json" \
-              --content-type application/json --cache-control "max-age=3600, must-revalidate"
-          fi
-
-          # Status (900s)
-          if [ -f trust/statuslist.json ]; then
-            aws --endpoint-url "$DO_ENDPOINT" s3 cp trust/statuslist.json "s3://$DO_SPACE/$PUBLISH_PREFIX/status/statuslist.json" \
-              --content-type application/json --cache-control "max-age=900, must-revalidate"
-          fi
-
-          # Vectors (immutable)
-          if ls examples/*.json >/dev/null 2>&1; then
-            aws --endpoint-url "$DO_ENDPOINT" s3 cp examples/ "s3://$DO_SPACE/$PUBLISH_PREFIX/vectors/" --recursive \
-              --exclude "*" --include "*.json" --content-type application/json \
-              --cache-control "public, max-age=31536000, immutable"
-          fi
-          if ls out/*.jws >/dev/null 2>&1; then
-            aws --endpoint-url "$DO_ENDPOINT" s3 cp out/ "s3://$DO_SPACE/$PUBLISH_PREFIX/vectors/" --recursive \
-              --exclude "*" --include "*.jws" --content-type application/jose \
-              --cache-control "public, max-age=31536000, immutable"
-          fi
-
-          # Audit
-          aws --endpoint-url "$DO_ENDPOINT" s3 cp audit/run.jsonl "s3://$DO_SPACE/$PUBLISH_PREFIX/audit/run.jsonl" \
-            --content-type text/plain
-
-      - name: Publish stable copies + latest pointer
-        run: |
-          set -e
-          echo "{\"sha\":\"${{ github.sha }}\",\"prefix\":\"$PUBLISH_PREFIX\"}" > latest.json
-
-          if [ -f trust/jwks.json ]; then
-            aws --endpoint-url "$DO_ENDPOINT" s3 cp "s3://$DO_SPACE/$PUBLISH_PREFIX/trust/jwks.json" "s3://$DO_SPACE/trust/jwks.json" \
-              --metadata-directive REPLACE --content-type application/json \
+              --content-type application/json \
               --cache-control "max-age=3600, must-revalidate"
           fi
 
+          # Status list
           if [ -f trust/statuslist.json ]; then
-            aws --endpoint-url "$DO_ENDPOINT" s3 cp "s3://$DO_SPACE/$PUBLISH_PREFIX/status/statuslist.json" "s3://$DO_SPACE/status/statuslist.json" \
-              --metadata-directive REPLACE --content-type application/json \
+            aws --endpoint-url "$DO_ENDPOINT" s3 cp trust/statuslist.json "s3://$DO_SPACE/$PUBLISH_PREFIX/status/statuslist.json" \
+              --content-type application/json \
               --cache-control "max-age=900, must-revalidate"
           fi
 
+          # Vectors (JSON)
+          if ls examples/*.json >/dev/null 2>&1; then
+            aws --endpoint-url "$DO_ENDPOINT" s3 cp examples/ "s3://$DO_SPACE/$PUBLISH_PREFIX/vectors/" --recursive \
+              --exclude "*" --include "*.json" \
+              --content-type application/json \
+              --cache-control "public, max-age=31536000, immutable"
+          fi
+
+          # JWS
+          if ls out/*.jws >/dev/null 2>&1; then
+            aws --endpoint-url "$DO_ENDPOINT" s3 cp out/ "s3://$DO_SPACE/$PUBLISH_PREFIX/vectors/" --recursive \
+              --exclude "*" --include "*.jws" \
+              --content-type application/jose \
+              --cache-control "public, max-age=31536000, immutable"
+          fi
+
+          # Audit log
+          aws --endpoint-url "$DO_ENDPOINT" s3 cp audit/run.jsonl "s3://$DO_SPACE/$PUBLISH_PREFIX/audit/run.jsonl" \
+            --content-type text/plain
+
+          # Write/Upload latest pointer
+          echo "{\"sha\":\"${{ github.sha }}\",\"prefix\":\"$PUBLISH_PREFIX\"}" > latest.json
           aws --endpoint-url "$DO_ENDPOINT" s3 cp latest.json "s3://$DO_SPACE/attestation-engine/latest.json" \
             --content-type application/json
 
-      - name: Optional CDN purge (jwks/status)
-        if: ${{ secrets.DO_PAT && vars.CDN_ENDPOINT_ID }}
+      # Optional CDN purge: only if both a token and endpoint id exist
+      - name: Install doctl
+        if: ${{ secrets.DO_PAT != '' && env.CDN_ENDPOINT_ID != '' }}
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DO_PAT }}
 
       - name: Purge CDN cache
-        if: ${{ secrets.DO_PAT && vars.CDN_ENDPOINT_ID }}
+        if: ${{ secrets.DO_PAT != '' && env.CDN_ENDPOINT_ID != '' }}
         run: |
-          doctl compute cdn flush "${{ vars.CDN_ENDPOINT_ID }}" \
+          doctl compute cdn flush "$CDN_ENDPOINT_ID" \
             --files "/trust/jwks.json" \
             --files "/status/statuslist.json"
