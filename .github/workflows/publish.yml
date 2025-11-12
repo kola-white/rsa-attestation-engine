@@ -7,50 +7,48 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+
     env:
-      DO_REGION: ${{ vars.DO_REGION }}                   # e.g., nyc3
-      DO_SPACE:  ${{ vars.DO_SPACE }}                    # your Space name
-      DO_ENDPOINT: ${{ vars.DO_ENDPOINT }}               # e.g., https://nyc3.digitaloceanspaces.com
-      CDN_ENDPOINT_ID: ${{ vars.CDN_ENDPOINT_ID }}       # optional
+      DO_REGION: ${{ vars.DO_REGION }}             # e.g., nyc3
+      DO_SPACE:  ${{ vars.DO_SPACE }}              # your Space name
+      DO_ENDPOINT: ${{ vars.DO_ENDPOINT }}         # e.g., https://nyc3.digitaloceanspaces.com
+      CDN_ENDPOINT_ID: ${{ vars.CDN_ENDPOINT_ID }} # optional
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install deps
-        run: npm ci
-
-      # --- Build your artifacts ---
-      - name: Optional keygen
-        run: bash scripts/dev-keygen.sh || echo "Skipping keygen."
-
-      - name: Build JWKS
-        run: node scripts/make-jwks.mjs
-
-      - name: Build status list (if present)
+      # --- Ensure endpoint is set (keep your validation step) ---
+      - name: Validate DigitalOcean variables and set DO_ENDPOINT
         run: |
-          if [ -f "scripts/update-statuslist.mjs" ]; then
-            node scripts/update-statuslist.mjs
+          if [ -z "$DO_SPACE" ]; then
+            echo "ERROR: DO_SPACE is not set. Set repo variable 'DO_SPACE'." >&2
+            exit 1
           fi
-
-      - name: Build vectors (if present)
-        run: |
-          if [ -f "scripts/make-vectors.sh" ]; then
-            bash scripts/make-vectors.sh
+          if [ -z "$DO_ENDPOINT" ] && [ -z "$DO_REGION" ]; then
+            echo "ERROR: Neither DO_ENDPOINT nor DO_REGION is set. Set at least one repo variable." >&2
+            exit 1
           fi
+          if [ -z "$DO_ENDPOINT" ] && [ -n "$DO_REGION" ]; then
+            echo "DO_ENDPOINT=https://$DO_REGION.digitaloceanspaces.com" >> "$GITHUB_ENV"
+          fi
+          if [ -z "$DO_ENDPOINT" ]; then
+            echo "ERROR: DO_ENDPOINT could not be determined." >&2
+            exit 1
+          fi
+          echo "DO_ENDPOINT set to: ${DO_ENDPOINT}"
+          echo "DO_SPACE set to: ${DO_SPACE}"
 
-      - name: Install AWS CLI
+      # --- Install AWS CLI v2 (bundled) — DO NOT use apt or pip ---
+      - name: Install AWS CLI v2
         run: |
-           sudo apt-get update -y
-           sudo apt-get install -y python3-pip
-           pip3 install --upgrade awscli
+          curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          sudo apt-get update -y && sudo apt-get install -y unzip
+          unzip -q awscliv2.zip
+          sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+          aws --version
 
+      # --- Configure Spaces creds (uses GitHub Secrets) ---
       - name: Configure AWS creds for Spaces
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.DO_SPACES_KEY }}
@@ -58,58 +56,18 @@ jobs:
         run: |
           aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
           aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
-          aws configure set default.region "$DO_REGION"
+          aws configure set default.region "${DO_REGION:-us-east-1}"  # region required; ignored by Spaces
 
-      - name: Upload per-commit (versioned) artifacts
+      # --- Quick sanity check before uploads ---
+      - name: Verify Spaces access
         run: |
-          set -e
-          PUBLISH_PREFIX="attestation-engine/${{ github.sha }}"
-          echo "Using prefix: $PUBLISH_PREFIX"
+          aws --endpoint-url "$DO_ENDPOINT" s3 ls "s3://$DO_SPACE/" || { echo "List failed"; exit 1; }
 
-          mkdir -p trust status examples out audit
-          echo "{\"ts\":\"$(date -u +%FT%TZ)\",\"sha\":\"${{ github.sha }}\",\"event\":\"publish\"}" >> audit/run.jsonl
+      # (Your build steps could go here if needed, before CDN purge)
+      # - name: Build JWKS
+      #   run: node scripts/make-jwks.mjs
+      # ... etc.
 
-          # JWKS
-          if [ -f trust/jwks.json ]; then
-            aws --endpoint-url "$DO_ENDPOINT" s3 cp trust/jwks.json "s3://$DO_SPACE/$PUBLISH_PREFIX/trust/jwks.json" \
-              --content-type application/json \
-              --cache-control "max-age=3600, must-revalidate"
-          fi
-
-          # Status list
-          if [ -f trust/statuslist.json ]; then
-            aws --endpoint-url "$DO_ENDPOINT" s3 cp trust/statuslist.json "s3://$DO_SPACE/$PUBLISH_PREFIX/status/statuslist.json" \
-              --content-type application/json \
-              --cache-control "max-age=900, must-revalidate"
-          fi
-
-          # Vectors (JSON)
-          if ls examples/*.json >/dev/null 2>&1; then
-            aws --endpoint-url "$DO_ENDPOINT" s3 cp examples/ "s3://$DO_SPACE/$PUBLISH_PREFIX/vectors/" --recursive \
-              --exclude "*" --include "*.json" \
-              --content-type application/json \
-              --cache-control "public, max-age=31536000, immutable"
-          fi
-
-          # JWS
-          if ls out/*.jws >/dev/null 2>&1; then
-            aws --endpoint-url "$DO_ENDPOINT" s3 cp out/ "s3://$DO_SPACE/$PUBLISH_PREFIX/vectors/" --recursive \
-              --exclude "*" --include "*.jws" \
-              --content-type application/jose \
-              --cache-control "public, max-age=31536000, immutable"
-          fi
-
-          # Audit log
-          aws --endpoint-url "$DO_ENDPOINT" s3 cp audit/run.jsonl "s3://$DO_SPACE/$PUBLISH_PREFIX/audit/run.jsonl" \
-            --content-type text/plain
-
-          # Write/Upload latest pointer
-          echo "{\"sha\":\"${{ github.sha }}\",\"prefix\":\"$PUBLISH_PREFIX\"}" > latest.json
-          aws --endpoint-url "$DO_ENDPOINT" s3 cp latest.json "s3://$DO_SPACE/attestation-engine/latest.json" \
-            --content-type application/json
-
-      # Optional CDN purge: only if both a token and endpoint id exist
-      # Convert the secret into a boolean-ish env var first (parser-safe)
       - name: Detect DO_PAT presence
         run: |
           if [ -n "${{ secrets.DO_PAT }}" ]; then
@@ -127,10 +85,6 @@ jobs:
       - name: Purge CDN cache
         if: ${{ env.HAS_DO_PAT == 'true' && env.CDN_ENDPOINT_ID != '' }}
         run: |
-          doctl compute cdn flush "$CDN_ENDPOINT_ID" \
-            --files "/trust/jwks.json" \
-            --files "/status/statuslist.json"
-
           doctl compute cdn flush "$CDN_ENDPOINT_ID" \
             --files "/trust/jwks.json" \
             --files "/status/statuslist.json"
