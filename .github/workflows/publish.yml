@@ -47,8 +47,9 @@ jobs:
 
       - name: Install AWS CLI
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y awscli
+           sudo apt-get update -y
+           sudo apt-get install -y python3-pip
+           pip3 install --upgrade awscli
 
       - name: Configure AWS creds for Spaces
         env:
