@@ -1,31 +1,15 @@
+// pkg/verification/verify.ts
 import { jwtVerify, createLocalJWKSet, type JWK } from "jose";
-import fs from "fs";
-import path from "path";
+import { fetchTrustArtifacts } from "./trust-endpoints.js";
 import { audit } from "../logger.js";
 
-// ---------- helpers ----------
-function loadJson(p: string) {
-  return JSON.parse(fs.readFileSync(p, "utf8"));
-}
-function requireString(obj: any, segs: string[]): string | null {
-  let cur = obj;
-  for (const s of segs) cur = cur?.[s];
-  return (typeof cur === "string" && cur.length > 0) ? cur : null;
-}
 const isoNow = () => new Date().toISOString();
 
-// ---------- trust artifacts (always from project ./trust) ----------
-const TRUST_DIR = path.resolve(process.cwd(), "trust");
-const jwks       = loadJson(path.join(TRUST_DIR, "jwks.json"));
-const statuslist = loadJson(path.join(TRUST_DIR, "statuslist.json"));
-const policy     = loadJson(path.join(TRUST_DIR, "policy.json"));
-
-const policyAllowed   = new Set<string>(Array.isArray(policy.allowed_assurance) ? policy.allowed_assurance : []);
-const policySchemaUri = String(policy.schema_uri || "");
-
-// ---------- main API ----------
 export async function verifyAttestationJws(jwsCompact: string) {
-  // 1) Signature + header (kid, alg)
+  // Remote (CDN) first; set TRUST_MODE=local to force local files
+  const { jwks, statuslist, policy } = await fetchTrustArtifacts({ mode: "stable" });
+
+  // 1) Signature + header
   const keyset = createLocalJWKSet({ keys: (jwks.keys as JWK[]) || [] });
   let payload: any, hdr: any;
   try {
@@ -41,17 +25,17 @@ export async function verifyAttestationJws(jwsCompact: string) {
   }
   audit({ stage: "signature", outcome: "ACCEPT" });
 
-  // 2) Minimal shape checks
-  const schemaUri = requireString(payload, ["schema_uri"]);
-  const attId     = requireString(payload, ["id"]);
-  const title     = requireString(payload, ["claim","value","title"]);
-  const serial    = requireString(payload, ["revocation","serial"]);
-  const notBefore = requireString(payload, ["validity","not_before"]);
-  const notAfter  = requireString(payload, ["validity","not_after"]);
-  const assurance = requireString(payload, ["policy","assurance"]);
+  // 2) Minimal shape checks (unchanged)
+  const schemaUri = payload?.schema_uri;
+  const attId     = payload?.id;
+  const title     = payload?.claim?.value?.title;
+  const serial    = payload?.revocation?.serial;
+  const notBefore = payload?.validity?.not_before;
+  const notAfter  = payload?.validity?.not_after;
+  const assurance = payload?.policy?.assurance;
 
-  if (schemaUri !== policySchemaUri) {
-    audit({ stage: "shape", outcome: "REJECT", reason: "schema_uri_mismatch", details: { schemaUri, expected: policySchemaUri } });
+  if (schemaUri !== policy.schema_uri) {
+    audit({ stage: "shape", outcome: "REJECT", reason: "schema_uri_mismatch", details: { schemaUri, expected: policy.schema_uri } });
     return { ok: false, code: "SCHEMA_URI_INVALID" as const };
   }
   if (!attId || !title || !serial || !notBefore || !notAfter || !assurance) {
@@ -72,8 +56,8 @@ export async function verifyAttestationJws(jwsCompact: string) {
   }
   audit({ stage: "liveness", outcome: "ACCEPT" });
 
-  // 4) Revocation (fail-open when not listed)
-  const entry = statuslist.entries?.find((e: any) => e.serial === serial);
+  // 4) Revocation
+  const entry = statuslist.entries?.find((e) => e.serial === serial);
   if (!entry) {
     audit({ stage: "revocation", outcome: "ACCEPT", reason: "unknown_not_listed", details: { serial } });
   } else if (entry.status === "revoked") {
@@ -86,7 +70,8 @@ export async function verifyAttestationJws(jwsCompact: string) {
     audit({ stage: "revocation", outcome: "ACCEPT" });
   }
 
-  // 5) Policy (from trust/policy.json)
+  // 5) Policy
+  const policyAllowed = new Set<string>(policy.allowed_assurance ?? []);
   if (!policyAllowed.has(assurance)) {
     audit({ stage: "policy", outcome: "REJECT", reason: "assurance_invalid", details: { assurance, allowed: [...policyAllowed] } });
     return { ok: false, code: "POLICY_ASSURANCE_INVALID" as const };
