@@ -124,6 +124,7 @@ async function maybeCopy(from: string, to: string) {
     Bucket: SPACES_BUCKET!,
     CopySource: `/${SPACES_BUCKET}/${from}`,
     Key: to,
+    ACL: "public-read",
     MetadataDirective: "REPLACE",
     ContentType: guessContentType(to),
     CacheControl: "public, max-age=60, s-maxage=60",
