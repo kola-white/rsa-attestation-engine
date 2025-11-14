@@ -9,7 +9,7 @@ export async function verifyAttestationJws(jwsCompact: string) {
   // Remote (CDN) first; set TRUST_MODE=local to force local files
   const { jwks, statuslist, policy } = await fetchTrustArtifacts({ mode: "stable" });
 
-  // 1) Signature + header
+  // Signature + header
   const keyset = createLocalJWKSet({ keys: (jwks.keys as JWK[]) || [] });
   let payload: any, hdr: any;
   try {
@@ -25,7 +25,7 @@ export async function verifyAttestationJws(jwsCompact: string) {
   }
   audit({ stage: "signature", outcome: "ACCEPT" });
 
-  // 2) Minimal shape checks (unchanged)
+  // Minimal shape checks (unchanged)
   const schemaUri = payload?.schema_uri;
   const attId     = payload?.id;
   const title     = payload?.claim?.value?.title;
@@ -33,6 +33,8 @@ export async function verifyAttestationJws(jwsCompact: string) {
   const notBefore = payload?.validity?.not_before;
   const notAfter  = payload?.validity?.not_after;
   const assurance = payload?.policy?.assurance;
+  const disclosure = payload?.disclosure;
+  const hash       = payload?.hash;
 
   if (schemaUri !== policy.schema_uri) {
     audit({ stage: "shape", outcome: "REJECT", reason: "schema_uri_mismatch", details: { schemaUri, expected: policy.schema_uri } });
@@ -40,11 +42,38 @@ export async function verifyAttestationJws(jwsCompact: string) {
   }
   if (!attId || !title || !serial || !notBefore || !notAfter || !assurance) {
     audit({ stage: "shape", outcome: "REJECT", reason: "missing_required_field" });
-    return { ok: false, code: "SHAPE_INVALID" as const };
+    return { ok: false, code: "SCHEMA_INVALID" as const };
   }
   audit({ stage: "shape", outcome: "ACCEPT" });
 
-  // 3) Liveness
+  // AP-1: disclosure.mode MUST be "full"
+  const disclosureMode = disclosure?.mode;
+  if (disclosureMode !== "full") {
+    audit({
+      stage: "shape",
+      outcome: "REJECT",
+      reason: "disclosure_mode_invalid",
+      details: { mode: disclosureMode }
+    });
+    return { ok: false, code: "DISCLOSURE_MODE_INVALID" as const };
+  }
+
+  // AP-1: hash.{payload_alg, payload_hash} MUST be present and SHA-256
+  const hashAlg = hash?.payload_alg;
+  const hashVal = hash?.payload_hash;
+  if (hashAlg !== "SHA-256" || typeof hashVal !== "string" || !hashVal.length) {
+    audit({
+      stage: "shape",
+      outcome: "REJECT",
+      reason: "hash_invalid",
+      details: { payload_alg: hashAlg, hasHash: !!hashVal }
+    });
+    return { ok: false, code: "HASH_INVALID" as const };
+  }
+
+  audit({ stage: "shape", outcome: "ACCEPT" });
+
+  // Liveness
   const now = isoNow();
   if (now < notBefore) {
     audit({ stage: "liveness", outcome: "REJECT", reason: "not_yet_valid", details: { now, not_before: notBefore } });
@@ -56,7 +85,7 @@ export async function verifyAttestationJws(jwsCompact: string) {
   }
   audit({ stage: "liveness", outcome: "ACCEPT" });
 
-  // 4) Revocation
+  // Revocation
   const entry = statuslist.entries?.find((e) => e.serial === serial);
   if (!entry) {
     audit({ stage: "revocation", outcome: "ACCEPT", reason: "unknown_not_listed", details: { serial } });
@@ -70,7 +99,7 @@ export async function verifyAttestationJws(jwsCompact: string) {
     audit({ stage: "revocation", outcome: "ACCEPT" });
   }
 
-  // 5) Policy
+  // Policy
   const policyAllowed = new Set<string>(policy.allowed_assurance ?? []);
   if (!policyAllowed.has(assurance)) {
     audit({ stage: "policy", outcome: "REJECT", reason: "assurance_invalid", details: { assurance, allowed: [...policyAllowed] } });
