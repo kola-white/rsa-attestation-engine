@@ -1,0 +1,46 @@
+{
+  "id": "dp1-ULID-01HX1AMBIG",
+  "schema_uri": "schema/disambiguation.result/v1",
+  "version": "1.0.0",
+  "context": {
+    "claim_type": "employment.role",
+    "profile_id": "AP-1/employment.role/v1",
+    "policy_uri": "https://issuer.tld/policies/employment-role",
+    "run_at": "2025-11-14T10:15:00Z"
+  },
+  "candidates": [
+    {
+      "serial": "att-SN-2001",
+      "issuer_id": "did:org:acme-corp",
+      "score": 85,
+      "eligibility": "eligible",
+      "dimensions": {
+        "issuer_confidence": 24,
+        "schema_fidelity": 21,
+        "temporal_alignment": 21,
+        "revocation_freshness": 9,
+        "uniqueness_signals": 10
+      }
+    },
+    {
+      "serial": "att-SN-2002",
+      "issuer_id": "did:org:acme-corp",
+      "score": 85,
+      "eligibility": "eligible",
+      "dimensions": {
+        "issuer_confidence": 24,
+        "schema_fidelity": 21,
+        "temporal_alignment": 21,
+        "revocation_freshness": 9,
+        "uniqueness_signals": 10
+      }
+    }
+  ],
+  "decision": {
+    "code": "AMBIGUOUS_RESULT",
+    "reason": "score_tie_after_tiebreak",
+    "tiebreak_applied": true,
+    "tiebreak_reason": "all_rules_exhausted",
+    "ambiguous_serials": ["att-SN-2001", "att-SN-2002"]
+  }
+}

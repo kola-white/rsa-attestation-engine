@@ -1,0 +1,171 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://issuer.example.com/schema/disambiguation.result.v1.json",
+  "title": "DP-1 Disambiguation Result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this disambiguation run (e.g., ULID or UUID)."
+    },
+    "schema_uri": {
+      "const": "schema/disambiguation.result/v1",
+      "description": "Logical identifier for the DP-1 result schema."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of the disambiguation result format (e.g., 1.0.0)."
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "claim_type": {
+          "const": "employment.role",
+          "description": "Claim type this disambiguation run pertains to."
+        },
+        "profile_id": {
+          "const": "AP-1/employment.role/v1",
+          "description": "Profile identifier for the underlying attestation profile."
+        },
+        "policy_uri": {
+          "type": "string",
+          "description": "Optional policy URI applied during disambiguation."
+        },
+        "run_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when disambiguation was executed."
+        }
+      },
+      "required": ["claim_type", "profile_id"]
+    },
+    "candidates": {
+      "type": "array",
+      "description": "All attestation candidates considered during this disambiguation run (eligible and ineligible).",
+      "items": { "$ref": "#/definitions/Candidate" }
+    },
+    "decision": {
+      "$ref": "#/definitions/Decision",
+      "description": "Final decision and tie-break details."
+    }
+  },
+  "required": ["id", "schema_uri", "version", "context", "candidates", "decision"],
+  "definitions": {
+    "OutcomeCode": {
+      "type": "string",
+      "enum": [
+        "SELECTED",
+        "NO_VALID_ATTESTATIONS",
+        "AMBIGUOUS_RESULT"
+      ]
+    },
+    "Eligibility": {
+      "type": "string",
+      "enum": ["eligible", "ineligible"]
+    },
+    "DimensionScores": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "issuer_confidence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "schema_fidelity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25
+        },
+        "temporal_alignment": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25
+        },
+        "revocation_freshness": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "uniqueness_signals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        }
+      },
+      "required": [
+        "issuer_confidence",
+        "schema_fidelity",
+        "temporal_alignment",
+        "revocation_freshness",
+        "uniqueness_signals"
+      ]
+    },
+    "Candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "serial": {
+          "type": "string",
+          "description": "Revocation serial / attestation identifier."
+        },
+        "issuer_id": {
+          "type": "string",
+          "description": "Issuer identifier (e.g., did:org:...)."
+        },
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Composite DP-1 confidence score."
+        },
+        "eligibility": {
+          "$ref": "#/definitions/Eligibility"
+        },
+        "ineligible_reasons": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "If ineligible, the reasons (e.g., BAD_SIGNATURE, REVOKED)."
+        },
+        "dimensions": {
+          "$ref": "#/definitions/DimensionScores"
+        }
+      },
+      "required": ["serial", "score", "eligibility", "dimensions"]
+    },
+    "Decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/definitions/OutcomeCode"
+        },
+        "selected_serial": {
+          "type": "string",
+          "description": "Serial of the winning attestation when code = SELECTED."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Human-readable explanation of the decision."
+        },
+        "tiebreak_applied": {
+          "type": "boolean",
+          "description": "True if any tie-break rule was applied."
+        },
+        "tiebreak_reason": {
+          "type": "string",
+          "description": "Which tie-break rule resolved the decision (if any)."
+        },
+        "ambiguous_serials": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of candidate serials involved when code = AMBIGUOUS_RESULT."
+        }
+      },
+      "required": ["code", "reason"]
+    }
+  }
+}

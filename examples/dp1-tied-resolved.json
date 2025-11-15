@@ -1,0 +1,46 @@
+{
+  "id": "dp1-ULID-01HX1TIERESOLVED",
+  "schema_uri": "schema/disambiguation.result/v1",
+  "version": "1.0.0",
+  "context": {
+    "claim_type": "employment.role",
+    "profile_id": "AP-1/employment.role/v1",
+    "policy_uri": "https://issuer.tld/policies/employment-role",
+    "run_at": "2025-11-14T10:10:00Z"
+  },
+  "candidates": [
+    {
+      "serial": "att-SN-1001",
+      "issuer_id": "did:org:acme-corp",
+      "score": 82,
+      "eligibility": "eligible",
+      "dimensions": {
+        "issuer_confidence": 24,
+        "schema_fidelity": 20,
+        "temporal_alignment": 20,
+        "revocation_freshness": 9,
+        "uniqueness_signals": 9
+      }
+    },
+    {
+      "serial": "att-SN-1002",
+      "issuer_id": "did:org:acme-subsidiary",
+      "score": 82,
+      "eligibility": "eligible",
+      "dimensions": {
+        "issuer_confidence": 22,
+        "schema_fidelity": 21,
+        "temporal_alignment": 21,
+        "revocation_freshness": 9,
+        "uniqueness_signals": 9
+      }
+    }
+  ],
+  "decision": {
+    "code": "SELECTED",
+    "selected_serial": "att-SN-1001",
+    "reason": "score_tie_resolved_by_trust_path_depth",
+    "tiebreak_applied": true,
+    "tiebreak_reason": "trust_path_depth"
+  }
+}
