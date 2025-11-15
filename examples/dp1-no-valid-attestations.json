@@ -1,0 +1,45 @@
+{
+  "id": "dp1-ULID-01HX1NOVALID",
+  "schema_uri": "schema/disambiguation.result/v1",
+  "version": "1.0.0",
+  "context": {
+    "claim_type": "employment.role",
+    "profile_id": "AP-1/employment.role/v1",
+    "run_at": "2025-11-14T10:05:00Z"
+  },
+  "candidates": [
+    {
+      "serial": "att-SN-0100",
+      "issuer_id": "did:org:acme-corp",
+      "score": 0,
+      "eligibility": "ineligible",
+      "ineligible_reasons": ["BAD_SIGNATURE"],
+      "dimensions": {
+        "issuer_confidence": 0,
+        "schema_fidelity": 0,
+        "temporal_alignment": 0,
+        "revocation_freshness": 0,
+        "uniqueness_signals": 0
+      }
+    },
+    {
+      "serial": "att-SN-0101",
+      "issuer_id": "did:org:acme-corp",
+      "score": 0,
+      "eligibility": "ineligible",
+      "ineligible_reasons": ["REVOKED"],
+      "dimensions": {
+        "issuer_confidence": 0,
+        "schema_fidelity": 0,
+        "temporal_alignment": 0,
+        "revocation_freshness": 0,
+        "uniqueness_signals": 0
+      }
+    }
+  ],
+  "decision": {
+    "code": "NO_VALID_ATTESTATIONS",
+    "reason": "all_candidates_failed_eligibility_filter",
+    "tiebreak_applied": false
+  }
+}

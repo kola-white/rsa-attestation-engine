@@ -602,7 +602,7 @@ type VerificationReceipt = {
 # Roadmap
 
 * Ed25519 / ECDSA support
-* Selective disclosure (SD-JWT / Merkle)
+* Selective disclosure (SD-JWT / Merkle) - out of scope
 * Candidate wallet (“purple badge”)
 * LinkedIn-style trust viewer
 * DP-1 disambiguation scoring
