@@ -85,7 +85,7 @@ Verifier API ◄─fetches───┘  │
 # 📁 Trust Directory (Source of Truth)
 
 All trust artifacts are maintained in-repo under `./trust/`.
-These files are **canonical**, versioned, and form the basis for what is later **published** to your production CDN (DigitalOcean Spaces / S3) under the public paths:
+These files are **canonical**, versioned, and form the basis for what is later **published** to our production CDN (DigitalOcean Spaces / S3) under the public paths:
 
 * `/.well-known/jwks.json`
 * `/statuslist.json`
