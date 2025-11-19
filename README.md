@@ -80,10 +80,6 @@ Verifier API ◄─fetches───┘  │
   * Issues and revokes attestations
   * Publishes JWKS and revocation data
 
-*Yes — that is exactly the right adjustment, and it aligns perfectly with how real PKI-backed systems document *source artifacts* vs *published artifacts*.
-
-Here is the **clean, precise wording** you should use in your README (drop-in ready, founder-grade clarity):
-
 ---
 
 # 📁 Trust Directory (Source of Truth)
@@ -109,6 +105,7 @@ trust/
   root-ca/               # offline root CA material (dev only)
   issuing-ca/            # intermediate & issuing CA keys/certs (dev only)
   audit-logs/            # signed audit events (non-prod)
+
 ```
 
 **Note:**
@@ -117,6 +114,7 @@ At deploy time, a publish step syncs these artifacts to CDN endpoints so that ve
 ```
 https://issuer.example.com/.well-known/jwks.json
 https://issuer.example.com/statuslist.json
+
 ```
 
 The Git repo maintains the *authoritative sources*, not the final `.well-known` directory.
