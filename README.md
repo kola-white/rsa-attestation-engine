@@ -80,12 +80,48 @@ Verifier API ◄─fetches───┘  │
   * Issues and revokes attestations
   * Publishes JWKS and revocation data
 
-* **Trust Directory**
+*Yes — that is exactly the right adjustment, and it aligns perfectly with how real PKI-backed systems document *source artifacts* vs *published artifacts*.
 
-  * `/.well-known/jwks.json`
-  * `statuslist.json`
-  * Policy JSON
-  * Schema JSON
+Here is the **clean, precise wording** you should use in your README (drop-in ready, founder-grade clarity):
+
+---
+
+# 📁 Trust Directory (Source of Truth)
+
+All trust artifacts are maintained in-repo under `./trust/`.
+These files are **canonical**, versioned, and form the basis for what is later **published** to your production CDN (DigitalOcean Spaces / S3) under the public paths:
+
+* `/.well-known/jwks.json`
+* `/statuslist.json`
+* `/policies/...`
+* `/schemas/...`
+
+**Repository structure:**
+
+```
+trust/
+  jwks.json              # canonical issuer keyset (stable)
+  statuslist.json        # canonical revocation list
+  policy.json            # issuer policy metadata
+  policies/              # versioned policy docs
+  specs/                 # spec artifacts (AP-1, RP-1, KP-1, DP-1, etc.)
+  TP-1-Trust-Path-Spec.md
+  root-ca/               # offline root CA material (dev only)
+  issuing-ca/            # intermediate & issuing CA keys/certs (dev only)
+  audit-logs/            # signed audit events (non-prod)
+```
+
+**Note:**
+At deploy time, a publish step syncs these artifacts to CDN endpoints so that verifiers can access:
+
+```
+https://issuer.example.com/.well-known/jwks.json
+https://issuer.example.com/statuslist.json
+```
+
+The Git repo maintains the *authoritative sources*, not the final `.well-known` directory.
+
+---
 
 * **Verifier API**
 
