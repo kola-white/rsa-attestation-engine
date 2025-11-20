@@ -222,3 +222,189 @@ export const isDp1DisambiguationResultV1 = (
   );
 };
 
+// -----------------------------------------------------------------------------
+// VP-1: Verification Policy Layer Types
+// -----------------------------------------------------------------------------
+
+// Risk appetite for a given policy profile.
+export type RiskTier = "LOW" | "MEDIUM" | "HIGH" | "CUSTOM";
+
+// High-level use case; useful in logging / analytics, not strictly required.
+export type VerificationUseCase =
+  | "screening"
+  | "hiring"
+  | "compliance"
+  | "other";
+
+// If you want to be stricter, you can use a union instead of generic string.
+export type AssuranceLevel = "TAL-1" | "TAL-2" | "TAL-3" | "TAL-4";
+
+// How assurance is governed at the policy layer (VP-1).
+// This is where your old `allowed_assurance` really belongs.
+export type AssurancePolicy = {
+  /**
+   * All TAL levels this policy is willing to consider at all.
+   * Typically this is ["TAL-1", "TAL-2", "TAL-3", "TAL-4"].
+   */
+  allowed_levels: AssuranceLevel[];
+
+  /**
+   * Minimum TAL level required for auto-decision under this policy.
+   * Example: "TAL-3" for high-assurance hiring.
+   */
+  min_level?: AssuranceLevel;
+};
+
+// Soft ambiguity controls (score margin between top-2 candidates).
+export type SoftAmbiguityConfig = {
+  /** Whether to use margin-based soft ambiguity at all. */
+  enable: boolean;
+
+  /**
+   * If S1 - S2 <= margin_soft → too close to call (soft ambiguity zone).
+   * Policy must not auto-accept in this zone.
+   */
+  margin_soft: number;
+
+  /**
+   * If S1 - S2 >= margin_hard → decisive zone.
+   * Margin in (margin_soft, margin_hard) → borderline zone.
+   */
+  margin_hard: number;
+
+  /**
+   * Upper bound on number of candidates DP-1/VP-1 consider for ambiguity
+   * margin calculations. Primarily a safety/config knob.
+   */
+  max_candidates_considered: number;
+};
+
+// Score thresholds for ACCEPT / REVIEW under this policy.
+export type ScoringPolicy = {
+  /**
+   * Minimum DP-1 score required to ever auto-ACCEPT under this policy.
+   * Everything below this is at best REVIEW, possibly REJECT.
+   */
+  min_score_accept: number;
+
+  /**
+   * Minimum DP-1 score required to be considered for REVIEW.
+   * Everything below this is REJECT.
+   */
+  min_score_review: number;
+
+  /** Soft ambiguity (margin-based) controls. */
+  soft_ambiguity: SoftAmbiguityConfig;
+};
+
+// Recency and revocation freshness expectations.
+export type RecencyPolicy = {
+  /**
+   * Maximum age of the claim window (now - not_before) in days.
+   * If omitted or null, policy does not constrain on this dimension.
+   */
+  max_claim_age_days?: number | null;
+
+  /**
+   * Maximum age of issued_at in days (when present on the attestation).
+   */
+  max_issued_age_days?: number | null;
+
+  /**
+   * Maximum age of last_seen_at in days (when present).
+   * This is useful if you re-issue refreshed attestations periodically.
+   */
+  max_last_seen_age_days?: number | null;
+
+  /**
+   * Maximum allowed age of revocation check (now - revocation.checked_at)
+   * in seconds. If exceeded, policy treats revocation as stale.
+   */
+  max_revocation_age_seconds: number;
+};
+
+// Coarse-grained trust constraints for issuers and keys.
+export type TrustConstraintsPolicy = {
+  /**
+   * Minimum issuer.trust_path_strength required (0–3).
+   * E.g. 3 for high-assurance hiring.
+   */
+  min_trust_path_strength: number;
+
+  /**
+   * Key lifecycle states allowed under this policy.
+   * For high-assurance hiring, you might restrict to ["active"].
+   */
+  allowed_key_states: Array<"active" | "grace" | "deprecated">;
+};
+
+// Mapping DP-1 non-OK outcomes to VP-1 decisions.
+export type DispositionPolicy = {
+  /** What to do when DP-1 finds no valid candidates. */
+  no_valid_attestations: "REJECT" | "REVIEW";
+
+  /** What to do when DP-1 returns AMBIGUOUS_RESULT (exact tie). */
+  ambiguous_result: "REJECT" | "REVIEW";
+};
+
+// Audit + receipt behavior under this policy.
+export type AuditPolicy = {
+  /** Whether to emit a verification receipt at all. */
+  emit_verification_receipt: boolean;
+
+  /** Whether to include DP-1 score(s) in the receipt. */
+  include_scores: boolean;
+
+  /**
+   * Whether to include a hash / fingerprint of the candidate set
+   * so receipts can be tied to a concrete DP-1 input set.
+   */
+  include_candidate_set_hash: boolean;
+};
+
+// Canonical VP-1 Verification Policy type (POL-1 / VP-1).
+export type VerificationPolicy = {
+  /** Policy identifier, e.g. "vp-1.employment-role.high-hiring". */
+  id: string;
+
+  /** Semantic version, e.g. "1.0.0". */
+  version: string;
+
+  /** Optional human-readable description. */
+  description?: string;
+
+  /** Risk tier for this profile. */
+  risk_tier: RiskTier;
+
+  /**
+   * Scope of this policy.
+   * claim_types mirrors AP-1 claim_type; schema_uri is optional.
+   */
+  applies_to: {
+    claim_types: string[];
+    schema_uri?: string;
+  };
+
+  /**
+   * Assurance extension for TAL-style levels.
+   * This is where your old allowed_assurance lives now.
+   */
+  assurance?: AssurancePolicy;
+
+  /** Score & soft ambiguity knobs. */
+  scoring: ScoringPolicy;
+
+  /** Recency / revocation freshness expectations. */
+  recency: RecencyPolicy;
+
+  /** Issuer + key trust constraints. */
+  trust_constraints: TrustConstraintsPolicy;
+
+  /** Mapping from DP-1 non-OK outcomes to REJECT/REVIEW. */
+  disposition: DispositionPolicy;
+
+  /** Receipt / audit behavior. */
+  audit: AuditPolicy;
+};
+
+
