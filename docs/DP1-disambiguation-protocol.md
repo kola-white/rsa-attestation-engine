@@ -3,7 +3,7 @@
 **Attested Identity — Deterministic Resolution of Human-Claim Attestations**
 
 **Status:** Final (MVP)
-**Editors:** Whitehouse, Coe
+**Editors:** Whitehouse 
 **Depends on:** AP-1 (Attestation Profile), RP-1 (Revocation Profile), KP-1 (Key Profile), TP-1 (Trust Path Specification)
 **Audience:** Verifiers, ATS platforms, Security Engineers
 **Purpose:** Ensure deterministic, unambiguous selection of *one authoritative attestation* in environments where multiple valid candidates may exist.

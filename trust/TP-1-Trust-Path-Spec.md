@@ -3,7 +3,7 @@
 **Attested Identity — Trust Path Definition**
 
 **Status:** Final (MVP)
-**Editors:** Whitehouse, Coe
+**Editors:** Whitehouse 
 **Scope:** Defines the cryptographic trust chain that governs the issuance and verification of human-claim attestations within the Attested Identity system.
 
 ---
