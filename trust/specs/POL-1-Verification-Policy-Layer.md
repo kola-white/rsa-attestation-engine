@@ -3,7 +3,7 @@
 **Attested Identity — Verification Policy Layer for Human-Claim Attestations**
 
 **Status:** Draft (Discover Phase)  
-**Editors:** Whitehouse, Coe  
+**Editors:** Whitehouse   
 **Depends on:**  
 - AP-1 (Attestation Profile)  
 - RP-1 (Revocation Profile)  
