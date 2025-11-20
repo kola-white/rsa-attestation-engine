@@ -206,6 +206,105 @@ Backed by an **X.509 CA hierarchy**:
        5. Evaluate trust chain  
 ```
 
+# Diagram: Attested Identity — Protocol + Policy Stack
+
+```
++------------------------------------------------------------------------------------+
+|                                 Relying Party                                       |
+|                        (ATS / HR System / Verifier Client)                          |
++------------------------------------------------------------------------------------+
+                                         |
+                                         | 1. Submit credential(s) (JWS)
+                                         v
++------------------------------------------------------------------------------------+
+|                         Attestation Verification Pipeline                           |
++------------------------------------------------------------------------------------+
+
+                                      PROTOCOL STACK
+                         (Deterministic, tenant-agnostic, verifiable)
+-----------------------------------------------------------------------------------------
+
+  +-------------------------+
+  |  AP-1: Attestation      |   ① Shape validation
+  |  Profile (schema)       |   - schema_uri match
+  |  e.g. employment.role   |   - required fields
+  +-------------------------+   - allowed assurance (TAL-levels)
+              |
+              v
+  +-------------------------+
+  |  KP-1: Key Profile      |   ② Key + signature validation
+  |  - Key state            |   - key usage
+  |  - Key lifecycle        |   - RSA verify
+  +-------------------------+
+              |
+              v
+  +-------------------------+
+  |  TP-1: Trust Path Spec  |   ③ Trust chain validation
+  |  - root-ca              |   - issuing-ca
+  |  - JWKS                 |   - trust_path_strength 0–3
+  +-------------------------+
+              |
+              v
+  +-------------------------+
+  |  RP-1: Revocation       |   ④ Revocation + liveness
+  |  - statuslist.json      |   - good / revoked / unknown
+  |  - ttl_s freshness      |   - fail-closed on stale
+  +-------------------------+
+              |
+              v
+  +-------------------------+
+  |  DP-1: Disambiguation   |   ⑤ Deterministic candidate selection
+  |  Protocol               |   - eligibility filter
+  |  - scoring (A–E)        |   - rank by composite score
+  |  - tieKey ordering      |   - exact tie → AMBIGUOUS_RESULT
+  +-------------------------+
+              |
+              |  DP-1 Result (full scored set, winner or ambiguity)
+              v
+
+-----------------------------------------------------------------------------------------
+                                      POLICY LAYER
+                       (Configurable, risk-driven, monetizable knobs)
+-----------------------------------------------------------------------------------------
+
+  +-------------------------+
+  |  POL-1 / VP-1:          |    ⑥ Policy-driven final decision
+  |  Verification Policy    |    - scoring thresholds
+  |  Layer                  |    - soft ambiguity (margin)
+  |                        |    - assurance requirements
+  |  Policy JSON (tenant   |    - trust_constraints
+  |  configurable):        |    - recency windows
+  |   - risk_tier          |    - stale revocation rules
+  |   - min_score_accept   |    - REVIEW / REJECT mapping
+  |   - margin_soft/hard   |
+  +-------------------------+
+              |
+              v
+
++------------------------------------------------------------------------------------+
+|                          Final VerificationDecision                                 |
+|-------------------------------------------------------------------------------------|
+| - ACCEPT   → auto-trusted for workflow                                               |
+| - REVIEW   → human-in-the-loop needed                                                |
+| - REJECT   → high-risk or invalid                                                    |
+|                                                                                     |
+| Includes:                                                                            |
+|   - dp1: full DP-1 result (for audit)                                                |
+|   - reason: machine-readable                                                         |
+|   - risk_label: LOW / MEDIUM / HIGH / UNKNOWN                                        |
+|   - policy_id + version                                                              |
++-------------------------------------------------------------------------------------+
+
+                                          |
+                                          |  Results consumed by ATS/HR system
+                                          v
+
++------------------------------------------------------------------------------------+
+|                                 Relying Party                                       |
++------------------------------------------------------------------------------------+
+
+```
+
 ---
 
 # Layered Trust Stack
