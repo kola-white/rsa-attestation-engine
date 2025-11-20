@@ -1,4 +1,52 @@
 {
-  "schema_uri": "schema/employment.role/v1",
-  "allowed_assurance": ["TAL-1", "TAL-2", "TAL-3", "TAL-4"]
+  "id": "vp-1.employment-role.high-hiring",
+  "version": "1.0.0",
+  "description": "High-assurance hiring policy for employment.role attestations. Strict recency, strong trust path, and high TAL level required.",
+
+  "risk_tier": "HIGH",
+
+  "applies_to": {
+    "claim_types": ["employment.role"],
+    "schema_uri": "schema/employment.role/v1"
+  },
+
+  "assurance": {
+    "allowed_levels": ["TAL-1", "TAL-2", "TAL-3", "TAL-4"],
+    "min_level": "TAL-3"
+  },
+
+  "scoring": {
+    "min_score_accept": 85,
+    "min_score_review": 70,
+
+    "soft_ambiguity": {
+      "enable": true,
+      "margin_soft": 5,
+      "margin_hard": 15,
+      "max_candidates_considered": 5
+    }
+  },
+
+  "recency": {
+    "max_claim_age_days": 365,
+    "max_issued_age_days": 365,
+    "max_last_seen_age_days": 90,
+    "max_revocation_age_seconds": 3600
+  },
+
+  "trust_constraints": {
+    "min_trust_path_strength": 3,
+    "allowed_key_states": ["active"]
+  },
+
+  "disposition": {
+    "no_valid_attestations": "REJECT",
+    "ambiguous_result": "REJECT"
+  },
+
+  "audit": {
+    "emit_verification_receipt": true,
+    "include_scores": true,
+    "include_candidate_set_hash": true
+  }
 }
