@@ -1,0 +1,59 @@
+{
+  "$id": "https://attested.example.com/schemas/PH-1-EVT/employment-verification.v1.json",
+  "title": "Employment Verification Token v1",
+  "type": "object",
+  "required": ["id", "issuer", "subject", "employment", "validity", "signature"],
+  "properties": {
+    "id": { "type": "string" },
+
+    "issuer": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id":   { "type": "string" },
+        "name": { "type": "string" }
+      }
+    },
+
+    "subject": {
+      "type": "object",
+      "required": ["full_name"],
+      "properties": {
+        "full_name":  { "type": "string" },
+        "employee_id": { "type": "string" }
+      }
+    },
+
+    "employment": {
+      "type": "object",
+      "required": ["title", "start_date"],
+      "properties": {
+        "title": { "type": "string" },
+        "start_date": { "type": "string", "format": "date" },
+        "end_date":   { "type": ["string", "null"], "format": "date" },
+        "employment_type": {
+          "type": "string",
+          "enum": ["full_time", "part_time", "contractor", "intern", "other"]
+        }
+      }
+    },
+
+    "validity": {
+      "type": "object",
+      "required": ["issued_at"],
+      "properties": {
+        "issued_at": { "type": "string", "format": "date-time" }
+      }
+    },
+
+    "signature": {
+      "type": "object",
+      "required": ["alg", "kid", "sig"],
+      "properties": {
+        "alg": { "type": "string" },
+        "kid": { "type": "string" },
+        "sig": { "type": "string" }
+      }
+    }
+  }
+}
