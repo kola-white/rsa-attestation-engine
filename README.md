@@ -1,34 +1,53 @@
-# ✅ **README.md — Attested Identity (v0.3, MVP)**
+# Attested Identity – PH-1 EVT (v0.1.0-evt)
 
-# Attested Identity – v0.3 (MVP)
+A minimal, production-minded **attestation layer** that allows issuers (employers, institutions) to **sign verifiable employment records**, and allows verifiers (ATS systems, recruiters, HR platforms, background check tools) to **validate** those records via a modern PKI-backed trust fabric.
 
-A minimal, production-minded **attestation layer** that allows issuers (employers, institutions) to **sign verifiable claims** about a person (roles, skills, contributions), and allows verifiers (ATS systems, recruiters, HR platforms) to **validate** those claims via a modern PKI-backed trust fabric.
+Phase 1 focuses on a single wedge:
 
-This is the core of a **resume-optional credential format** designed for the web era.
+> **Employment Verification Tokens (EVT)** – cryptographically signed confirmation that:
+> **“This person worked here, in this role, during this time window, in this capacity.”**
 
-### ✅ Design Principles
+Later phases (attested job descriptions, résumé tokens, student portfolios, admissions) build on the same protocol, but PH-1 EVT is the **current MVP**.
 
-* **Web-native**: JSON, JWS, JWKS, HTTPS primitives
-* **PKI-anchored**: X.509 trust foundations, issuer keys in HSM/KMS
-* **Low friction**: minimal integration requirements for issuers and ATSes
-* **Long-lived**: credentials survive devices, accounts, and job changes
-* **Privacy-aware**: minimal PII, selective disclosure planned
+For a Phase-1 deep-dive, see:
 
-### ✅ Specification Status
-
-* **AP-1 (Attestation Processing)** — complete
-* **DP-1 (Disambiguation Protocol)** — draft (Google Docs)
-* **Canonical JSON Objects** — complete (below)
-
-### ✅ Cryptographic Baseline
-
-* **JWS (RS256)** — human claim signing
-* **JWKS** — issuer public-key distribution
-* **JSON Status List** — revocation (CRL-like, W3C-aligned)
+📄 `docs/pre-wedge-README.md`
 
 ---
 
-# Contents
+## Design Principles
+
+* **Web-native**: JSON, JWS, JWKS, HTTPS primitives
+* **PKI-anchored**: X.509 trust foundations, issuer keys in HSM/KMS
+* **Low friction**: minimal integration for issuers and ATS/HR systems
+* **Long-lived**: credentials survive devices, accounts, and job changes
+* **Privacy-aware**: minimal PII, with future support for selective disclosure
+
+---
+
+## Specification Status (PH-1)
+
+**Core protocol specs (Phase 1 – EVT):**
+
+* **AP-1 (Attestation Processing)** – EVT shape + validation rules
+  `specs/PH-1-EVT/`
+* **KP-1 (Key Profile)** – key lifecycle and usage constraints
+  `specs/PH-1-EVT/`
+* **TP-1 (Trust Path Spec)** – trust chain evaluation
+  `specs/PH-1-EVT/TP-1-Trust-Path-Spec.md`
+* **RP-1 / POL-1 (Revocation & Verification Policy Layer)** – liveness, status list, policies
+  `specs/PH-1-EVT/POL-1-Verification-Policy-Layer.md`, `trust/policies/`
+
+**Cross-cutting / future:**
+
+* **DP-1 (Disambiguation Protocol)** – draft, mainly for PH-3 résumé tokens
+  `specs/DP-1/`
+* **Generic employment.role / skills / outcomes schemas** – parked under
+  `schemas/future/`
+
+---
+
+## Contents
 
 * [Goals](#goals)
 * [Architecture (MVP)](#architecture-mvp)
@@ -48,471 +67,297 @@ This is the core of a **resume-optional credential format** designed for the web
 
 ---
 
-# Goals
+## Goals
 
-* **Issue** signed attestations about employment, skills, or outcomes
-* **Verify** integrity, trust chain, validity window, and revocation
-* **Revoke** via status lists, with fail-closed behavior
-* **Rotate** issuer keys safely, without breaking existing attestations
-* **Audit** issuance/verification/revocation events
-* Keep friction low — **resume-free workflows** supported
+PH-1 EVT has a very constrained goal set:
+
+* **Issue** signed employment verification tokens (EVT) for a subject:
+  employer, role, start/end dates, employment type.
+* **Verify**:
+
+  * signature and trust chain
+  * validity window
+  * revocation state
+* **Revoke** via JSON status lists (fail-closed behavior).
+* **Rotate** issuer keys without breaking existing EVT records.
+* **Audit** issuance / verification / revocation.
+* Keep friction low – so EVT can realistically be piloted in real orgs.
+
+Future phases (résumés, job descriptions, student records) build on top.
 
 ---
 
-# Architecture (MVP)
+## Architecture (MVP)
 
 ```
-Issuer API ──signs──► Attestation JSON
-    │                       │
-    │ publishes keys        ▼
-    ├──► Trust Directory (JWKS, statuslist.json, policies, schemas)
-    │                       │
-Verifier API ◄─fetches───┘  │
-    │                       │
-    └──► VerificationReceipt (VALID / INVALID / REVOKED / EXPIRED)
+Issuer API ──signs──► Employment Verification Token (EVT JSON)
+│                      │
+│ publishes keys       ▼
+├──► Trust Directory (JWKS, statuslist.json, policies, schemas)
+│                      │
+Verifier API ◄─fetches─┘
+│
+└──► VerificationReceipt (VALID / INVALID / REVOKED / EXPIRED)
 ```
 
 ### Components
 
-* **Issuer API**
+**Issuer API**
 
-  * Holds private keys (dev: local; prod: HSM/KMS)
-  * Issues and revokes attestations
-  * Publishes JWKS and revocation data
+* Holds private keys (dev: local; prod: HSM/KMS)
+* Issues and revokes EVT payloads
+* Publishes JWKS and revocation data
+
+**Verifier API**
+
+* Performs signature verification
+* Evaluates trust path and validity
+* Checks revocation via JSON status list
+* Returns a structured **VerificationReceipt**
 
 ---
 
-# 📁 Trust Directory (Source of Truth)
+## Trust Directory (Source of Truth)
 
-All trust artifacts are maintained in-repo under `./trust/`.
-These files are **canonical**, versioned, and form the basis for what is later **published** to our production CDN (DigitalOcean Spaces / S3) under the public paths:
+Trust artifacts live under `./trust/`.
+
+Canonical, versioned, and intended for publishing to CDN endpoints:
 
 * `/.well-known/jwks.json`
 * `/statuslist.json`
 * `/policies/...`
-* `/schemas/...`
 
-**Repository structure:**
+### Repository Structure (simplified)
 
 ```
 trust/
-  jwks.json              # canonical issuer keyset (stable)
-  statuslist.json        # canonical revocation list
-  policy.json            # issuer policy metadata
-  policies/              # versioned policy docs
-  specs/                 # spec artifacts (AP-1, RP-1, KP-1, DP-1, etc.)
-  TP-1-Trust-Path-Spec.md
-  root-ca/               # offline root CA material (dev only)
-  issuing-ca/            # intermediate & issuing CA keys/certs (dev only)
-  audit-logs/            # signed audit events (non-prod)
-
+  jwks.json
+  statuslist.json
+  policy.json
+  policies/
+  root-ca/           # dev only
+  issuing-ca/        # dev only
+  audit-logs/
+  changelog/
 ```
 
-**Note:**
-At deploy time, a publish step syncs these artifacts to CDN endpoints so that verifiers can access:
+> Specs now live under `specs/PH-1-EVT/`, not `trust/specs/`.
+
+Example published endpoints:
 
 ```
 https://issuer.example.com/.well-known/jwks.json
 https://issuer.example.com/statuslist.json
-
 ```
 
-The Git repo maintains the *authoritative sources*, not the final `.well-known` directory.
-
 ---
 
-* **Verifier API**
-
-  * Signature verification
-  * Trust path evaluation
-  * Validity and revocation checking
-  * Outputs a structured **VerificationReceipt**
-
----
-
-# Device vs Human Identity Model
+## Device vs Human Identity Model
 
 Human-fact credentials persist for **years** and must be independent of devices.
-Device identity is used only for **authentication** (e.g., issuer admin actions).
 
-### ✅ Device Identity = Authentication Layer
+### Device Identity = Authentication Layer
 
 “How do I know the admin pressing ‘issue’ actually belongs at the issuer?”
 
-* WebAuthn
-* FIDO2 passkeys
+* WebAuthn / FIDO2 passkeys
 * TPM / Secure Enclave keypairs
 * Optional client X.509 certs
 
 Used for **admin login**, not attestation signing.
 
-### ✅ Issuer Identity = PKI Authority
+### Issuer Identity = PKI Authority
 
 Backed by an **X.509 CA hierarchy**:
 
-* **Root CA** (offline — “vampire in the crypt”)
-* **Intermediate / Issuing CAs** (“vampire lieutenants”)
-* Private keys stored in KMS/HSM in production
+* **Root CA** (offline)
+* **Intermediate / Issuing CAs**
+* Private keys stored in HSM/KMS (prod)
 
-### ✅ Human Claim Identity = Long-Lived Facts
+### Human Claim Identity = Long-Lived Facts
 
-* JWS-signed JSON describing role, skills, outcomes
-* Verified via JWKS, schema, and revocation
-* Bound to subject public key and/or stable identifier
+Phase-1: **employment records**.
+
+* JWS-signed JSON
+* Verified via JWKS, schema, revocation
+* Bound to subject identifiers (subject keybinding later)
 
 ---
 
-# Diagram: Device Identity vs Human Claim Identity
+## Diagram: Device Identity vs Human Claim Identity
 
 ```
-                           ┌───────────────────────────────┐
-                           │         DEVICE IDENTITY       │
-                           │      (Authentication Layer)   │
-                           └───────────────────────────────┘
-                                         │
-                      proves possession ➜│
-                      ▼                  ▼
-    ┌────────────────────────┐   ┌─────────────────┐   ┌──────────────────────────┐
-    │ User Device            │   │ Browser/FIDO2   │   │ Device-bound Keypair     │
-    │ (Laptop/Phone)         │   │ WebAuthn/Passkey│   │ (Secure Enclave/TPM)     │
-    └────────────────────────┘   └─────────────────┘   └──────────────────────────┘
-                              │
-                     ✅ Authenticates admin users
+┌───────────────────────────────┐
+│ DEVICE IDENTITY               │
+│ (Authentication Layer)        │
+└───────────────────────────────┘
+            │ proves possession
+            ▼
+┌────────────────────────┐  ┌─────────────────┐  ┌──────────────────────────┐
+│ User Device            │  │ Browser/FIDO2   │  │ Device-bound Keypair     │
+│ (Laptop/Phone)         │  │ WebAuthn/Passkey│  │ (Secure Enclave / TPM)   │
+└────────────────────────┘  └─────────────────┘  └──────────────────────────┘
+            │
+            ▼ Authenticates admin users
 ──────────────────────────────────────────────────────────────────────────────
-   HUMAN CLAIM IDENTITY (Independent of Device; persists for years)
+HUMAN CLAIM IDENTITY (Independent of Device; persists for years)
 ──────────────────────────────────────────────────────────────────────────────
-                           ┌───────────────────────────────┐
-                           │       ISSUER = AUTHORITY      │
-                           │  (“Vampire in the Crypt”)     │
-                           └───────────────────────────────┘
-                                         │
-                                 Offline Root CA
-                                         │
-                       Intermediate / Issuing CA Keys
-                                         │
+┌───────────────────────────────┐
+│ ISSUER = AUTHORITY            │
+└───────────────────────────────┘
+       │
+Offline Root CA
+       │
+Intermediate / Issuing CA Keys
 ──────────────────────────────────────────────────────────────────────────────
-                     JWS / JWKS ATTESTATION LAYER (Human Facts)
+JWS / JWKS ATTESTATION LAYER (Human Facts)
 ──────────────────────────────────────────────────────────────────────────────
-                   - JSON claims: role, skill, outcomes
-                   - JWS-signed using issuer private key
-                   - Verified with issuer JWKS
+- JSON claims
+- JWS signatures
+- Verified via JWKS
 ──────────────────────────────────────────────────────────────────────────────
-                           VERIFIER (ATS / Recruiters)
+VERIFIER
 ──────────────────────────────────────────────────────────────────────────────
-       1. Fetch JWKS  
-       2. Verify JWS  
-       3. Check validity window  
-       4. Check revocation  
-       5. Evaluate trust chain  
-```
-
-# Diagram: Attested Identity — Protocol + Policy Stack
-
-```
-+------------------------------------------------------------------------------------+
-|                                 Relying Party                                       |
-|                        (ATS / HR System / Verifier Client)                          |
-+------------------------------------------------------------------------------------+
-                                         |
-                                         | 1. Submit credential(s) (JWS)
-                                         v
-+------------------------------------------------------------------------------------+
-|                         Attestation Verification Pipeline                           |
-+------------------------------------------------------------------------------------+
-
-                                      PROTOCOL STACK
-                         (Deterministic, tenant-agnostic, verifiable)
------------------------------------------------------------------------------------------
-
-  +-------------------------+
-  |  AP-1: Attestation      |   ① Shape validation
-  |  Profile (schema)       |   - schema_uri match
-  |  e.g. employment.role   |   - required fields
-  +-------------------------+   - allowed assurance (TAL-levels)
-              |
-              v
-  +-------------------------+
-  |  KP-1: Key Profile      |   ② Key + signature validation
-  |  - Key state            |   - key usage
-  |  - Key lifecycle        |   - RSA verify
-  +-------------------------+
-              |
-              v
-  +-------------------------+
-  |  TP-1: Trust Path Spec  |   ③ Trust chain validation
-  |  - root-ca              |   - issuing-ca
-  |  - JWKS                 |   - trust_path_strength 0–3
-  +-------------------------+
-              |
-              v
-  +-------------------------+
-  |  RP-1: Revocation       |   ④ Revocation + liveness
-  |  - statuslist.json      |   - good / revoked / unknown
-  |  - ttl_s freshness      |   - fail-closed on stale
-  +-------------------------+
-              |
-              v
-  +-------------------------+
-  |  DP-1: Disambiguation   |   ⑤ Deterministic candidate selection
-  |  Protocol               |   - eligibility filter
-  |  - scoring (A–E)        |   - rank by composite score
-  |  - tieKey ordering      |   - exact tie → AMBIGUOUS_RESULT
-  +-------------------------+
-              |
-              |  DP-1 Result (full scored set, winner or ambiguity)
-              v
-
------------------------------------------------------------------------------------------
-                                      POLICY LAYER
-                       (Configurable, risk-driven, monetizable knobs)
------------------------------------------------------------------------------------------
-
-  +-------------------------+
-  |  POL-1 / VP-1:          |    ⑥ Policy-driven final decision
-  |  Verification Policy    |    - scoring thresholds
-  |  Layer                  |    - soft ambiguity (margin)
-  |                        |    - assurance requirements
-  |  Policy JSON (tenant   |    - trust_constraints
-  |  configurable):        |    - recency windows
-  |   - risk_tier          |    - stale revocation rules
-  |   - min_score_accept   |    - REVIEW / REJECT mapping
-  |   - margin_soft/hard   |
-  +-------------------------+
-              |
-              v
-
-+------------------------------------------------------------------------------------+
-|                          Final VerificationDecision                                 |
-|-------------------------------------------------------------------------------------|
-| - ACCEPT   → auto-trusted for workflow                                               |
-| - REVIEW   → human-in-the-loop needed                                                |
-| - REJECT   → high-risk or invalid                                                    |
-|                                                                                     |
-| Includes:                                                                            |
-|   - dp1: full DP-1 result (for audit)                                                |
-|   - reason: machine-readable                                                         |
-|   - risk_label: LOW / MEDIUM / HIGH / UNKNOWN                                        |
-|   - policy_id + version                                                              |
-+-------------------------------------------------------------------------------------+
-
-                                          |
-                                          |  Results consumed by ATS/HR system
-                                          v
-
-+------------------------------------------------------------------------------------+
-|                                 Relying Party                                       |
-+------------------------------------------------------------------------------------+
-
+1. Fetch JWKS
+2. Verify JWS
+3. Check validity window
+4. Check revocation
+5. Evaluate trust chain
 ```
 
 ---
 
-# Layered Trust Stack
+## Diagram: Attested Identity — Protocol + Policy Stack
+
+```
++------------------------------------------------------------------------------------+
+| Relying Party (ATS / HR System)                                                    |
++------------------------------------------------------------------------------------+
+       |
+       v
++------------------------------------------------------------------------------------+
+| Attestation Verification Pipeline                                                   |
++------------------------------------------------------------------------------------+
+
+PROTOCOL STACK
+----------------------------------------------------------------------------------------
+AP-1 → KP-1 → TP-1 → RP-1 → DP-1
+----------------------------------------------------------------------------------------
+
+POLICY LAYER
+----------------------------------------------------------------------------------------
+POL-1 / VP-1 → final decision (ACCEPT / REVIEW / REJECT)
+----------------------------------------------------------------------------------------
+```
+
+---
+
+## Layered Trust Stack
 
 ```
 [ Layer 5 — Apps / HR Systems / ATS ]
-    - Candidate wallets
-    - Recruiter dashboards
-    - Resume-optional workflows
-
-[ Layer 4 — JWS Attestations ]
-    - JSON claims
-    - Signature envelopes (JWS)
-    - Selective disclosure (future)
-
-[ Layer 3 — JWKS Trust Directory ]
-    - Public key distribution
-    - Key rotation metadata
-    - Revocation status list (JSON)
-
-[ Layer 2 — Issuer CA Keys (X.509 PKI) ]
-    - Offline root CA (“vampire in crypt”)
-    - Intermediate / issuing CA keys
-    - Encoded in `issuer.ca_chain`
-
-[ Layer 1 — Device Identity ]
-    - Passkeys / WebAuthn
-    - TPM keypairs
-    - Optional client certificates
+[ Layer 4 — JWS Attestations        ]
+[ Layer 3 — JWKS Trust Directory    ]
+[ Layer 2 — Issuer CA Keys (X.509)  ]
+[ Layer 1 — Device Identity         ]
 ```
 
 ---
 
-# Trust Contract Overview
+## Trust Contract Overview
 
 The Attestation Trust Contract governs:
 
-✅ **What issuers may sign** (role, time, skills, outcomes).  
-✅ **Required metadata** (issuer ID, CA chain, key metadata).  
-✅ **Subject binding rules** (pubkey, identifier, or both).  
-✅ **Validity windows** (`issued_at`, `not_before`, `not_after`).  
-✅ **Revocation semantics** (status list entries, reason codes).  
-✅ **Verifier responsibilities** (fail-closed behavior, TTL, clock skew).  
+* **What issuers may sign** (PH-1: employment facts)
+* **Required metadata** (issuer ID, CA chain, key metadata)
+* **Subject binding rules**
+* **Validity windows**
+* **Revocation semantics**
+* **Verifier responsibilities** (fail-closed, TTL, clock skew)
 
-DP-1 (Disambiguation Protocol) builds the tie-break logic for large candidate sets but is **non-MVP**.
+DP-1 matters later (résumé tokens), not PH-1.
 
 ---
 
-# Data Schemas
-
-Schemas live in `./schemas/`:
+## Data Schemas
 
 ```
 schemas/
-  attestation.schema.json
-  verification-receipt.schema.json
-  revocation-event.schema.json
+  common/
+  PH-1-EVT/
+    employment.verification.v1.json
+  PH-2-JD/
+  PH-3-RESUME/
+    disambiguation.result.v1.json
+  PH-4-STUDENT/
+  PH-5-ADMISSIONS/
+  future/
+    employment.role.v1.json
 ```
 
-Each schema is referenced by its `schema_uri`.
-
-Schemas are responsible for validating:
-
-* required fields
-* enumerations
-* timestamp formats
-* nested objects
-* key metadata
-* revocation pointers
+Schemas validate required fields, timestamps, nested objects, key metadata, and revocation hooks.
 
 ---
 
-# Canonical JSON Objects
+## Canonical JSON Objects
 
-✅ These are the **authoritative** JSON structures for all endpoints.
-
-## **1. Attestation (Signed Object)**
+### 1. Employment Verification Token (EVT)
 
 ```jsonc
 {
-  "id": "string",                         // stable attestation ID (UUID/ULID)
-  "schema_uri": "https://.../skill/v1",   // versioned claim schema
-  "version": "1.0.0",
-
-  "issuer": {
-    "id": "did:org:apple",                // issuer identifier (DID/URI)
-    "name": "Apple Inc.",                 // optional display value
-    "ca_chain": ["urn:ca:root:...", "urn:ca:int:..."] // references to trust anchors
+  "id": "evt-ULID-01HXYZ...",
+  "issuer": { "id": "did:org:acme-electric", "name": "Acme Electric, Inc." },
+  "subject": { "full_name": "Jane Doe", "employee_id": "E12345" },
+  "employment": {
+    "title": "Project Manager",
+    "start_date": "2020-01-15",
+    "end_date": "2024-10-31",
+    "employment_type": "full_time"
   },
-
-  "key": {
-    "kid": "apple-key-2025q1",            // key identifier (rotatable)
-    "alg": "RS256"                        // cryptographic algorithm
-  },
-
-  "subject": {
-    "binding": {
-      "type": "pubkey|identifier|both",
-      "pubkey_thumbprint": "BASE64URL...",      // if bound to subject's public key
-      "identifier": "mailto:nick@example.com"   // HR ID, email, DID (PII-minimized)
-    }
-  },
-
-  "claim": {
-    "type": "employment.role",            // claim kind (role, skill.level, outcome.metric)
-    "context": {
-      "org_unit": "Vision Pro",
-      "project": "CV pipeline",
-      "location": "US-CA"
-    },
-    "value": {
-      "title": "Lead Engineer",
-      "skill": "Computer Vision",
-      "level": "L4"
-    }
-  },
-
-  "validity": {
-    "issued_at": "2025-11-06T20:05:00Z",
-    "not_before": "2025-11-06T20:05:00Z",
-    "not_after": "2027-11-06T00:00:00Z"
-  },
-
-  "revocation": {
-    "method": "status-list|endpoint",     // CRL/OCSP-style mechanisms
-    "pointer": "https://issuer.tld/revocations/abcd.json",
-    "serial": "att-3f2c..."
-  },
-
-  "policy": {
-    "policy_uri": "internal/issuer/issuer-v1.md",
-    "assurance": "TAL-3"                  // Trust Attestation Level
-  },
-
-  "disclosure": {
-    "mode": "full|sd-jwt|merkle",
-    "merkle_root": "BASE64URL...",        // only if selective disclosure used
-    "disclosed_fields": [
-      "claim.value.title",
-      "claim.value.skill"
-    ]
-  },
-
-  "hash": {
-    "payload_alg": "SHA-256",
-    "payload_hash": "BASE64URL..."        // hash of signed payload for detached signatures
-  },
-
+  "validity": { "issued_at": "2025-11-06T20:05:00Z" },
   "signature": {
-    "mode": "attached|detached",
-    "sig_alg": "RS256",
-    "sig": "BASE64URL..."                 // JWS-style signature blob
+    "alg": "RS256",
+    "kid": "acme-key-2025q4",
+    "sig": "BASE64URL..."
   }
 }
 ```
 
 ---
 
-## **2. Verification Receipt**
+### 2. Verification Receipt
 
 ```jsonc
 {
   "id": "vr-ULID-01HABC...",
-  "attestation_id": "att-ULID-01HXYZ...",
-  "verifier": {
-    "id": "did:org:acme-ats",
-    "name": "Acme ATS"
-  },
+  "attestation_id": "evt-ULID-01HXYZ...",
+  "verifier": { "id": "did:org:acme-ats", "name": "Acme ATS" },
   "time": "2025-11-06T20:06:11Z",
-
   "signature_check": {
     "valid": true,
     "alg": "RS256",
-    "kid": "apple-key-2025q1"
+    "kid": "acme-key-2025q4"
   },
-
   "chain_check": {
     "trusted": true,
     "path": [
-      "urn:ca:int:apple-issuing-2025",
+      "urn:ca:int:acme-issuing-2025",
       "urn:ca:root:digicert-G3"
     ]
   },
-
   "schema_check": {
     "valid": true,
-    "schema_uri": "https://.../employment.role/v1"
+    "schema_uri": "https://.../PH-1-EVT/employment.verification.v1.json"
   },
-
-  "liveness_check": {
-    "state": "ACTIVE",
-    "now": "2025-11-06T20:06:11Z"
-  },
-
+  "liveness_check": { "state": "ACTIVE", "now": "2025-11-06T20:06:11Z" },
   "revocation_check": {
     "status": "good",
-    "source": "https://apple.com/.../statuslist.json",
+    "source": "https://acme.com/.well-known/statuslist.json",
     "cache_ttl_s": 3600
   },
-
-  "binding_check": {
-    "bound": true,
-    "method": "pubkey+identifier"
-  },
-
+  "binding_check": { "bound": true, "method": "identifier" },
   "result": "VALID",
   "reasons": [],
-
   "audit": {
     "resolver_signature": "BASE64URL...",
     "request_hash": "BASE64URL...",
@@ -523,24 +368,19 @@ Schemas are responsible for validating:
 
 ---
 
-## **3. Revocation Event (Issuer Signed CA)**
+### 3. Revocation Event
 
 ```jsonc
 {
   "id": "rev-ULID-01HDEF...",
-  "attestation_id": "att-ULID-01HXYZ...",
-  "issuer": {
-    "id": "did:org:apple"
-  },
-
-  "reason_code": "key_compromise|cessation|superseded|administrative",
-  "reason_text": "Role misattributed; corrected record issued",
+  "attestation_id": "evt-ULID-01HXYZ...",
+  "issuer": { "id": "did:org:acme-electric" },
+  "reason_code": "administrative",
+  "reason_text": "Record superseded by corrected employment dates",
   "time": "2026-04-03T09:22:00Z",
-
-  "supersedes": "att-ULID-OLD123",        // optional: link to replacement attestation
-
+  "supersedes": "evt-ULID-OLD123",
   "signature": {
-    "kid": "apple-key-2026q2",
+    "kid": "acme-key-2026q2",
     "alg": "RS256",
     "sig": "BASE64URL..."
   }
@@ -549,29 +389,27 @@ Schemas are responsible for validating:
 
 ---
 
-# Services & Endpoints
+## Services & Endpoints
 
 ### Issuer Service
 
-#### **POST `/issue`** → `201 Created`
+#### `POST /issue` → `201 Created`
 
-* Validates schema
-* Binds subject
-* Signs JWS
-* Emits signed audit log
+* Validate payload
+* Bind subject
+* Sign EVT
+* Emit audit log
 
-#### **POST `/revoke`** → `201 Created`
+#### `POST /revoke` → `201 Created`
 
-* Updates `statuslist.json`
-* Reason codes follow the trust contract
-* Emits signed audit log
+* Update status list
+* Store revocation event
+* Emit audit log
 
-#### **POST `/rotate`** → `200 OK`
+#### `POST /rotate` → `200 OK`
 
-* Publishes new JWKS
-* Supports grace period
-
-Issuer authentication must use **device identity** (WebAuthn/passkeys/client certs).
+* Publish JWKS update
+* Support key grace period
 
 ---
 
@@ -581,39 +419,27 @@ Issuer authentication must use **device identity** (WebAuthn/passkeys/client cer
 GET /.well-known/jwks.json
 GET /statuslist.json
 GET /policies/:name
-GET /schemas/:name
+GET /schemas/:phase/:name
 ```
-
-All are cache-friendly with strong ETags.
 
 ---
 
 ### Verifier API
 
-#### **POST `/verify`** → `200 OK`
+#### `POST /verify` → `200 OK`
 
-Returns a structured **VerificationReceipt**:
+Returns a **VerificationReceipt** including:
 
 * signature validity
-* trust chain validity
+* chain validation
 * revocation state
-* schema conformance
+* schema conformity
 * binding check
-* audit signature
+* policy ruling
 
 ---
 
-# Quickstart (dev)
-
-### Prerequisites
-
-* Node 18+
-* `curl`
-* `jq`
-* Bash / zsh
-* `./scripts/dev-keygen.sh` (included)
-
----
+## Quickstart (dev)
 
 ### 1. Generate dev keypair + JWKS
 
@@ -621,31 +447,37 @@ Returns a structured **VerificationReceipt**:
 ./scripts/dev-keygen.sh
 ```
 
-Produces:
+Outputs:
 
 ```
-public/.well-known/jwks.json
+trust/jwks.json
+trust/root-ca/
+trust/issuing-ca/
 ```
 
 ---
 
-### 2. Seed Trust Directory
+### 2. Seed a local dev trust directory
 
 ```bash
 mkdir -p public/{.well-known,schemas,policies}
-cp schemas/*.json public/schemas/
-echo "[]" > public/statuslist.json
+
+cp trust/jwks.json public/.well-known/jwks.json
+cp trust/statuslist.json public/statuslist.json
+cp schemas/common/*.json public/schemas/
+cp schemas/PH-1-EVT/*.json public/schemas/
+cp trust/policies/*.md public/policies/
 ```
 
 ---
 
-### 3. Issue an attestation
+### 3. Issue an EVT
 
 ```bash
 curl -s -X POST http://localhost:8080/issue \
   -H "Content-Type: application/json" \
-  -d @examples/attestation_input.json \
-  > out/attestation.json
+  -d @examples/PH-1-EVT/employment.verification.input.json \
+  > out/employment.verification.json
 ```
 
 ---
@@ -655,7 +487,7 @@ curl -s -X POST http://localhost:8080/issue \
 ```bash
 curl -s -X POST http://localhost:8081/verify \
   -H "Content-Type: application/json" \
-  -d @out/attestation.json | jq
+  -d @out/employment.verification.json | jq
 ```
 
 ---
@@ -665,35 +497,34 @@ curl -s -X POST http://localhost:8081/verify \
 ```bash
 curl -s -X POST http://localhost:8080/revoke \
   -H "Content-Type: application/json" \
-  -d '{"attestation_id":"att-ULID-01HXYZ...","reason_code":"administrative"}'
+  -d '{"attestation_id":"evt-ULID-01HXYZ...","reason_code":"administrative"}'
 ```
 
 ---
 
-# Golden Rules (Test Cases)
+## Golden Rules (Test Cases)
 
-### ✅ Valid
+### VALID
 
 * Signature OK
-* Now ∈ `[not_before, not_after]`
-* Revocation state = good
+* Validity window OK
+* Revocation = `good`
 
-### ✅ Expired
+### EXPIRED
 
-* Now > `not_after`
+* Past `not_after`
 
-### ✅ Revoked
+### REVOKED
 
-* `statuslist.json` marks serial as revoked
+* Status list marks revoked
 
-### ✅ Signature Invalid
+### SIGNATURE INVALID
 
-* Wrong key, wrong algorithm, or tampering
-* MUST result in `INVALID`
+* Must return `INVALID`
 
 ---
 
-# Verifier SDK Shape (TypeScript)
+## Verifier SDK Shape (TypeScript)
 
 ```ts
 type VerificationReceipt = {
@@ -701,56 +532,62 @@ type VerificationReceipt = {
   attestation_id: string;
   verifier: { id: string; name?: string };
   time: string;
-
   signature_check: { valid: boolean; alg: string; kid: string };
   chain_check: { trusted: boolean; path: string[]; depth?: number; root?: string };
   schema_check: { valid: boolean; schema_uri: string };
   liveness_check: { state: "ACTIVE" | "EXPIRED" | "NOT_YET_VALID"; now: string };
   revocation_check: { status: "good" | "revoked" | "unknown"; cache_ttl_s: number };
   binding_check: { bound: boolean; method: string };
-
   result: "VALID" | "INVALID";
   reasons: string[];
-
   audit: {
     resolver_signature: string;
     request_hash: string;
     policy_version: string;
   };
-}
+};
 ```
 
 ---
 
-# Security Notes
+## Security Notes
 
-* **Fail closed** on expired revocation TTL
-* Enforce **clock-skew ±5 minutes**
+* **Fail closed** on stale status list TTL
+* Enforce **±5 min clock skew**
 * Private keys MUST be in **HSM/KMS** in production
-* Audit logs must include **request body hash**
-* Issuers must rotate keys **at least annually**
+* Audit logs must include **request hash**
+* Issuers must rotate keys **annually**
 
 ---
 
-# Roadmap
+## Roadmap (Phases)
 
-* Ed25519 / ECDSA support
-* Selective disclosure (SD-JWT / Merkle) - out of scope
-* Candidate wallet (“purple badge”)
-* LinkedIn-style trust viewer
-* DP-1 disambiguation scoring
-* ATS plugins (Greenhouse, Lever, Workday)
-* Governance console for issuers
+* **PH-1 – EVT (current)**
+  Employment Verification Tokens (MVP)
+
+* **PH-2 – JD**
+  Attested job descriptions
+
+* **PH-3 – RESUME**
+  Verified résumé tokens + DP-1 disambiguation
+
+* **PH-4 – STUDENT**
+  Student e-portfolios
+
+* **PH-5 – ADMISSIONS**
+  Attested records for admissions workflows
 
 ---
 
-# License
+## License
 
 MIT
 
 ---
 
-# Maintainers
+## Maintainers
 
-* **Spec/architecture:** Whitehouse
-* **PKI review:** 
+* **Spec / architecture:** Whitehouse
+* **PKI review:** *(TBD)*
+
+---
