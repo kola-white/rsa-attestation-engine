@@ -10,19 +10,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+
       - run: npm ci
+
       - run: npm run test:ci
 
   publish:
     needs: test
     runs-on: ubuntu-latest
+    env:
+      SPACES_KEY: ${{ secrets.SPACES_KEY }}
+      SPACES_SECRET: ${{ secrets.SPACES_SECRET }}
+      SPACES_BUCKET: ${{ vars.SPACES_BUCKET }}
+      SPACES_REGION: ${{ vars.SPACES_REGION }}
+      SPACES_ENDPOINT: ${{ vars.SPACES_ENDPOINT }}
+      CDN_BASE_URL: ${{ vars.CDN_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+
       - run: npm ci
+
       - run: npx tsx scripts/publish.ts
