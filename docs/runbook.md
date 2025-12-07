@@ -190,7 +190,7 @@ After merge:
 4. Purge CDN (if PAT available):
 
    ```bash
-   doctl compute cdn flush <ID> --files "/trust/jwks.json" --files "/status/statuslist.json"
+   doctl compute cdn flush <ID> --files "/trust/jwks.json" --files "/trust/statuslist.json"
    ```
 
 ### Verify:

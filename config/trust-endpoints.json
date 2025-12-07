@@ -1,6 +1,6 @@
 {
   "base_url": "https://hapis.sfo3.cdn.digitaloceanspaces.com",
   "jwks_path": "/trust/jwks.json",
-  "status_path": "/status/statuslist.json",
+  "status_path": "/trust/statuslist.json",
   "latest_pointer": "/attestation-engine/latest.json"
 }

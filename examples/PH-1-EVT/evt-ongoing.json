@@ -1,0 +1,25 @@
+{
+  "id": "evt-ULID-01J0A7F8SD4VCH1T7M5CMH7N2A",
+  "issuer": {
+    "id": "did:org:acme-corp",
+    "name": "Acme Corporation"
+  },
+  "subject": {
+    "full_name": "Michael Smith",
+    "employee_id": "EMP-55901"
+  },
+  "employment": {
+    "title": "Site Reliability Engineer",
+    "start_date": "2022-03-01",
+    "end_date": null,
+    "employment_type": "full_time"
+  },
+  "validity": {
+    "issued_at": "2025-02-10T08:00:00Z"
+  },
+  "signature": {
+    "alg": "RS256",
+    "kid": "issuer-dev-key-2",
+    "sig": "BASE64URL_SIGNATURE_PLACEHOLDER"
+  }
+}

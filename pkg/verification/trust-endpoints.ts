@@ -16,7 +16,7 @@ function loadTrustConfig(): Required<TrustCfg> {
 
   const base_url = (env.TRUST_BASE_URL || fileCfg.base_url || "").trim();
   const jwks_path = (env.TRUST_JWKS_PATH || fileCfg.jwks_path || "/trust/jwks.json").trim();
-  const status_path = (env.TRUST_STATUS_PATH || fileCfg.status_path || "/status/statuslist.json").trim();
+  const status_path = (env.TRUST_STATUS_PATH || fileCfg.status_path || "/trust/statuslist.json").trim();
   const latest_pointer = (env.TRUST_LATEST_PATH || fileCfg.latest_pointer || "/attestation-engine/latest.json").trim();
 
   return { base_url, jwks_path, status_path, latest_pointer };
@@ -47,7 +47,7 @@ type TrustUrls =
 
 /**
  * Resolve URLs for trust artifacts.
- * mode = "stable" → CDN /trust/jwks.json, /status/statuslist.json
+ * mode = "stable" → CDN /trust/jwks.json, /trust/statuslist.json
  * mode = "pinned" → reads /attestation-engine/latest.json, prefixes versioned paths
  */
 export async function getTrustUrls(mode: "stable" | "pinned" = "stable"): Promise<TrustUrls> {
