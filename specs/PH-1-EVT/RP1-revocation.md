@@ -1,31 +1,32 @@
 # **RP-1: Revocation Profile — Status-List Method (v1.0.0)**
 
-**Scope:** Human *employment-role* claims (AP-1.employment-role)
-**Status:** Final (MVP)
+**Scope:** Human employment verification claims (**PH-1 EVT / `employment.verification.v1`**)
+**Status:** Final (PH-1 EVT)
 **Audience:** Issuers, Verifiers, Security Engineers
-**Depends on:** AP-1 (Attestation Profile), KP-1 (Key Profile)
-**Version:** 1.0.0  
+**Depends on:** PH-1-EVT (Employment Verification Token), KP-1 (Key Profile), Deployment Guide
+**Version:** 1.0.0
 
 ---
 
 ## **1. Purpose**
 
-RP-1 defines the **canonical revocation mechanism** for attestations issued under **AP-1.employment-role** using the **status-list** method.
+RP-1 defines the **canonical revocation mechanism** for attestations issued under **PH-1 EVT** using the **status-list** method.
+
 This profile standardizes:
 
 * The **status-list document format** (`trust/statuslist.json`)
 * The **revocation event** object (issuer audit logs)
-* The **verification algorithm** used to determine if a claim is revoked
+* The **verification algorithm** used to determine if an EVT is revoked
 * The **allowed revocation statuses**
 * Error semantics and canonical verifier return codes
 
-This profile ensures revocation is predictable, minimal, privacy-preserving, and compatible with streaming verification environments.
+The goal is revocation that is predictable, minimal, privacy-preserving, and compatible with high-throughput verification pipelines.
 
 ---
 
 ## **2. Applicability**
 
-An attestation conforms to RP-1 when its `revocation` stanza contains:
+An EVT attestation conforms to RP-1 when its `revocation` stanza contains:
 
 ```jsonc
 "revocation": {
@@ -36,10 +37,14 @@ An attestation conforms to RP-1 when its `revocation` stanza contains:
 ```
 
 * `method` MUST be `"status-list"`
-* `pointer` MUST reference a valid RP-1 status list
+* `pointer` MUST identify a valid RP-1 status list
 * `serial` MUST uniquely identify the attestation within that list
 
-The **golden revoked attestation** example adheres to this pattern.
+> **Note:**
+> In production, `pointer` will typically be a full HTTPS URL (e.g. CDN path).
+> The literal `"trust/statuslist.json"` value is a **dev / repo-local** convention for golden vectors.
+
+The **golden revoked EVT** example adheres to this pattern.
 
 ---
 
@@ -47,9 +52,11 @@ The **golden revoked attestation** example adheres to this pattern.
 
 The canonical status list is a JSON document located at:
 
-```
+```text
 trust/statuslist.json
 ```
+
+(Repo-local canonical; published via Digital Ocean CDN for verifiers.)
 
 ### **3.1 Structure**
 
@@ -82,7 +89,7 @@ trust/statuslist.json
 | `issuer`       | MUST match `attestation.issuer.id` | Prevents cross-issuer poisoning      |
 | `generated_at` | MUST be valid UTC timestamp        | Used for caching heuristics          |
 | `ttl_s`        | SHOULD be honored by verifiers     | Soft guidance, not strict            |
-| `entries`      | MAY be empty                       | Each entry maps a serial → status    |
+| `entries`      | MAY be empty                       | Each entry maps serial → status      |
 
 ### **3.3 Entry Object**
 
@@ -100,8 +107,11 @@ RP-1 **ONLY** allows:
 * `"good"`
 * `"revoked"`
 
-Any other value MUST cause the verifier to reject with
-`code: "REVOCATION_STATUS_INVALID"`.
+Any other value MUST cause the verifier to reject with:
+
+```text
+code: "REVOCATION_STATUS_INVALID"
+```
 
 ---
 
@@ -126,31 +136,31 @@ Issuers SHOULD record revocation events using the following structure:
 }
 ```
 
-**Revocation events are NOT required for verification.**
-They serve operational, compliance, and audit purposes.
+Revocation events are **not** required for online revocation checks.
+They exist for operational, compliance, and audit purposes.
 
 ---
 
 ## **5. Verification Algorithm (Normative)**
 
-The following steps MUST be applied in order.
-
 ### **5.1 Precondition**
 
-Attestation signature MUST already be verified under KP-1.
-Revocation checks do NOT bypass signature requirements.
+The EVT’s signature MUST already be verified according to **KP-1** (and the PH-1 EVT schema).
+Revocation checks do **not** bypass signature requirements.
 
 ---
 
 ### **5.2 Algorithm**
 
-| Step                   | Logic                                                   |
-| ---------------------- | ------------------------------------------------------- |
-| **1. Check method**    | Reject if method ≠ `"status-list"`                      |
-| **2. Resolve pointer** | Fetch `pointer` (e.g., `trust/statuslist.json`)         |
-| **3. Validate list**   | Reject if: parse failure, issuer mismatch, or malformed |
-| **4. Find entry**      | `entry = entries.find(e => e.serial === serial)`        |
-| **5. Evaluate status** | Apply below rules                                       |
+Verifiers MUST follow these steps in order:
+
+| Step                   | Logic                                                             |
+| ---------------------- | ----------------------------------------------------------------- |
+| **1. Check method**    | Reject if `revocation.method !== "status-list"`                   |
+| **2. Resolve pointer** | Fetch `revocation.pointer` (e.g., CDN or `trust/statuslist.json`) |
+| **3. Validate list**   | Reject if parse failure, issuer mismatch, or malformed            |
+| **4. Find entry**      | `entry = entries.find(e => e.serial === serial)`                  |
+| **5. Evaluate status** | Apply rules in §5.3                                               |
 
 ---
 
@@ -158,20 +168,19 @@ Revocation checks do NOT bypass signature requirements.
 
 #### **Case A — Entry not found**
 
-```
+```text
 outcome: ACCEPT
 reason: unknown_not_listed
 ```
 
 Result: **Not revoked**
-
-This avoids punitive interpretation of missing data.
+Missing data is treated as “no revocation information,” not as implicit revocation.
 
 ---
 
-#### **Case B — Entry has status = "revoked"**
+#### **Case B — Entry has `status = "revoked"`**
 
-```
+```text
 outcome: REJECT
 reason: revoked
 return code: REVOKED
@@ -183,21 +192,20 @@ Result: **Revoked**
 
 #### **Case C — Entry has invalid status value**
 
-```
+```text
 outcome: REJECT
 reason: invalid_status_value
 return code: REVOCATION_STATUS_INVALID
 ```
 
-Result: **Verifier MUST reject**
-
-This prevents issuers from unintentionally introducing unrecognized states.
+Result: Verifier **MUST** reject.
+This prevents issuers from accidentally introducing non-standard states.
 
 ---
 
-#### **Case D — Entry has status = "good"**
+#### **Case D — Entry has `status = "good"`**
 
-```
+```text
 outcome: ACCEPT
 reason: good
 ```
@@ -210,18 +218,18 @@ Result: **Not revoked**
 
 Verifiers SHOULD emit:
 
-```
+```text
 REVOCATION_SOURCE_UNAVAILABLE
 ```
 
-When:
+when:
 
 * status list cannot be fetched
-* invalid JSON
-* issuer mismatch
+* JSON is invalid
+* issuer mismatch occurs
 * structural validation fails
 
-This distinguishes operational errors from actual revocation.
+This distinguishes **operational errors** from actual revocation states.
 
 ---
 
@@ -231,13 +239,13 @@ Issuers implementing RP-1 MUST:
 
 ### **6.1 Assign a unique `serial`**
 
-* MUST be unique per attestation
-* MUST be opaque (ULID, UUID, random)
-* MUST not encode PII
+* MUST be unique per EVT attestation
+* MUST be opaque (ULID/UUID/random)
+* MUST NOT encode PII
 
 ### **6.2 Maintain the canonical status list**
 
-* MUST be authoritative for all RP-1 attestations
+* MUST be authoritative for all RP-1 EVTs
 * MUST update entries atomically and predictably
 * MUST avoid PII in list entries
 
@@ -245,16 +253,16 @@ Issuers implementing RP-1 MUST:
 
 * Append-only
 * Signed under KP-1
-* Internal use only
+* Internal / non-public
 
 ### **6.4 Keep status vocabulary strict**
 
 Only `"good"` and `"revoked"` are permitted.
 
-### **6.5 Respect AP-1 and KP-1 invariants**
+### **6.5 Respect PH-1 EVT and KP-1 invariants**
 
-* Revocation does not replace signature failure
-* Signature failure does not imply revocation
+* Revocation does **not** replace signature validation.
+* Signature failure does **not** imply revocation.
 
 ---
 
@@ -264,11 +272,12 @@ Verifiers claiming RP-1 conformance MUST:
 
 * Implement all logic in §5
 * Preserve audit logs (`stage: "revocation"`)
-* Honor `ttl_s` when caching
-* Treat “not listed” as “not revoked”
+* Honor `ttl_s` when caching status lists
+* Treat “not listed” as **not revoked**
 * Enforce issuer match
 * Enforce vocabulary constraints
-* Map results to the canonical result codes:
+
+They MUST map results to the canonical **RP-1 result codes**:
 
 ### **RP-1 Result Codes**
 
@@ -283,45 +292,52 @@ Verifiers claiming RP-1 conformance MUST:
 
 ## **8. Privacy Considerations**
 
-Because RP-1 governs human-centric employment claims:
+Because RP-1 governs human-centric **employment verification**:
 
-* Status lists MUST NOT contain PII
-* `reason_text` MUST NOT appear publicly
-* Revocation events SHOULD be stored privately
-* Serials MUST NOT be reversible to employee identity
-* “Not listed” MUST NOT be treated as suspicious
+* Status lists MUST NOT contain PII.
+* `reason_text` MUST NOT be published in public status lists.
+* Revocation events SHOULD be stored privately.
+* `serial` MUST NOT be reversible to an individual’s identity.
+* “Not listed” MUST NOT be treated as suspicious or negative by itself.
 
-RP-1 focuses on **minimizing privacy exposure while preserving security guarantees**.
+RP-1 prioritizes **privacy-preserving revocation** while retaining strong security guarantees.
 
 ---
 
 ## **9. Security Considerations**
 
-* Status list MUST be integrity-protected (served over HTTPS, content hashed if mirrored)
-* Issuers MUST ensure availability and freshness
-* Verifiers SHOULD revalidate lists when `ttl_s` expires
-* Revocation MUST NOT substitute for signature verification
-* Key compromise MUST trigger revocation events and KP-1 rotation
+* Status list MUST be integrity-protected (served over HTTPS; optionally content-hashed if mirrored).
+* Issuers MUST ensure availability and freshness of published status lists.
+* Verifiers SHOULD re-fetch status lists when `ttl_s` expires.
+* Revocation MUST NOT substitute for signature verification.
+* Key compromise MUST trigger:
+
+  * KP-1-driven key rotation, and
+  * appropriate RP-1 revocation entries.
 
 ---
 
 ## **10. Compatibility & Extensibility**
 
-Future profiles (RP-2, RP-3) MAY add:
+Future revocation profiles (e.g., **RP-2**, **RP-3**) MAY add:
 
-* “stapled revocation”
-* inclusion proofs (Merkleized lists)
-* authenticated status-list endpoints
-* issuer-signed delta updates
+* Stapled revocation
+* Merkleized / compressed status lists
+* Authenticated status-list endpoints
+* Signed delta updates
 
-Breaking changes MUST increment both `version` field and document version.
+Breaking changes MUST bump both the `version` field in the JSON and the document version.
 
 ---
 
 ## **11. Summary**
 
-RP-1 establishes the **minimal interoperable revocation mechanism** for AP-1 employment-role attestations using a shared status list. It is intentionally simple, privacy-preserving, and compatible with high-performance verification systems.
+RP-1 establishes the **minimal interoperable revocation mechanism** for **PH-1 EVT** attestations using a shared status list.
 
-This profile, together with AP-1 and KP-1, forms one pillar of the **Operational Trio** referenced in DP-1.
+It is intentionally:
 
----
+* Simple
+* Privacy-preserving
+* Friendly to high-performance, streaming verification
+
+Together with **PH-1-EVT** and **KP-1**, RP-1 forms one leg of the **operational trio** for the Phase 1 Employment Verification Token stack.

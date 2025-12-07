@@ -1,0 +1,21 @@
+{
+  "id": "evt-ULID-01J0A7G9QJ2W5PZ9BV3TKZQNEQ",
+  "issuer": {
+    "id": "did:org:acme-corp"
+  },
+  "subject": {
+    "employee_id": "EMP-88221"
+  },
+  "employment": {
+    "title": 123,
+    "start_date": "not-a-date",
+    "employment_type": "wizard"
+  },
+  "validity": {
+    "issued_at": "INVALID-DATETIME"
+  },
+  "signature": {
+    "alg": "RS256",
+    "sig": "NO_KID_PROVIDED"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "evt-ULID-01J0A7E6FR2VH9C8YQG3N8KZ5G",
+  "issuer": {
+    "id": "did:org:acme-corp",
+    "name": "Acme Corporation"
+  },
+  "subject": {
+    "full_name": "Jane Doe",
+    "employee_id": "EMP-44219"
+  },
+  "employment": {
+    "title": "Senior Software Engineer",
+    "start_date": "2020-06-15",
+    "end_date": "2024-11-30",
+    "employment_type": "full_time"
+  },
+  "validity": {
+    "issued_at": "2025-01-05T10:15:00Z"
+  },
+  "signature": {
+    "alg": "RS256",
+    "kid": "issuer-dev-key-1",
+    "sig": "BASE64URL_SIGNATURE_PLACEHOLDER"
+  }
+}

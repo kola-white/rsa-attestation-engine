@@ -12,7 +12,7 @@ The publish pipeline produces two classes of artifacts:
 ```
 
 /trust/jwks.json
-/status/statuslist.json
+/trust/statuslist.json
 
 ```
 
@@ -24,7 +24,7 @@ The publish pipeline produces two classes of artifacts:
 ```
 
 /attestation-engine/<sha>/trust/jwks.json
-/attestation-engine/<sha>/status/statuslist.json
+/attestation-engine/<sha>/trust/statuslist.json
 /attestation-engine/<sha>/audit/publish-audit.jsonl
 /attestation-engine/latest.json
 

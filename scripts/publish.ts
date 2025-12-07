@@ -40,7 +40,7 @@ const specs: UploadSpec[] = [
   // core trust artifacts
   { src: "trust/jwks.json",          dst: `${prefix}/trust/jwks.json`,          contentType: "application/json", stable: true },
   { src: "trust/policy.json",        dst: `${prefix}/trust/policy.json`,        contentType: "application/json", stable: true },
-  { src: "status/statuslist.json",   dst: `${prefix}/status/statuslist.json`,   contentType: "application/json", stable: true },
+  { src: "status/statuslist.json",   dst: `${prefix}/trust/statuslist.json`,   contentType: "application/json", stable: true },
 
   // vectors & jws (globbed)
   { src: "examples/**/*.json",       dst: `${prefix}/vectors/`,                 contentType: "application/json", isPrefix: true },
