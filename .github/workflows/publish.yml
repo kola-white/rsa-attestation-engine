@@ -27,12 +27,12 @@ jobs:
 
       - name: Publish artifacts to DigitalOcean Spaces
         env:
-          SPACES_KEY:     ${{ secrets.DO_SPACES_KEY }}
-          SPACES_SECRET:  ${{ secrets.DO_SPACES_SECRET }}
-          SPACES_BUCKET:  ${{ vars.DO_SPACE }}  # your Space name as a repo variable
-          SPACES_REGION:  sfo3
-          SPACES_ENDPOINT: https://sfo3.digitaloceanspaces.com
-          CDN_BASE_URL:   https://hapis.sfo3.cdn.digitaloceanspaces.com
+          DO_SPACES_KEY:    ${{ secrets.DO_SPACES_KEY }}
+          DO_SPACES_SECRET: ${{ secrets.DO_SPACES_SECRET }}
+          DO_SPACE:         ${{ vars.DO_SPACE }}  # "hapis"
+          DO_REGION:        ${{ vars.DO_REGION }} # "sfo3"
+          DO_ENDPOINT:      ${{ vars.DO_ENDPOINT }} # "https://sfo3.digitaloceanspaces.com"
+          TRUST_BASE_URL:   https://hapis.sfo3.cdn.digitaloceanspaces.com
         run: npx tsx scripts/publish.ts
 
       - name: Detect DO_PAT presence
