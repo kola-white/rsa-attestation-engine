@@ -5,27 +5,30 @@ import path from "path";
 import { globSync } from "glob";
 
 const {
-  SPACES_KEY,
-  SPACES_SECRET,
-  SPACES_REGION = "sfo3",
-  SPACES_ENDPOINT = "https://sfo3.digitaloceanspaces.com",
-  SPACES_BUCKET,
-  CDN_BASE_URL = "https://hapis.sfo3.cdn.digitaloceanspaces.com",
+  DO_SPACES_KEY,
+  DO_SPACES_SECRET,
+  DO_SPACE,                                     
+  DO_REGION = "sfo3",
+  DO_ENDPOINT = "https://sfo3.digitaloceanspaces.com",
+  TRUST_BASE_URL = "https://hapis.sfo3.cdn.digitaloceanspaces.com",
   GITHUB_SHA,
 } = process.env;
 
-if (!SPACES_BUCKET || !SPACES_KEY || !SPACES_SECRET) {
-  console.error("Missing SPACES_* env vars");
+if (!DO_SPACE || !DO_SPACES_KEY || !DO_SPACES_SECRET) {
+  console.error("Missing DO_SPACE, DO_SPACES_KEY, or DO_SPACES_SECRET");
   process.exit(1);
 }
+
+const effectiveTrustBaseUrl =
+  TRUST_BASE_URL ?? `https://${DO_SPACE}.${DO_REGION}.cdn.digitaloceanspaces.com`;
 
 const sha = GITHUB_SHA || run("git", ["rev-parse", "HEAD"]).trim();
 const prefix = `attestation-engine/${sha}`;
 
 const s3 = new S3Client({
-  region: SPACES_REGION,
-  endpoint: SPACES_ENDPOINT,
-  credentials: { accessKeyId: SPACES_KEY, secretAccessKey: SPACES_SECRET },
+  region: DO_REGION,
+  endpoint: DO_ENDPOINT,
+  credentials: { accessKeyId: DO_SPACES_KEY, secretAccessKey: DO_SPACES_SECRET },
 });
 
 type UploadSpec = {
@@ -104,10 +107,11 @@ async function main() {
     await maybeCopy(u.key, stableKey);
   }
 
-  console.log(`Pinned:  ${CDN_BASE_URL}/${prefix}/`);
-  console.log(`Latest:  ${CDN_BASE_URL}/attestation-engine/latest.json`);
-  console.log(`Stable:  ${CDN_BASE_URL}/trust/jwks.json`);
+    console.log(`Pinned:  ${effectiveTrustBaseUrl}/${prefix}/`);
+  console.log(`Latest:  ${effectiveTrustBaseUrl}/attestation-engine/latest.json`);
+  console.log(`Stable:  ${effectiveTrustBaseUrl}/trust/jwks.json`);
 }
+
 
 async function putObject(src: string, key: string, opts: { immutable?: boolean; contentType?: string }) {
   const body = fs.readFileSync(src);
@@ -121,8 +125,8 @@ async function putObject(src: string, key: string, opts: { immutable?: boolean; 
 
 async function maybeCopy(from: string, to: string) {
   await s3.send(new CopyObjectCommand({
-    Bucket: SPACES_BUCKET!,
-    CopySource: `/${SPACES_BUCKET}/${from}`,
+    Bucket: DO_SPACE!,
+    CopySource: `/${DO_SPACE}/${from}`,
     Key: to,
     ACL: "public-read",
     MetadataDirective: "REPLACE",
@@ -134,7 +138,7 @@ async function maybeCopy(from: string, to: string) {
 
 async function putRaw(key: string, body: Buffer | string, opts: { contentType?: string; cacheControl?: string }) {
   await s3.send(new PutObjectCommand({
-    Bucket: SPACES_BUCKET!,
+    Bucket: DO_SPACE!,
     Key: key,
     Body: body,
     ACL: "public-read",
