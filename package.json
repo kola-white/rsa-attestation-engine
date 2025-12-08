@@ -5,11 +5,13 @@
   "scripts": {
     "validate:evt:schema": "ajv compile -s schemas/PH-1-EVT/employment.verification.v1.json --spec=draft7 -c ajv-formats",
     "validate:evt:vectors": "ajv validate -s schemas/PH-1-EVT/employment.verification.v1.json -d 'examples/PH-1-EVT/*.json' --spec=draft7 -c ajv-formats",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "validate:evt:vectors:valid": "npm run validate:evt:vectors",
+    "validate:evt:vectors:invalid": "sh -c '! ajv validate -s schemas/PH-1-EVT/employment.verification.v1.json -d \"examples/PH-1-EVT/invalid/*.json\" --spec=draft7 -c ajv-formats'",
+    "test": "npm run test:ci",
     "build": "tsc -p tsconfig.json",
     "sign-file": "node dist/pkg/issuer/sign-file.js",
     "verify": "node dist/pkg/verification/run-verify.js",
-    "test:ci": "npm run validate:evt:schema && npm run validate:evt:vectors"
+    "test:ci": "npm run validate:evt:schema && npm run validate:evt:vectors:valid && npm run validate:evt:vectors:invalid"
   },
   "keywords": [],
   "author": "Nicholas Whitehouse",
