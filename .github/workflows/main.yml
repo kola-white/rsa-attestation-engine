@@ -1,41 +1,17 @@
-name: CI + Publish
+name: CI
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
+  pull_request:
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-
       - run: npm ci
-
       - run: npm run test:ci
-
-  publish:
-    needs: test
-    runs-on: ubuntu-latest
-    env:
-      SPACES_KEY: ${{ secrets.DO_SPACES_KEY }}
-      SPACES_SECRET: ${{ secrets.DO_SPACES_SECRET }}
-      SPACES_BUCKET: ${{ vars.DO_SPACE }}
-      SPACES_REGION: ${{ vars.DO_REGION }}
-      SPACES_ENDPOINT: ${{ vars.DO_ENDPOINT }}
-      CDN_BASE_URL: https://hapis.sfo3.cdn.digitaloceanspaces.com
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - run: npm ci
-
-      - run: npx tsx scripts/publish.ts
