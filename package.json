@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "a human claims and attestations validation service",
   "scripts": {
-    "validate:evt:schema": "ajv-cli compile -s schemas/PH-1-EVT/employment.verification.v1.json --spec=draft7 -c ajv-formats",
-    "validate:evt:vectors": "ajv-cli validate -s schemas/PH-1-EVT/employment.verification.v1.json -d 'examples/PH-1-EVT/*.json' --spec=draft7 -c ajv-formats",
+    "validate:evt:schema": "ajv compile -s schemas/PH-1-EVT/employment.verification.v1.json --spec=draft7 -c ajv-formats",
+    "validate:evt:vectors": "ajv validate -s schemas/PH-1-EVT/employment.verification.v1.json -d 'examples/PH-1-EVT/*.json' --spec=draft7 -c ajv-formats",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc -p tsconfig.json",
     "sign-file": "node dist/pkg/issuer/sign-file.js",
