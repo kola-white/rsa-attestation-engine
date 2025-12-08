@@ -23,12 +23,12 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     env:
-      SPACES_KEY: ${{ secrets.SPACES_KEY }}
-      SPACES_SECRET: ${{ secrets.SPACES_SECRET }}
-      SPACES_BUCKET: ${{ vars.SPACES_BUCKET }}
-      SPACES_REGION: ${{ vars.SPACES_REGION }}
-      SPACES_ENDPOINT: ${{ vars.SPACES_ENDPOINT }}
-      CDN_BASE_URL: ${{ vars.CDN_BASE_URL }}
+      SPACES_KEY: ${{ secrets.DO_SPACES_KEY }}
+      SPACES_SECRET: ${{ secrets.DO_SPACES_SECRET }}
+      SPACES_BUCKET: ${{ vars.DO_SPACE }}
+      SPACES_REGION: ${{ vars.DO_REGION }}
+      SPACES_ENDPOINT: ${{ vars.DO_ENDPOINT }}
+      CDN_BASE_URL: https://hapis.sfo3.cdn.digitaloceanspaces.com
     steps:
       - uses: actions/checkout@v4
 
