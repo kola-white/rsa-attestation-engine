@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Run CI tests before publish
+        run: npm run test:ci
+
       - name: Publish artifacts to DigitalOcean Spaces
         env:
           DO_SPACES_KEY:    ${{ secrets.DO_SPACES_KEY }}
