@@ -1,9 +1,9 @@
-name: CI
+name: CI Artifacts
 
 on:
-  pull_request:
   push:
-    branches-ignore: [ main ]   # optional; keeps main for publish only
+    branches: [ main ]   
+  pull_request:
   workflow_dispatch: {}
 
 jobs:
@@ -19,7 +19,6 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          # You run v20.19.5 locally; pin to 20.x in CI (or 20.19.5 if you prefer exact)
           node-version: '20.19.5'
           cache: 'npm'
 
