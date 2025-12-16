@@ -1,37 +1,34 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, Pressable } from "react-native";
-import { StatusBar } from "expo-status-bar";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { View, Text, ScrollView, Pressable, } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type CaseStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export default function HRReviewScreenSettingsStyle() {
   const insets = useSafeAreaInsets();
   const status: CaseStatus = "PENDING";
-
+  
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right"]}>
-      <StatusBar style="dark" />
-
+    <View className="flex-1 bg-white dark:bg-zinc-900" style={{ paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }}>
       <ScrollView
-        className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingBottom: 16 + 72 + insets.bottom, // room for sticky DecisionBar
+          flexGrow: 1,
+          paddingBottom: 16 + 64 + insets.bottom,
         }}
       >
-        <View className="px-4 pt-4">
+        <View className="px-4 pt-4 flex-1">
           <TopBar />
 
           {/* CASE */}
           <SectionHeader title="Case" />
           <SettingsSection>
             <SettingsRow>
-              <Text className="text-xs text-zinc-500">Case ID</Text>
-              <Text className="text-base font-medium text-zinc-900 mt-0.5">
+              <Text className="text-xs text-zinc-500 dark:text-zinc-400">Case ID</Text>
+              <Text className="text-base font-medium text-zinc-900 dark:text-zinc-100 mt-0.5">
                 EVT-10324
               </Text>
-              <Text className="text-sm text-zinc-500 mt-0.5">
+              <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-0.5">
                 Submitted 2h ago
               </Text>
             </SettingsRow>
@@ -39,11 +36,11 @@ export default function HRReviewScreenSettingsStyle() {
             <Separator />
 
             <SettingsRow>
-              <Text className="text-xs text-zinc-500">Employee</Text>
-              <Text className="text-base text-zinc-900 mt-0.5">Jane Doe</Text>
-              <Text className="text-sm text-zinc-500 mt-0.5">
+              <Text className="text-xs text-zinc-500 dark:text-zinc-400">Employee</Text>
+              <Text className="text-base text-zinc-900 dark:text-zinc-100 mt-0.5">Jane Doe</Text>
+              <Text className="text-sm text-zinc-500 dark:text-zinc-300 mt-0.5">
                 Worker ID ·{" "}
-                <Text className="font-medium text-zinc-700">CEI-48219</Text>
+                <Text className="font-medium text-zinc-700 dark:text-zinc-200">CEI-48219</Text>
               </Text>
             </SettingsRow>
 
@@ -58,8 +55,8 @@ export default function HRReviewScreenSettingsStyle() {
           <SectionHeader title="Claim" />
           <SettingsSection>
             <SettingsRow>
-              <Text className="text-xs text-zinc-500">Employer</Text>
-              <Text className="text-base text-zinc-900 mt-0.5">
+              <Text className="text-xs text-zinc-500 dark:text-zinc-400">Employer</Text>
+              <Text className="text-base text-zinc-900 dark:text-zinc-100 mt-0.5">
                 ACME Electric (AEI)
               </Text>
             </SettingsRow>
@@ -67,11 +64,11 @@ export default function HRReviewScreenSettingsStyle() {
             <Separator />
 
             <SettingsRow>
-              <Text className="text-xs text-zinc-500">Role</Text>
-              <Text className="text-base text-zinc-900 mt-0.5">
+              <Text className="text-xs text-zinc-500 dark:text-zinc-400">Role</Text>
+              <Text className="text-base text-zinc-900 dark:text-zinc-100 mt-0.5">
                 Senior Project Manager
               </Text>
-              <Text className="text-sm text-zinc-500 mt-0.5">
+              <Text className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
                 Aug 2023 — May 2025
               </Text>
             </SettingsRow>
@@ -97,15 +94,16 @@ export default function HRReviewScreenSettingsStyle() {
 
           {/* FOOTNOTE */}
           <Footnote text="Approve only if employer, dates, and (if present) title match HRIS. Reject if anything conflicts (notes step can be added later)." />
+          <View style={{ paddingBottom: insets.bottom }} /> 
+            <DecisionBar
+              bottomInset={insets.bottom}
+              onApprove={() => console.log("Approve")}
+              onReject={() => console.log("Reject")}
+            />
         </View>
       </ScrollView>
 
-      <DecisionBar
-        bottomInset={insets.bottom}
-        onApprove={() => console.log("Approve")}
-        onReject={() => console.log("Reject")}
-      />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -114,11 +112,11 @@ export default function HRReviewScreenSettingsStyle() {
 function TopBar() {
   return (
     <View className="mb-4">
-      <Text className="text-[12px] text-zinc-500">EVT</Text>
-      <Text className="text-2xl font-semibold text-zinc-900 mt-1">
+      <Text className="text-[12px] text-zinc-500 dark:text-zinc-400">EVT</Text>
+      <Text className="text-3xl font-semibold text-zinc-950 dark:text-zinc-50 mt-1">
         HR Review
       </Text>
-      <Text className="text-sm text-zinc-500 mt-1">
+      <Text className="text-sm text-zinc-500 dark:text-zinc-300 mt-1">
         Validate employment details and decide whether to issue an EVT.
       </Text>
     </View>
@@ -129,7 +127,7 @@ function TopBar() {
 
 function SectionHeader({ title }: { title: string }) {
   return (
-    <Text className="text-[12px] text-zinc-500 mt-6 mb-2">
+    <Text className="text-[12px] text-zinc-600 dark:text-zinc-400 mt-6 mb-2">
       {title.toUpperCase()}
     </Text>
   );
@@ -139,7 +137,7 @@ function SectionHeader({ title }: { title: string }) {
 
 function SettingsSection({ children }: { children: React.ReactNode }) {
   return (
-    <View className="rounded-xl bg-white border border-zinc-200 overflow-hidden">
+    <View className="rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 overflow-hidden">
       {children}
     </View>
   );
@@ -150,7 +148,7 @@ function SettingsRow({ children }: { children: React.ReactNode }) {
 }
 
 function Separator() {
-  return <View className="h-px bg-zinc-200 ml-4" />;
+  return <View className="h-px bg-zinc-200 dark:bg-zinc-700 ml-4" />;
 }
 
 /* ===================== Status Row ===================== */
@@ -165,7 +163,7 @@ function StatusRow({ status }: { status: CaseStatus }) {
 
   return (
     <View className="flex-row items-center justify-between">
-      <Text className="text-base text-zinc-900">Status</Text>
+      <Text className="text-base text-zinc-900 dark:text-zinc-100">Status</Text>
       <Text className={`text-base font-medium ${color}`}>{status}</Text>
     </View>
   );
@@ -192,14 +190,14 @@ function DisclosureRow({
         accessibilityRole="button"
         accessibilityLabel={`${open ? "Collapse" : "Expand"} ${title}`}
       >
-        <Text className="text-base text-zinc-900">{title}</Text>
-        <Text className="text-zinc-400 text-base">{open ? "⌃" : "⌄"}</Text>
+        <Text className="text-base text-zinc-900 dark:text-zinc-100">{title}</Text>
+        <Text className="text-zinc-400 text-base dark:text-zinc-400">{open ? "⌃" : "⌄"}</Text>
       </Pressable>
 
       {open ? (
         <View className="px-4 pb-3">
           {body.map((line, i) => (
-            <Text key={i} className="text-sm text-zinc-600 mt-1 leading-5">
+            <Text key={i} className="text-sm text-zinc-600 dark:text-zinc-400 mt-1 leading-5">
               {line}
             </Text>
           ))}
@@ -215,7 +213,7 @@ function DisclosureRow({
 
 function Footnote({ text }: { text: string }) {
   return (
-    <Text className="text-[13px] text-zinc-500 mt-3 leading-5">
+    <Text className="text-[13px] text-zinc-600 dark:text-zinc-400 mt-3 leading-5">
       {text}
     </Text>
   );
@@ -234,8 +232,8 @@ function DecisionBar({
 }) {
   return (
     <View
-      className="absolute left-0 right-0 bottom-0 bg-white border-t border-zinc-200 px-4 pt-3"
-      style={{ paddingBottom: Math.max(bottomInset, 12) }}
+      className="absolute left-0 right-0 bottom-0 bg-white dark:bg-zinc-800 border-t border-zinc-200 dark:border-zinc-700 px-4 pt-3"
+      style={{ paddingBottom: bottomInset + 16 }}
     >
       <View className="flex-row gap-3">
         <Pressable
@@ -246,7 +244,7 @@ function DecisionBar({
         </Pressable>
 
         <Pressable
-          className="flex-1 rounded-xl bg-black py-3 items-center"
+          className="flex-1 rounded-xl bg-zinc-700 py-3 items-center"
           onPress={onApprove}
         >
           <Text className="text-sm font-semibold text-white">Approve</Text>

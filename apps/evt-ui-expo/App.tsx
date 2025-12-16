@@ -1,25 +1,17 @@
-import { Platform } from "react-native";
-if (Platform.OS === "web") {
-  require("./global.css");
-}
+import "./global.css";
+import { View, useColorScheme } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-
-import ErrorBoundary from "./components/ErrorBoundary";
-import HRReviewScreen from "./screens/HRReviewScreen";
+import { StatusBar } from "expo-status-bar";
 import HRReviewScreenSettingsStyle from "./screens/HRReviewScreen.SettingsStyle";
 
-const USE_SETTINGS_STYLE = true;
-
 export default function App() {
+  const colorScheme = useColorScheme() ?? `light`;
   return (
     <SafeAreaProvider>
-      {USE_SETTINGS_STYLE ? (
-        <ErrorBoundary title="NativeWind screen crashed">
-          <HRReviewScreenSettingsStyle />
-        </ErrorBoundary>
-      ) : (
-        <HRReviewScreen />
-      )}
+      <View className={`${colorScheme === "dark" ? "dark" : ""} flex-1`}>
+        <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <HRReviewScreenSettingsStyle />
+      </View>
     </SafeAreaProvider>
   );
 }
