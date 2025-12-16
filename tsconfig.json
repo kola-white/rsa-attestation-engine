@@ -12,6 +12,6 @@
     "resolveJsonModule": true,
     "esModuleInterop": true
   },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["pkg/**/*.ts", "scripts/**/*.ts", "**/*.ts"],
+  "exclude": ["node_modules", "dist","apps/**"]
 }
