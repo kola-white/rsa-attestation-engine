@@ -560,6 +560,31 @@ type VerificationReceipt = {
 
 ---
 
+## Local Postgres (Docker)
+
+* **Note:** 
+* See docker-compose.yml for exact configuration (volumes, healthchecks, ports).
+* All database access must go through a backend API, which uses `DATABASE_URL`.
+
+
+### Start
+```bash
+docker volume create evt_pgdata
+
+docker run --name evt-postgres \
+  --restart unless-stopped \
+  -e POSTGRES_PASSWORD=devpass \
+  -e POSTGRES_DB=evt \
+  -p 5432:5432 \
+  -v evt_pgdata:/var/lib/postgresql/data \
+  --health-cmd="pg_isready -U postgres -d evt" \
+  --health-interval=5s \
+  --health-timeout=3s \
+  --health-retries=20 \
+  -d postgres:16
+
+---
+
 ## Roadmap (Phases)
 
 * **PH-1 – EVT (current)**
