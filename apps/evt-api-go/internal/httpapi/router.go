@@ -20,7 +20,11 @@ func NewRouter(cfg *config.Config) http.Handler {
 		panic(err)
 	}
 
-	s := &Server{cfg: cfg, s3: s3, policy: storage.EvidencePolicy{}}
+	s := &Server{
+	cfg:    cfg,
+	s3:     s3,
+	policy: storage.DefaultEvidencePolicy(),
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {

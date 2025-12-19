@@ -42,17 +42,8 @@ type EvidenceInitFileOut struct {
 }
 
 var (
-	maxFiles     = 3
-	maxSizeBytes = int64(5 * 1024 * 1024) // 5MB
-
 	caseIDRe  = regexp.MustCompile(`^[A-Za-z0-9._-]{1,64}$`)
 	checkIDRe = regexp.MustCompile(`^[A-Za-z0-9._-]{1,96}$`)
-
-	allowedMimes = map[string]bool{
-		"application/pdf": true,
-		"image/jpeg":      true,
-		"image/png":       true,
-	}
 )
 
 func (s *Server) HandleEvidenceInit(w http.ResponseWriter, r *http.Request) {
@@ -76,13 +67,27 @@ func (s *Server) HandleEvidenceInit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3) Validate files array
-	if len(req.Files) == 0 || len(req.Files) > maxFiles {
+	// 3) Enforce URL param consistency
+	pathCaseID := r.PathValue("caseId")
+	pathCheckID := r.PathValue("checkId")
+
+	if pathCaseID != "" && pathCaseID != req.CaseID {
+	writeErr(w, http.StatusBadRequest, "caseId_mismatch")
+	return
+	}
+	if pathCheckID != "" && pathCheckID != req.CheckID {
+	writeErr(w, http.StatusBadRequest, "checkId_mismatch")
+	return
+	}
+
+
+	// 4) Validate files array
+	if len(req.Files) == 0 || len(req.Files) > s.policy.MaxFiles {
 		writeErr(w, http.StatusBadRequest, "invalid_file_count")
 		return
 	}
 
-	// 4) Build a single store for this request (DO Spaces)
+	// 5) Build a single store for this request (DO Spaces)
 	store := s.s3
 
 	if store == nil {
@@ -90,7 +95,7 @@ func (s *Server) HandleEvidenceInit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Set expiration for presigned URLs
+	// 6) Set expiration for presigned URLs
 	expiresIn := 10 * time.Minute
 	expiresAt := time.Now().UTC().Add(expiresIn)
 
@@ -101,7 +106,7 @@ func (s *Server) HandleEvidenceInit(w http.ResponseWriter, r *http.Request) {
 		Uploads: make([]EvidenceInitFileOut, 0, len(req.Files)),
 	}
 
-	// 6) For each requested file: validate → build key → presign PUT
+	// 7) For each requested file: validate → build key → presign PUT
 	for _, f := range req.Files {
 		name := strings.TrimSpace(f.Name)
 		mime := strings.TrimSpace(f.MimeType)
@@ -109,19 +114,19 @@ func (s *Server) HandleEvidenceInit(w http.ResponseWriter, r *http.Request) {
 		if name == "" || len(name) > 200 {
 			writeErr(w, http.StatusBadRequest, "invalid_file_name")
 			return
-		}
-		if !allowedMimes[mime] {
-			writeErr(w, http.StatusBadRequest, "invalid_mimeType")
+			}
+		if f.Size <= 0 || f.Size > s.policy.MaxBytes {
+			writeErr(w, http.StatusBadRequest, "invalid_file_size")
 			return
 		}
-		if f.Size <= 0 || f.Size > maxSizeBytes {
-			writeErr(w, http.StatusBadRequest, "invalid_file_size")
+		if !s.policy.AllowedMimeType[mime] {
+			writeErr(w, http.StatusBadRequest, "invalid_mimeType")
 			return
 		}
 
 		// IMPORTANT: this must match the prefix policy you’ll enforce in /commit
 		uploadID := uuid.NewString()
-		storageKey := storage.BuildStorageKey(req.CaseID, req.CheckID, name,  uploadID)
+		storageKey := storage.BuildStorageKey(req.CaseID, req.CheckID, uploadID, name)
 
 		u, hdrs, err := store.PresignPut(r.Context(), storageKey, mime, expiresIn)
 		if err != nil {
