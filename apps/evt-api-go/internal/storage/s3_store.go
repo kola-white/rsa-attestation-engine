@@ -39,7 +39,7 @@ func (s *S3Store) PresignPut(ctx context.Context, key, mime string, expires time
 	}
 
 	// Client MUST send this header (otherwise signature mismatch).
-	return out.URL, map[string]string{"Content-Type": mime}, nil
+	return out.URL, map[string]string{"Content-Type": mime, "x-amz-acl": "private"}, nil
 }
 
 type HeadMeta struct {

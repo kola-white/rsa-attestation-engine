@@ -6,13 +6,15 @@ import (
 )
 
 type EvidencePolicy struct {
+	MaxFiles		 int
 	MaxBytes        int64
 	AllowedMimeType map[string]bool
 }
 
 func DefaultEvidencePolicy() EvidencePolicy {
 	return EvidencePolicy{
-		MaxBytes: 25 * 1024 * 1024, // 25MB v1 default (change anytime)
+		MaxFiles: 3,
+		MaxBytes: 5 * 1024 * 1024, // 5 MB
 		AllowedMimeType: map[string]bool{
 			"application/pdf": true,
 			"image/jpeg":      true,
@@ -22,7 +24,7 @@ func DefaultEvidencePolicy() EvidencePolicy {
 }
 
 func (p EvidencePolicy) ValidateKey(caseID, checkID, key string) error {
-	prefix := "evidence/v1/" + caseID + "/" + checkID + "/"
+	prefix := "cases/" + caseID + "/checks/" + checkID + "/evidence/"
 	if !strings.HasPrefix(key, prefix) {
 		return fmt.Errorf("storageKey out of scope")
 	}
