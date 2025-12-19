@@ -93,7 +93,10 @@ export default function HRReviewScreenSettingsStyle() {
           </SettingsSection>
 
           {/* FOOTNOTE */}
-          <Footnote text="Approve only if employer, dates, and (if present) title match HRIS. Reject if anything conflicts (notes step can be added later)." />
+          <Footnote text="I consent to Certis processing uploaded evidence solely for the purpose of verifying employment claims. 
+          Certis processes uploaded evidence solely to verify employment claims. 
+          Raw evidence is retained only as long as necessary to complete verification and is then deleted. 
+          Certis issues cryptographic verification tokens that do not expose underlying documents." />
           <View style={{ paddingBottom: insets.bottom }} /> 
             <DecisionBar
               bottomInset={insets.bottom}

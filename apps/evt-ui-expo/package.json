@@ -11,6 +11,8 @@
   "dependencies": {
     "babel-preset-expo": "~54.0.0",
     "expo": "~54.0.29",
+    "expo-document-picker": "~14.0.8",
+    "expo-file-system": "~19.0.21",
     "expo-status-bar": "~3.0.9",
     "nativewind": "^5.0.0-preview.2",
     "react": "19.1.0",
