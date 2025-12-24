@@ -9,9 +9,9 @@
 
 **Covers:**
 - Employer
-- Role / capacity
-- Start / end dates
-- Employment type (full_time / part_time / contractor / etc.)
+- Start / end dates (minimum month/year mm/yyyy)
+- Role / capacity (optional)
+- Employment type (full_time / part_time / contractor / etc.) (optional)
 
 **Explicitly NOT PH-1:**
 - Skills / levels
