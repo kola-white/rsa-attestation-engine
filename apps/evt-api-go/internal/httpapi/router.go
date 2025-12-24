@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"log"
 	"net/http"
 
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/config"
@@ -43,5 +44,6 @@ func NewRouter(cfg *config.Config) http.Handler {
 }
 
 func (s *Server) HandleEvidenceComplete(w http.ResponseWriter, r *http.Request) {
+	  log.Printf("[evidence:complete] called path=%s", r.URL.Path)
 	writeErr(w, http.StatusNotImplemented, "evidence_complete_requires_persistence")
 }
