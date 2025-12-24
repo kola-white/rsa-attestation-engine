@@ -25,6 +25,45 @@ and adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.0-evt] – 2025-12-22
+
+### Added
+- Introduced **Evidence Integrity Representation** as a normative specification section.
+- Standardized evidence integrity hashes to **canonical lowercase hex SHA-256** across:
+  - Evidence upload completion
+  - Evidence listing APIs
+  - Storage and audit records
+- Defined explicit **hex ↔ base64url conversion rules** at trust boundaries.
+- Added a **normative Evidence vs Claims Boundary**, specifying that:
+  - Evidence hashes and metadata are never embedded in issued human-claims tokens.
+- Added **inline validation tables** per endpoint covering:
+  - Evidence upload initialization
+  - Evidence upload completion
+  - Evidence listing
+  - Token issuance
+  - Token revocation
+  - Case deletion lifecycle
+- Clarified lifecycle sequencing for evidence integrity:
+  - Upload → hash → submit → verify → retain → delete.
+
+### Changed
+- Updated all relevant endpoint examples to explicitly reference
+  **Evidence Integrity Representation**.
+- Hardened API contract language to use enforceable, RFC-style normative terms
+  (MUST, MUST NOT, SHOULD).
+- Clarified trust and responsibility boundaries between:
+  - Evidence ingestion and retention
+  - Claim derivation and token issuance
+  - JOSE-encoded objects and application-level APIs.
+
+### Notes
+- This release introduces **no breaking changes**.
+- Existing clients already submitting SHA-256 hashes remain compatible,
+  provided they conform to the canonical lowercase hex format.
+- JOSE encoding requirements remain confined to JOSE objects only.
+
+---
+
 ## [0.3-dev] – 2025-12-05
 
 ### Added

@@ -1,4 +1,7 @@
-# V1 API Contract
+# EVT Evidence & Claims API
+
+API Version: v1
+Spec Version: EVT-API v0.2.0
 
 ## Conventions
 
@@ -9,12 +12,179 @@ All endpoints require an **access token** (minutes–hours lifetime).
 ```
 Authorization: Bearer <access_token>
 ```
+**Token identity**
+- The token MUST include a stable subject identifier (`sub`) representing the authenticated caller.
+- The server treats `sub` as the caller identity for authorization checks and audit logging.
+
+**Authorization rules**
+- On `evidence:init`, the server sets `upload_sessions.uploaded_by = sub`.
+- On `evidence:complete`, the server MUST verify the `uploadSessionId` belongs to the same caller (`upload_sessions.uploaded_by == sub`) and is not expired.
+- All `/v1/cases/...` reads/writes MUST be authorized based on the caller identity and server policy (e.g., membership in the case, reviewer role, or service account).
+
+**Scopes (optional in V1)**
+If tokens include scopes, the API SHOULD enforce them:
+- `cases:write` for creating cases/checks
+- `evidence:write` for init/complete uploads
+- `evidence:read` for listing evidence
+- `tokens:issue` / `tokens:revoke` for token actions
 
 ### IDs
 
 * `caseId`: external case identifier (string, e.g. `EVT-10324`)
 * `checkId`: machine id for the check (string, e.g. `employment.company_and_dates`)
 * `uploadSessionId`, `uploadId`: server-generated IDs (UUID)
+
+---
+
+## Evidence Integrity Representation
+
+### 1. Scope and Purpose
+
+This section defines the **canonical representation**, **validation rules**, and **boundary constraints** for evidence integrity hashes used within the Evidence Upload and Review subsystem.
+
+The intent of this section is to:
+
+* Ensure deterministic integrity verification of uploaded evidence
+* Enable reliable debugging, auditability, and cross-system comparison
+* Preserve strict separation between **evidence material** and **issued human-claims tokens**
+
+This section applies to all fields named `sha256` within the Evidence API surface and storage model.
+
+---
+
+### 2. Canonical Digest Definition
+
+* Evidence integrity is represented by a **SHA-256 digest** computed over the raw bytes of the uploaded evidence object.
+* The **canonical value** of an evidence hash is the **32-byte binary output** of the SHA-256 function.
+* All textual representations defined in this specification MUST decode to exactly these 32 bytes.
+
+Encodings are representations only and MUST NOT alter the underlying digest semantics.
+
+---
+
+### 3. Canonical API Representation (HEX)
+
+#### 3.1 Required Encoding
+
+* Within all Evidence APIs, databases, logs, and audit records, the `sha256` field MUST be represented as **lowercase hexadecimal** encoding of the canonical digest bytes.
+
+#### 3.2 Format Requirements
+
+* Length MUST be exactly **64 characters**
+* Characters MUST match the regular expression:
+
+```
+^[0-9a-f]{64}$
+```
+
+* Uppercase hex characters MUST NOT be accepted or emitted.
+
+#### 3.3 Definition
+
+Let `D` be the canonical 32-byte SHA-256 digest.
+
+```
+sha256 = HEX_LOWER_ENCODE(D)
+```
+
+This representation is referred to as **`sha256Hex`** for descriptive purposes.
+
+---
+
+### 4. JOSE Boundary Representation (Base64URL)
+
+#### 4.1 Applicability
+
+When, and only when, a SHA-256 digest must be represented **inside a JOSE object** (e.g., JWS payloads, protected headers, or related cryptographic structures), it MUST be encoded using **base64url without padding**, as required by JOSE specifications.
+
+This representation is referred to as **`sha256B64u`**.
+
+#### 4.2 Definition
+
+```
+sha256B64u = BASE64URL_NOPAD_ENCODE(D)
+```
+
+* Padding characters (`=`) MUST NOT be included.
+* For a 32-byte digest, the resulting string length MUST be **43 characters**.
+
+#### 4.3 Boundary Rule
+
+Base64url encoding is **confined to the JOSE boundary**.
+It MUST NOT be used as the canonical representation in Evidence APIs, storage, or audit logs.
+
+---
+
+### 5. Conversion Rules (Normative)
+
+#### 5.1 HEX → Base64URL (No Padding)
+
+Input: `sha256` (lowercase hex)
+
+1. Decode hex string into bytes → `D`
+2. Assert `len(D) == 32`
+3. Encode `D` using base64url without padding
+
+#### 5.2 Base64URL (No Padding) → HEX
+
+Input: `sha256B64u`
+
+1. Decode base64url-no-pad string into bytes → `D`
+2. Assert `len(D) == 32`
+3. Encode `D` using lowercase hexadecimal
+
+Conversions MUST be deterministic and lossless.
+
+---
+
+### 6. Validation and Enforcement
+
+Servers MUST enforce the following when receiving evidence integrity data:
+
+* Reject values that do not conform to the required hex format
+* Reject values that fail decoding
+* Reject values whose decoded byte length is not exactly 32 bytes
+* Emit evidence hashes only in the canonical lowercase hex representation
+
+---
+
+### 7. Evidence vs Claims Boundary (Normative Constraint)
+
+**Evidence hashes MUST NOT be embedded directly in issued human-claims tokens.**
+
+Specifically:
+
+* Evidence integrity values (including `sha256`) are confined to:
+
+  * Evidence upload lifecycle
+  * Evidence validation and scanning
+  * Internal audit and compliance records
+* Issued human-claims tokens (e.g., employment verification tokens) MUST contain only:
+
+  * Derived, minimized claims explicitly permitted by policy
+  * Cryptographic metadata required for verification, revocation, and trust chaining
+
+Evidence material—including raw files, file metadata, or evidence hashes—MUST remain **out of scope** for issued claim tokens.
+
+This separation enforces:
+
+* Purpose limitation
+* Data minimization
+* Privacy boundaries
+* Long-term token portability independent of evidence retention policies
+
+---
+
+### 8. Rationale (Non-Normative)
+
+* Hexadecimal encoding is selected for Evidence APIs due to superior human readability, tooling compatibility, and audit ergonomics.
+* Base64url encoding is restricted to JOSE objects where mandated by specification.
+* Encodings are treated as **boundary-specific representations**, not system-wide requirements.
+
+**Note:** All fields named `sha256` in the following endpoints conform to
+**Evidence Integrity Representation** (lowercase hex, 64 characters).
+
+---
 
 ### Policy constants (server-enforced)
 
@@ -85,6 +255,9 @@ Creates a case for a subject (subject identity can be handled separately; V1 kee
 ### `POST /v1/cases/{caseId}/checks/{checkId}/evidence:init`
 
 Creates an upload session and returns presigned PUT URLs for each file.
+Integrity hashes are not supplied during `evidence:init`.  
+Hashes are computed client-side after upload and submitted during
+`evidence:complete` per **Evidence Integrity Representation**.
 
 **Request**
 
@@ -127,6 +300,21 @@ Creates an upload session and returns presigned PUT URLs for each file.
   ]
 }
 ```
+| Field              | Requirement                          | Enforcement           |
+| ------------------ | ------------------------------------ | --------------------- |
+| `files`            | MUST be an array                     | Reject otherwise      |
+| `files.length`     | MUST be `≤ MAX_FILES_PER_CHECK`      | Reject                |
+| `files[].name`     | MUST be non-empty string             | Reject                |
+| `files[].mimeType` | MUST be allow-listed                 | Reject                |
+| `files[].size`     | MUST be `> 0` and `≤ MAX_FILE_BYTES` | Reject                |
+| `storageKey`       | MUST NOT be client-supplied          | Server-generated only |
+| `sha256`           | MUST NOT appear                      | Reject if present     |
+
+
+> **Note:** Evidence integrity hashes are intentionally excluded from
+> `evidence:init`. Hashes are submitted only during `evidence:complete`
+> per **Evidence Integrity Representation**.
+
 
 **Server enforcement**
 
@@ -151,13 +339,31 @@ Creates an upload session and returns presigned PUT URLs for each file.
   "uploads": [
     {
       "uploadId": "3f2f7d2c-7e58-42b2-8e76-05b7dc0d4d7e",
-      "sha256": "hex-or-base64",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "size": 384112,
       "mimeType": "application/pdf"
     }
   ]
 }
 ```
+| Field                | Requirement                                           | Enforcement |
+| -------------------- | ----------------------------------------------------- | ----------- |
+| `uploadSessionId`    | MUST exist and not be expired                         | Reject      |
+| `uploadSessionId`    | MUST belong to caller                                 | Reject      |
+| `uploads`            | MUST be non-empty array                               | Reject      |
+| `uploads[].uploadId` | MUST belong to session + case + check                 | Reject      |
+| `uploads[].size`     | MUST equal observed object size                       | Reject      |
+| `uploads[].mimeType` | MUST equal expected mime type                         | Reject      |
+| `uploads[].sha256`   | MUST conform to **Evidence Integrity Representation** | Reject      |
+| `uploads[].sha256`   | MUST decode to 32 bytes                               | Reject      |
+| `uploads[].sha256`   | MUST match object bytes                               | Reject      |
+
+#### `sha256`
+
+- Lowercase hexadecimal SHA-256 digest of the uploaded object
+- MUST conform to **Evidence Integrity Representation**
+- MUST be computed over the exact bytes uploaded via the presigned PUT
+
 
 **Response**
 
@@ -202,7 +408,7 @@ Creates an upload session and returns presigned PUT URLs for each file.
       "fileName": "paystub.pdf",
       "mimeType": "application/pdf",
       "size": 384112,
-      "sha256": "hex-or-base64",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "status": "AVAILABLE",
       "scanStatus": "CLEAN",
       "createdAt": "2025-12-16T21:11:00Z",
@@ -211,6 +417,20 @@ Creates an upload session and returns presigned PUT URLs for each file.
   ]
 }
 ```
+| Field                | Requirement                                           | Guarantee      |
+| -------------------- | ----------------------------------------------------- | -------------- |
+| `items[].sha256`     | MUST be lowercase hex                                 | Always emitted |
+| `items[].sha256`     | MUST conform to **Evidence Integrity Representation** | Guaranteed     |
+| `items[].sha256`     | MUST correspond to stored digest                      | Guaranteed     |
+| `items[].status`     | MUST reflect evidence lifecycle                       | Guaranteed     |
+| `items[].scanStatus` | MUST reflect latest scan state                        | Guaranteed     |
+
+> Returned integrity values are canonical representations and MUST NOT
+> require client-side normalization.
+
+- `sha256` is emitted in canonical lowercase hex form
+- Encoding and validation rules are defined in **Evidence Integrity Representation**
+
 
 > V1 does **not** return raw download URLs by default. If needed, add `GET /download-url` to return a short-lived presigned GET.
 
@@ -219,6 +439,14 @@ Creates an upload session and returns presigned PUT URLs for each file.
 ## 6) Issue Derived Employment Verification Token
 
 ### `POST /v1/cases/{caseId}/checks/{checkId}/tokens:issue`
+
+> **Boundary Constraint:**  
+> Evidence hashes, file metadata, or storage identifiers are **never**
+> embedded in issued human-claims tokens.
+>
+> Only derived, policy-allowed claims may appear in the token payload.
+> See **Evidence Integrity Representation – Evidence vs Claims Boundary**.
+
 
 **Request**
 
@@ -251,6 +479,17 @@ Creates an upload session and returns presigned PUT URLs for each file.
   }
 }
 ```
+| Constraint           | Requirement                              | Enforcement |
+| -------------------- | ---------------------------------------- | ----------- |
+| Evidence hashes      | MUST NOT be present                      | Reject      |
+| File metadata        | MUST NOT be present                      | Reject      |
+| Storage identifiers  | MUST NOT be present                      | Reject      |
+| Claims               | MUST be subset of `allowedDerivedFields` | Reject      |
+| Evidence scan status | MUST be `CLEAN` (unless overridden)      | Reject      |
+
+> **Boundary Constraint:**  
+> Evidence integrity values (`sha256`) are strictly confined to the Evidence
+> subsystem and MUST NOT be embedded or referenced in issued tokens.
 
 **Server enforcement**
 
@@ -283,6 +522,15 @@ Creates an upload session and returns presigned PUT URLs for each file.
 }
 ```
 
+| Field         | Requirement            | Enforcement |
+| ------------- | ---------------------- | ----------- |
+| `tokenId`     | MUST exist             | Reject      |
+| Token status  | MUST be revocable      | Reject      |
+| Evidence data | MUST NOT be referenced | Reject      |
+
+> Token revocation operates solely within the claims layer and does not
+> depend on evidence integrity data.
+
 ---
 
 ## 8) Delete Case (CPRA/GDPR-style)
@@ -304,7 +552,20 @@ Creates an upload session and returns presigned PUT URLs for each file.
 }
 ```
 
+| Aspect           | Requirement                    | Enforcement |
+| ---------------- | ------------------------------ | ----------- |
+| Evidence objects | MUST be deleted                | Enforced    |
+| Evidence hashes  | MUST be deleted with evidence  | Enforced    |
+| Tokens           | MUST be revoked or invalidated | Enforced    |
+| Audit events     | MAY retain minimal references  | Allowed     |
+
+> Evidence integrity values do not survive beyond evidence retention
+> requirements and MUST NOT be retained independently.
+
 **Server behavior**
+
+- Evidence integrity hashes are deleted alongside evidence objects and
+  MUST NOT persist beyond retention requirements, except in minimal audit events.
 
 * Immediately revoke tokens (or mark “subject deleted” depending on policy)
 * Delete evidence objects from Spaces

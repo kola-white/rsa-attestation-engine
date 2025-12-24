@@ -1,16 +1,26 @@
 {
   "expo": {
-    "name": "evt-ui-expo",
+    "name": "Certis",
     "slug": "evt-ui-expo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos so you can upload verification evidence.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to use your camera to capture verification evidence.",
+          "microphonePermission": "Allow $(PRODUCT_NAME) to use your microphone when recording video evidence."
+        }
+      ]
+    ],
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true
