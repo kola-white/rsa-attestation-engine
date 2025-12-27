@@ -1,0 +1,105 @@
+```markdown
+# Evidence Hashing Contract (Expo Client + API)
+
+## 1. Overview
+This section defines the hashing behavior and integrity model for **evidence files** (photos, documents) exchanged between the **Expo React Native client** and the **Go-based API**.  
+Hashing applies **only** to uploaded evidence materials for integrity and UX deduplication.  
+It explicitly **does not** modify or influence authentication, JOSE (JWS/JWKS) layers, or X.509 trust.  
+The evidence layer is a **separate integrity domain** and MUST remain isolated from higher trust layers.
+
+---
+
+## 2. Hash Algorithm and Encoding
+
+### 2.1 Algorithm
+- The only permitted hash function for evidence hashing is **SHA-256**.
+- Client implementation: `expo-crypto`
+- Server implementation: Go standard library `crypto/sha256`
+
+### 2.2 Encoding
+- All evidence digests MUST be represented as **lowercase hexadecimal strings**.
+- Evidence hashes MUST NOT be encoded as base64, base64url, or any variant encoding under this contract.
+  - Base64 / base64url remain reserved for **JOSE**, PKCE, and other unrelated cryptographic flows.
+
+---
+
+## 2.x  Client-Side Hashing & Hard Dedupe
+
+**(This text is included verbatim exactly as required — DO NOT EDIT)**
+
+```
+
+2.x  Client-Side Hashing & Hard Dedupe
+
+The Expo client MAY compute a SHA-256 digest of locally selected evidence
+files for the sole purpose of session-local duplicate detection.
+
+* Algorithm: SHA-256
+* Input: full file bytes as read on-device
+* Output encoding: lowercase hexadecimal string
+* Scope: in-memory only; not persisted or transmitted to the API
+
+Hard Dedupe Rule:
+If a newly selected evidence file has a SHA-256 digest that matches any
+previously selected evidence item in the current session, the client MUST NOT
+add a second copy of that file to the evidence list. Instead, the UI MUST
+inform the user that this file is already attached as evidence (e.g.,
+"This file is already attached as evidence. No additional upload needed.").
+
+Security Boundary:
+Client-side digests are non-authoritative and MUST NOT be used for integrity
+or security decisions. The canonical evidence hash is computed exclusively by
+the server over stored bytes and is the only digest used for integrity checks
+or higher-level assertions about evidence.
+
+````
+
+---
+
+## 4. Server-Side Canonical Hashing
+- The server MUST compute the **canonical** SHA-256 digest over the **exact bytes stored** in backend object storage (e.g., DigitalOcean Spaces, S3) *after upload is completed*.
+- The canonical digest MUST be stored in metadata as:
+  - Field name: `evidence_hash`
+  - Format: lowercase hexadecimal string
+- The server MUST verify integrity using **only** the canonical digest.
+- The server MUST NOT trust or rely on **any client-provided hash** for any security-sensitive function (authorization, admissibility, trust assertions, or fraud checks).
+- The canonical digest is the **only** digest used for:
+  - Integrity validation
+  - Internal referencing and logical linking
+  - Any future attestation or statements about evidence
+
+---
+
+## 5. Interaction with JOSE and X.509 Layers
+- Evidence hashes:
+  - MUST NOT be embedded into **JWS headers or payloads** as human-claim content.
+  - MUST NOT be embedded into **X.509 certificates** or certificate extensions.
+- JOSE signing (e.g., RS256) and X.509 hashing semantics remain **unchanged** and are **not altered** by this contract.
+- Boundary rule:
+  - **Evidence → Only lives in evidence metadata**
+  - **Human claims → Only live in signed JWS tokens**
+  - The two MUST remain separate domains to avoid trust confusion or scope leakage.
+
+---
+
+## 6. Security Considerations
+- Client-side digests are **non-authoritative** and can be tampered with; they exist purely for UX deduplication.
+- The server **recomputes** evidence hashes and treats its digest as **canonical**.
+- Hash collision risk using SHA-256 is theoretically possible but **practically negligible** in this employment-verification context.
+- This spec **does not** provide content-based authorization or policy enforcement—only integrity metadata.
+
+---
+
+## 7. Non-Goals
+This contract **does NOT** define or govern:
+- Authentication, authorization, PKCE, token lifetimes, login, or identity
+- Encryption requirements or storage-at-rest policies
+- Chunked upload hashing, multi-block digests, or Merkle-tree-based schemes
+- Vendor-specific storage lifecycle controls (S3 retention, DO lifecycle rules)
+- Evidence approval workflow, HR UX, or business rules for token issuance
+
+---
+
+*End of Contract*
+```markdown
+````
