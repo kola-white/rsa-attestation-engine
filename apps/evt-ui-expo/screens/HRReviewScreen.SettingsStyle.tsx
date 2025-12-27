@@ -6,6 +6,8 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  ActionSheetIOS,
+  Platform
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
@@ -386,6 +388,53 @@ export default function HRReviewScreenSettingsStyle() {
     }
   }
 
+  const handleUploadEvidencePress = () => {
+    if (!API_BASE_URL) {
+      setUploadState({
+        status: "error",
+        message: "Missing EXPO_PUBLIC_EVT_API_BASE_URL (device cannot reach 127.0.0.1).",
+      });
+      return;
+    }
+
+    if (!canUpload) {
+      return;
+    }
+
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: "Upload evidence",
+          message: "Choose a source",
+          options: ["Cancel", "Photo library", "Files"],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            void pickAndUploadPhoto();
+          } else if (buttonIndex === 2) {
+            void pickAndUploadDocument();
+          }
+        }
+      );
+    } else {
+      Alert.alert("Upload evidence", undefined, [
+        {
+          text: "Photo library",
+          onPress: () => void pickAndUploadPhoto(),
+        },
+        {
+          text: "Files",
+          onPress: () => void pickAndUploadDocument(),
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ]);
+    }
+  };
+
   async function pickAndUploadPhoto() {
     try {
       if (!API_BASE_URL) {
@@ -503,60 +552,31 @@ export default function HRReviewScreenSettingsStyle() {
           <SettingsSection>
             <SettingsRow>
               <Text className="text-xs text-zinc-500 dark:text-zinc-400">Upload evidence</Text>
-
               <View className="mt-2">
-            {/* Helper text sits ABOVE controls (stable, iOS Settings-like) */}
-            <Text className="text-sm text-zinc-600 dark:text-zinc-300">
-              PDF / JPG / PNG (max 5MB)
-            </Text>
-
-            {/* Controls are a predictable layout: 2 equal buttons */}
-            <View className="mt-3 flex-row gap-2">
-              <Pressable
-                disabled={!canUpload}
-                onPress={() => {
-                  if (!API_BASE_URL) {
-                    Alert.alert("Missing API base URL", "Set EXPO_PUBLIC_EVT_API_BASE_URL to a reachable host.");
-                    return;
-                  }
-                  pickAndUploadPhoto();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Choose photo"
-                className={[
-                  "flex-1 rounded-xl px-4 py-3 items-center justify-center",
-                  canUpload ? "bg-zinc-700" : "bg-zinc-400",
-                ].join(" ")}
-                style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
-              >
-                <Text className="text-base font-semibold text-white">
-                  Choose photo
+                {/* Helper text sits ABOVE controls (stable, iOS Settings-like) */}
+                <Text className="text-sm text-zinc-600 dark:text-zinc-300">
+                  Upload file or photo (max 5MB)
                 </Text>
-              </Pressable>
 
-              <Pressable
-                disabled={!canUpload}
-                onPress={() => {
-                  if (!API_BASE_URL) {
-                    Alert.alert("Missing API base URL", "Set EXPO_PUBLIC_EVT_API_BASE_URL to a reachable host.");
-                    return;
-                  }
-                  pickAndUploadDocument();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Choose file"
-                className={[
-                  "flex-1 rounded-xl px-4 py-3 items-center justify-center",
-                  canUpload ? "bg-zinc-600" : "bg-zinc-400",
-                ].join(" ")}
-                style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
-              >
-                <Text className="text-base font-semibold text-white">
-                  Choose file
-                </Text>
-              </Pressable>
-            </View>
-          </View>
+                <View className="mt-3">
+                  <Pressable
+                    disabled={!canUpload}
+                    // ✅ Now uses the handler INSIDE the component:
+                    onPress={handleUploadEvidencePress}
+                    accessibilityRole="button"
+                    accessibilityLabel="Upload evidence"
+                    className={[
+                      "w-full rounded-xl px-4 py-3 items-center justify-center",
+                      canUpload ? "bg-zinc-700" : "bg-zinc-400",
+                    ].join(" ")}
+                    style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+                  >
+                    <Text className="text-base font-semibold text-white">
+                      Upload evidence
+                    </Text>
+                  </Pressable>
+                </View>
+              </View> 
               <View className="mt-3">
                 {uploadState.status === "picking" ||
                 uploadState.status === "initing" ||
