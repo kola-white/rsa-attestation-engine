@@ -2,14 +2,14 @@ services:
   db:
     image: postgres:16
     environment:
-      POSTGRES_PASSWORD: devpass
-      POSTGRES_DB: evt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - evt_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d evt"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB}"]
       interval: 2s
       timeout: 2s
       retries: 20
@@ -22,7 +22,7 @@ services:
       EVT_API_ADDR: "0.0.0.0:8080"
 
       # DB inside docker network
-      DATABASE_URL: "postgres://postgres:devpass@db:5432/evt?sslmode=disable"
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable"
 
       # Your REAL DigitalOcean Spaces settings:
       DO_ENDPOINT: "${DO_ENDPOINT}"
@@ -35,8 +35,21 @@ services:
       db:
         condition: service_healthy
 
+  kratos:
+    image: oryd/kratos:v1.1.0
+    command: serve --config /etc/config/kratos/kratos.yml
+    volumes:
+      - /opt/cvera/rsa-attestation-engine/infra/kratos/kratos.yml:/etc/config/kratos/kratos.yml
+      - /opt/cvera/rsa-attestation-engine/infra/kratos/identity.schema.json:/etc/config/kratos/identity.schema.json
+    depends_on:
+      - db
+    ports:
+      - "4434:4434"
+      - "4435:4435"
+    environment:
+      DSN: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/evt_kratos?sslmode=disable"
+      KRATOS_SECRET_DEFAULT: "${KRATOS_SECRET_DEFAULT}"
+      KRATOS_SECRET_COOKIE: "${KRATOS_SECRET_COOKIE}"
+
 volumes:
   evt_pgdata:
-
-  
-

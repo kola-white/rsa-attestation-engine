@@ -1,0 +1,46 @@
+version: v0.14.
+
+dsn: postgres://evt-app:norstarSystemsCveraBabyl0n!@db:5432/evt_kratos?sslmode=disable
+
+log:
+  level: info
+  format: text
+
+serve:
+  public:
+    base_url: https://auth.cvera.app
+    port: 4434
+  admin:
+    base_url: http://kratos-admin:4435
+    port: 4435
+
+identity:
+  default_schema_id: default
+  schemas:
+    - id: default
+      url: file:///etc/config/kratos/identity.schema.json
+
+selfservice:
+  default_browser_return_url: https://api.cvera.app/healthz
+  allowed_return_urls:
+    - https://api.cvera.app/*
+    - cvera://auth/callback
+
+  flows:
+    login:
+      ui_url: https://auth.cvera.app/ui/login
+      lifespan: 10m
+    registration:
+      ui_url: https://auth.cvera.app/ui/registration
+      lifespan: 30m
+
+courier:
+  smtp:
+    # placeholder; we’ll fix later
+    connection_uri: smtps://user:pass@smtp.example.com:465/
+
+secrets:
+  default:
+    - ${KRATOS_SECRET_DEFAULT}
+  cookie:
+    - ${KRATOS_SECRET_COOKIE}
