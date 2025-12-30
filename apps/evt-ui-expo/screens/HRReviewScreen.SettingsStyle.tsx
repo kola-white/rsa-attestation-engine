@@ -7,12 +7,13 @@ import {
   Alert,
   ActivityIndicator,
   ActionSheetIOS,
-  Platform
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
+import * as Crypto from "expo-crypto";
 
 /**
  * NOTE (intentional for MVP):
@@ -79,7 +80,9 @@ function shortKey(key: string, head = 22, tail = 10): string {
   return `${key.slice(0, head)}…${key.slice(-tail)}`;
 }
 
-function inferExtensionFromMime(mimeType: EvidenceFile["mimeType"]): "pdf" | "jpg" | "png" {
+function inferExtensionFromMime(
+  mimeType: EvidenceFile["mimeType"]
+): "pdf" | "jpg" | "png" {
   switch (mimeType) {
     case "application/pdf":
       return "pdf";
@@ -104,7 +107,9 @@ function sanitizeFilename(name: string): string {
   return replaced.length > 0 ? replaced : `evidence-${Date.now()}`;
 }
 
-function guessMimeTypeFromName(filename: string): EvidenceFile["mimeType"] | null {
+function guessMimeTypeFromName(
+  filename: string
+): EvidenceFile["mimeType"] | null {
   const lower = filename.toLowerCase();
   if (lower.endsWith(".pdf")) return "application/pdf";
   if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
@@ -124,8 +129,95 @@ async function getFileSizeBytes(uri: string): Promise<number> {
   const info = await FileSystem.getInfoAsync(uri);
   if (!info.exists) throw new Error("File does not exist at provided URI.");
   const size = (info as any).size;
-  if (typeof size !== "number" || size <= 0) throw new Error("Missing or invalid file size.");
+  if (typeof size !== "number" || size <= 0)
+    throw new Error("Missing or invalid file size.");
   return size;
+}
+
+/**
+ * Base64 → Uint8Array (no atob / Buffer dependencies).
+ * Input is assumed to be a valid base64 string without data URI prefix.
+ */
+function base64ToUint8Array(b64: string): Uint8Array {
+  const clean = b64.replace(/[\r\n\s]/g, "");
+  const len = clean.length;
+  if (len % 4 !== 0) {
+    throw new Error("Invalid base64 input.");
+  }
+
+  const lookup =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+  const padding =
+    clean.endsWith("==") ? 2 : clean.endsWith("=") ? 1 : 0;
+  const bytesLen = (len * 3) / 4 - padding;
+  const bytes = new Uint8Array(bytesLen);
+
+  let byteIndex = 0;
+
+  for (let i = 0; i < len; i += 4) {
+    const c1 = lookup.indexOf(clean[i]);
+    const c2 = lookup.indexOf(clean[i + 1]);
+    const c3 = lookup.indexOf(clean[i + 2]);
+    const c4 = lookup.indexOf(clean[i + 3]);
+
+    const triple =
+      (c1 << 18) |
+      (c2 << 12) |
+      ((c3 & 63) << 6) |
+      (c4 & 63);
+
+    if (byteIndex < bytesLen) {
+      bytes[byteIndex++] = (triple >> 16) & 0xff;
+    }
+    if (byteIndex < bytesLen) {
+      bytes[byteIndex++] = (triple >> 8) & 0xff;
+    }
+    if (byteIndex < bytesLen) {
+      bytes[byteIndex++] = triple & 0xff;
+    }
+  }
+
+  return bytes;
+}
+
+function arrayBufferToHex(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let hex = "";
+  for (let i = 0; i < bytes.length; i++) {
+    hex += bytes[i].toString(16).padStart(2, "0");
+  }
+  return hex;
+}
+
+/**
+ * Evidence digest helper:
+ * - Reads full file bytes via FileSystem.readAsStringAsync(uri, Base64)
+ * - Decodes base64 to Uint8Array
+ * - Hashes with SHA-256 via expo-crypto Crypto.digest
+ * - Returns lowercase hex string
+ *
+ * Client-side digest is:
+ * - Session-local only
+ * - NEVER sent to the API
+ * - Used strictly for UX hard dedupe per Evidence Hashing Contract.
+ */
+async function computeEvidenceDigestHex(uri: string): Promise<string> {
+  const base64 = await FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  // TypedArray that native expo-crypto expects
+  const bytes = base64ToUint8Array(base64);
+
+  // Runtime needs a TypedArray; TS types are too picky about BufferSource,
+  // so we bypass them with a cast on Crypto and leave `bytes` as-is.
+  const digestBuffer = await (Crypto as any).digest(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    bytes
+  );
+
+  return arrayBufferToHex(digestBuffer).toLowerCase();
 }
 
 /**
@@ -153,7 +245,8 @@ async function normalizeEvidenceFile(input: {
     // attempt infer from uri path as a last resort
     const uriLower = rawUri.toLowerCase();
     if (uriLower.endsWith(".pdf")) mimeType = "application/pdf";
-    else if (uriLower.endsWith(".jpg") || uriLower.endsWith(".jpeg")) mimeType = "image/jpeg";
+    else if (uriLower.endsWith(".jpg") || uriLower.endsWith(".jpeg"))
+      mimeType = "image/jpeg";
     else if (uriLower.endsWith(".png")) mimeType = "image/png";
   }
 
@@ -181,7 +274,9 @@ async function normalizeEvidenceFile(input: {
 
   // 4) Enforce client-side policy before init
   if (size > MAX_FILE_BYTES) {
-    throw new Error(`File is too large. Max is ${Math.floor(MAX_FILE_BYTES / 1_000_000)}MB.`);
+    throw new Error(
+      `File is too large. Max is ${Math.floor(MAX_FILE_BYTES / 1_000_000)}MB.`
+    );
   }
 
   // 5) Ensure we have a file:// source for PUT uploads
@@ -212,14 +307,15 @@ async function pickPhotoEvidence(): Promise<EvidenceFile | null> {
   // Permission only on tap
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) {
-    // Structured message to fit your Alert pattern
-    throw new Error(
-      "Photo access denied. Enable Photos permission for this app in iOS Settings > Privacy & Security > Photos."
+    Alert.alert(
+      "Photos Permission Required",
+      "Enable Photos access:\nSettings → Privacy & Security → Photos → Allow this app."
     );
+    return null;
   }
 
   const res = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    mediaTypes: ['images', 'livePhotos'],
     allowsMultipleSelection: false,
     quality: 1,
     // Don't force base64 (we upload bytes via FileSystem.uploadAsync)
@@ -230,7 +326,19 @@ async function pickPhotoEvidence(): Promise<EvidenceFile | null> {
   if (res.canceled) return null;
 
   const asset = res.assets?.[0];
-  if (!asset?.uri) throw new Error("Image picker returned no image.");
+  
+  const mime = asset.mimeType ?? "image/jpeg";
+
+  // 🟥 HEIC / HEIF block (Live Photos on newer iPhones)
+  if (mime.includes("heic") || mime.includes("heif")) {
+    Alert.alert(
+      "Unsupported Format",
+      "HEIC / Live Photos are not supported yet.\nPlease choose a regular photo (JPG or PNG)."
+    );
+    return null;
+  }
+
+  if (!asset?.uri) Alert.alert("Image picker returned no image.");
 
   // Normalize:
   // - For iOS/Android, asset.fileName and asset.mimeType may or may not exist
@@ -238,12 +346,18 @@ async function pickPhotoEvidence(): Promise<EvidenceFile | null> {
     uri: asset.uri,
     name: (asset as any).fileName ?? null,
     mimeType: (asset as any).mimeType ?? null,
-    size: typeof (asset as any).fileSize === "number" ? (asset as any).fileSize : null,
+    size:
+      typeof (asset as any).fileSize === "number"
+        ? (asset as any).fileSize
+        : null,
   });
 
   // Additional guard: ImagePicker should only allow images, but enforce minimum allowlist
-  if (normalized.mimeType !== "image/jpeg" && normalized.mimeType !== "image/png") {
-    throw new Error("Unsupported photo type. Use JPG or PNG.");
+  if (
+    normalized.mimeType !== "image/jpeg" &&
+    normalized.mimeType !== "image/png"
+  ) {
+    Alert.alert("Unsupported photo type. Use JPG or PNG.");
   }
 
   return normalized;
@@ -268,7 +382,9 @@ async function pickDocumentEvidence(): Promise<EvidenceFile | null> {
   const normalized = await normalizeEvidenceFile({
     uri: asset.uri,
     name: asset.name ?? null,
-    mimeType: asset.mimeType ?? (asset.name ? guessMimeTypeFromName(asset.name) : null),
+    mimeType:
+      asset.mimeType ??
+      (asset.name ? guessMimeTypeFromName(asset.name) : null),
     size: typeof asset.size === "number" ? asset.size : null,
   });
 
@@ -281,23 +397,30 @@ async function pickDocumentEvidence(): Promise<EvidenceFile | null> {
  * - PUT to initJson.uploads[0].url with initJson.uploads[0].headers EXACTLY
  * - DOES NOT call evidence:complete (server returns 501 today)
  */
-async function uploadViaInitAndPut(evidence: EvidenceFile): Promise<{ storageKey: string }> {
+async function uploadViaInitAndPut(
+  evidence: EvidenceFile
+): Promise<{ storageKey: string }> {
   if (!API_BASE_URL) {
-    throw new Error("Missing EXPO_PUBLIC_EVT_API_BASE_URL (device cannot reach 127.0.0.1).");
+    throw new Error(
+      "Missing EXPO_PUBLIC_EVT_API_BASE_URL (device cannot reach 127.0.0.1)."
+    );
   }
 
   // Extra defensive checks (deterministic policy)
   if (!ALLOWED_MIME_TYPES.includes(evidence.mimeType as any)) {
     throw new Error("Unsupported file type. Use PDF, JPG, or PNG.");
   }
-  if (!evidence.size || evidence.size <= 0) throw new Error("Missing or invalid file size.");
+  if (!evidence.size || evidence.size <= 0)
+    throw new Error("Missing or invalid file size.");
   if (evidence.size > MAX_FILE_BYTES) {
-    throw new Error(`File is too large. Max is ${Math.floor(MAX_FILE_BYTES / 1_000_000)}MB.`);
+    throw new Error(
+      `File is too large. Max is ${Math.floor(MAX_FILE_BYTES / 1_000_000)}MB.`
+    );
   }
 
-  const initUrl = `${API_BASE_URL}/v1/cases/${encodeURIComponent(CASE_ID)}/checks/${encodeURIComponent(
-    CHECK_ID
-  )}/evidence:init`;
+  const initUrl = `${API_BASE_URL}/v1/cases/${encodeURIComponent(
+    CASE_ID
+  )}/checks/${encodeURIComponent(CHECK_ID)}/evidence:init`;
 
   const initRes = await fetch(initUrl, {
     method: "POST",
@@ -305,7 +428,9 @@ async function uploadViaInitAndPut(evidence: EvidenceFile): Promise<{ storageKey
     body: JSON.stringify({
       caseId: CASE_ID, // keep as-is (your server ignores/accepts)
       checkId: CHECK_ID, // keep as-is (your server ignores/accepts)
-      files: [{ name: evidence.name, mimeType: evidence.mimeType, size: evidence.size }],
+      files: [
+        { name: evidence.name, mimeType: evidence.mimeType, size: evidence.size },
+      ],
     }),
   });
 
@@ -343,7 +468,13 @@ export default function HRReviewScreenSettingsStyle() {
   const insets = useSafeAreaInsets();
   const status: CaseStatus = "PENDING";
 
-  const [uploadState, setUploadState] = useState<UploadState>({ status: "idle" });
+  const [uploadState, setUploadState] = useState<UploadState>({
+    status: "idle",
+  });
+
+  // Session-local set of evidence digests (lowercase hex).
+  // Populated ONLY after a successful upload to avoid blocking retries.
+  const [evidenceDigests, setEvidenceDigests] = useState<string[]>([]);
 
   const canUpload = useMemo(() => {
     return (
@@ -358,7 +489,8 @@ export default function HRReviewScreenSettingsStyle() {
       if (!API_BASE_URL) {
         setUploadState({
           status: "error",
-          message: "Missing EXPO_PUBLIC_EVT_API_BASE_URL (device cannot reach 127.0.0.1).",
+          message:
+            "Missing EXPO_PUBLIC_EVT_API_BASE_URL (device cannot reach 127.0.0.1).",
         });
         return;
       }
@@ -371,18 +503,84 @@ export default function HRReviewScreenSettingsStyle() {
         return;
       }
 
+      // Compute client-side digest for hard dedupe (session-local only).
       setUploadState({ status: "initing" });
+      const digestHex = await computeEvidenceDigestHex(evidence.uri);
+
+      if (evidenceDigests.includes(digestHex)) {
+        // Hard dedupe: do NOT upload, do NOT add second copy.
+        setUploadState({ status: "idle" });
+        Alert.alert(
+          "Already attached",
+          "This file is already attached as evidence. No additional upload needed."
+        );
+        return;
+      }
+
       const { storageKey } = await uploadViaInitAndPut(evidence);
 
+      // Only record digest after successful upload, so failed uploads can be retried.
+      setEvidenceDigests((prev) => [...prev, digestHex]);
       setUploadState({ status: "done", storageKey });
     } catch (err: any) {
       const msg = String(err?.message ?? err ?? "");
-      const friendly =
-        msg.includes("Network request failed")
-          ? "Cannot reach server. Check Wi-Fi/LAN URL."
-          : msg.toLowerCase().includes("timed out")
-          ? "Request timed out. Check server reachability or try again."
-          : msg;
+      const friendly = msg.includes("Network request failed")
+        ? "Cannot reach server. Check Wi-Fi/LAN URL."
+        : msg.toLowerCase().includes("timed out")
+        ? "Request timed out. Check server reachability or try again."
+        : msg;
+
+      setUploadState({ status: "error", message: friendly });
+    }
+  }
+
+  async function pickAndUploadPhoto() {
+    try {
+      if (!API_BASE_URL) {
+        setUploadState({
+          status: "error",
+          message:
+            "Missing EXPO_PUBLIC_EVT_API_BASE_URL (device cannot reach 127.0.0.1).",
+        });
+        return;
+      }
+
+      setUploadState({ status: "picking" });
+
+      const evidence = await pickPhotoEvidence();
+      if (!evidence) {
+        setUploadState({ status: "idle" });
+        return;
+      }
+
+      // Compute client-side digest for hard dedupe (session-local only).
+      setUploadState({ status: "initing" });
+      const digestHex = await computeEvidenceDigestHex(evidence.uri);
+
+      if (evidenceDigests.includes(digestHex)) {
+        // Hard dedupe: do NOT upload, do NOT add second copy.
+        setUploadState({ status: "idle" });
+        Alert.alert(
+          "Already attached",
+          "This file is already attached as evidence. No additional upload needed."
+        );
+        return;
+      }
+
+      const { storageKey } = await uploadViaInitAndPut(evidence);
+
+      // Only record digest after successful upload, so failed uploads can be retried.
+      setEvidenceDigests((prev) => [...prev, digestHex]);
+      setUploadState({ status: "done", storageKey });
+    } catch (err: any) {
+      const msg = String(err?.message ?? err ?? "");
+      const friendly = msg.includes("Photo access denied")
+        ? msg
+        : msg.includes("Network request failed")
+        ? "Cannot reach server. Check Wi-Fi/LAN URL."
+        : msg.toLowerCase().includes("timed out")
+        ? "Request timed out. Check server reachability or try again."
+        : msg;
 
       setUploadState({ status: "error", message: friendly });
     }
@@ -392,7 +590,8 @@ export default function HRReviewScreenSettingsStyle() {
     if (!API_BASE_URL) {
       setUploadState({
         status: "error",
-        message: "Missing EXPO_PUBLIC_EVT_API_BASE_URL (device cannot reach 127.0.0.1).",
+        message:
+          "Missing EXPO_PUBLIC_EVT_API_BASE_URL (device cannot reach 127.0.0.1).",
       });
       return;
     }
@@ -435,47 +634,14 @@ export default function HRReviewScreenSettingsStyle() {
     }
   };
 
-  async function pickAndUploadPhoto() {
-    try {
-      if (!API_BASE_URL) {
-        setUploadState({
-          status: "error",
-          message: "Missing EXPO_PUBLIC_EVT_API_BASE_URL (device cannot reach 127.0.0.1).",
-        });
-        return;
-      }
-
-      setUploadState({ status: "picking" });
-
-      const evidence = await pickPhotoEvidence();
-      if (!evidence) {
-        setUploadState({ status: "idle" });
-        return;
-      }
-
-      setUploadState({ status: "initing" });
-      const { storageKey } = await uploadViaInitAndPut(evidence);
-
-      setUploadState({ status: "done", storageKey });
-    } catch (err: any) {
-      const msg = String(err?.message ?? err ?? "");
-      const friendly =
-        msg.includes("Photo access denied")
-          ? msg
-          : msg.includes("Network request failed")
-          ? "Cannot reach server. Check Wi-Fi/LAN URL."
-          : msg.toLowerCase().includes("timed out")
-          ? "Request timed out. Check server reachability or try again."
-          : msg;
-
-      setUploadState({ status: "error", message: friendly });
-    }
-  }
-
   return (
     <View
       className="flex-1 bg-white dark:bg-zinc-900"
-      style={{ paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }}
+      style={{
+        paddingTop: insets.top,
+        paddingLeft: insets.left,
+        paddingRight: insets.right,
+      }}
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -491,21 +657,31 @@ export default function HRReviewScreenSettingsStyle() {
           <SectionHeader title="Case" />
           <SettingsSection>
             <SettingsRow>
-              <Text className="text-xs text-zinc-500 dark:text-zinc-400">Case ID</Text>
+              <Text className="text-xs text-zinc-500 dark:text-zinc-400">
+                Case ID
+              </Text>
               <Text className="text-base font-medium text-zinc-900 dark:text-zinc-100 mt-0.5">
                 EVT-10324
               </Text>
-              <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-0.5">Submitted 2h ago</Text>
+              <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-0.5">
+                Submitted 2h ago
+              </Text>
             </SettingsRow>
 
             <Separator />
 
             <SettingsRow>
-              <Text className="text-xs text-zinc-500 dark:text-zinc-400">Employee</Text>
-              <Text className="text-base text-zinc-900 dark:text-zinc-100 mt-0.5">Jane Doe</Text>
+              <Text className="text-xs text-zinc-500 dark:text-zinc-400">
+                Employee
+              </Text>
+              <Text className="text-base text-zinc-900 dark:text-zinc-100 mt-0.5">
+                Jane Doe
+              </Text>
               <Text className="text-sm text-zinc-500 dark:text-zinc-300 mt-0.5">
                 Worker ID ·{" "}
-                <Text className="font-medium text-zinc-700 dark:text-zinc-200">CEI-48219</Text>
+                <Text className="font-medium text-zinc-700 dark:text-zinc-200">
+                  CEI-48219
+                </Text>
               </Text>
             </SettingsRow>
 
@@ -520,7 +696,9 @@ export default function HRReviewScreenSettingsStyle() {
           <SectionHeader title="Claim" />
           <SettingsSection>
             <SettingsRow>
-              <Text className="text-xs text-zinc-500 dark:text-zinc-400">Employer</Text>
+              <Text className="text-xs text-zinc-500 dark:text-zinc-400">
+                Employer
+              </Text>
               <Text className="text-base text-zinc-900 dark:text-zinc-100 mt-0.5">
                 ACME Electric (AEI)
               </Text>
@@ -529,11 +707,15 @@ export default function HRReviewScreenSettingsStyle() {
             <Separator />
 
             <SettingsRow>
-              <Text className="text-xs text-zinc-500 dark:text-zinc-400">Role</Text>
+              <Text className="text-xs text-zinc-500 dark:text-zinc-400">
+                Role
+              </Text>
               <Text className="text-base text-zinc-900 dark:text-zinc-100 mt-0.5">
                 Senior Project Manager
               </Text>
-              <Text className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">Aug 2023 — May 2025</Text>
+              <Text className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
+                Aug 2023 — May 2025
+              </Text>
             </SettingsRow>
           </SettingsSection>
 
@@ -542,16 +724,26 @@ export default function HRReviewScreenSettingsStyle() {
           <SettingsSection>
             <DisclosureRow
               title="Request details"
-              body={["Requester: Mortgage / Loan", "Purpose: Employment verification", "Consent: On file"]}
+              body={[
+                "Requester: Mortgage / Loan",
+                "Purpose: Employment verification",
+                "Consent: On file",
+              ]}
             />
-            <DisclosureRow title="Verification checks" body={["Tenure matches HRIS", "Title matches HRIS"]} last />
+            <DisclosureRow
+              title="Verification checks"
+              body={["Tenure matches HRIS", "Title matches HRIS"]}
+              last
+            />
           </SettingsSection>
 
           {/* EVIDENCE UPLOAD */}
           <SectionHeader title="Evidence" />
           <SettingsSection>
             <SettingsRow>
-              <Text className="text-xs text-zinc-500 dark:text-zinc-400">Upload evidence</Text>
+              <Text className="text-xs text-zinc-500 dark:text-zinc-400">
+                Upload evidence
+              </Text>
               <View className="mt-2">
                 {/* Helper text sits ABOVE controls (stable, iOS Settings-like) */}
                 <Text className="text-sm text-zinc-600 dark:text-zinc-300">
@@ -561,7 +753,6 @@ export default function HRReviewScreenSettingsStyle() {
                 <View className="mt-3">
                   <Pressable
                     disabled={!canUpload}
-                    // ✅ Now uses the handler INSIDE the component:
                     onPress={handleUploadEvidencePress}
                     accessibilityRole="button"
                     accessibilityLabel="Upload evidence"
@@ -576,7 +767,7 @@ export default function HRReviewScreenSettingsStyle() {
                     </Text>
                   </Pressable>
                 </View>
-              </View> 
+              </View>
               <View className="mt-3">
                 {uploadState.status === "picking" ||
                 uploadState.status === "initing" ||
@@ -595,13 +786,18 @@ export default function HRReviewScreenSettingsStyle() {
 
                 {uploadState.status === "done" ? (
                   <View className="mt-1">
-                    <Text className="text-sm text-emerald-600">Upload complete</Text>
+                    <Text className="text-sm text-emerald-600">
+                      Upload complete
+                    </Text>
 
                     <Text className="text-sm text-zinc-800 dark:text-zinc-200 mt-1">
                       {displayFileNameFromKey(uploadState.storageKey)}
                     </Text>
 
-                    <Text className="text-xs text-zinc-500 dark:text-zinc-400 mt-1" numberOfLines={1}>
+                    <Text
+                      className="text-xs text-zinc-500 dark:text-zinc-400 mt-1"
+                      numberOfLines={1}
+                    >
                       {shortKey(uploadState.storageKey)}
                     </Text>
 
@@ -611,8 +807,12 @@ export default function HRReviewScreenSettingsStyle() {
 
                 {uploadState.status === "error" ? (
                   <View className="mt-1">
-                    <Text className="text-sm text-rose-600">Upload failed</Text>
-                    <Text className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{uploadState.message}</Text>
+                    <Text className="text-sm text-rose-600">
+                      Upload failed
+                    </Text>
+                    <Text className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                      {uploadState.message}
+                    </Text>
                   </View>
                 ) : null}
               </View>
@@ -629,7 +829,11 @@ export default function HRReviewScreenSettingsStyle() {
 
           <View style={{ paddingBottom: insets.bottom }} />
 
-          <DecisionBar bottomInset={insets.bottom} onApprove={() => console.log("Approve")} onReject={() => console.log("Reject")} />
+          <DecisionBar
+            bottomInset={insets.bottom}
+            onApprove={() => console.log("Approve")}
+            onReject={() => console.log("Reject")}
+          />
         </View>
       </ScrollView>
     </View>
@@ -642,7 +846,9 @@ function TopBar() {
   return (
     <View className="mb-4">
       <Text className="text-[12px] text-zinc-500 dark:text-zinc-400">EVT</Text>
-      <Text className="text-3xl font-semibold text-zinc-950 dark:text-zinc-50 mt-1">HR Review</Text>
+      <Text className="text-3xl font-semibold text-zinc-950 dark:text-zinc-50 mt-1">
+        HR Review
+      </Text>
       <Text className="text-sm text-zinc-500 dark:text-zinc-300 mt-1">
         Validate employment details and decide whether to issue an EVT.
       </Text>
@@ -653,7 +859,11 @@ function TopBar() {
 /* ===================== Section Header ===================== */
 
 function SectionHeader({ title }: { title: string }) {
-  return <Text className="text-[12px] text-zinc-600 dark:text-zinc-400 mt-6 mb-2">{title.toUpperCase()}</Text>;
+  return (
+    <Text className="text-[12px] text-zinc-600 dark:text-zinc-400 mt-6 mb-2">
+      {title.toUpperCase()}
+    </Text>
+  );
 }
 
 /* ===================== Settings Group Shell ===================== */
@@ -678,7 +888,11 @@ function Separator() {
 
 function StatusRow({ status }: { status: CaseStatus }) {
   const color =
-    status === "APPROVED" ? "text-emerald-600" : status === "REJECTED" ? "text-rose-600" : "text-amber-600";
+    status === "APPROVED"
+      ? "text-emerald-600"
+      : status === "REJECTED"
+      ? "text-rose-600"
+      : "text-amber-600";
 
   return (
     <View className="flex-row items-center justify-between">
@@ -709,14 +923,21 @@ function DisclosureRow({
         accessibilityRole="button"
         accessibilityLabel={`${open ? "Collapse" : "Expand"} ${title}`}
       >
-        <Text className="text-base text-zinc-900 dark:text-zinc-100">{title}</Text>
-        <Text className="text-zinc-400 text-base dark:text-zinc-400">{open ? "⌃" : "⌄"}</Text>
+        <Text className="text-base text-zinc-900 dark:text-zinc-100">
+          {title}
+        </Text>
+        <Text className="text-zinc-400 text-base dark:text-zinc-400">
+          {open ? "⌃" : "⌄"}
+        </Text>
       </Pressable>
 
       {open ? (
         <View className="px-4 pb-3">
           {body.map((line, i) => (
-            <Text key={i} className="text-sm text-zinc-600 dark:text-zinc-400 mt-1 leading-5">
+            <Text
+              key={i}
+              className="text-sm text-zinc-600 dark:text-zinc-400 mt-1 leading-5"
+            >
               {line}
             </Text>
           ))}
@@ -731,7 +952,11 @@ function DisclosureRow({
 /* ===================== Footnote ===================== */
 
 function Footnote({ text }: { text: string }) {
-  return <Text className="text-[13px] text-zinc-600 dark:text-zinc-400 mt-3 leading-5">{text}</Text>;
+  return (
+    <Text className="text-[13px] text-zinc-600 dark:text-zinc-400 mt-3 leading-5">
+      {text}
+    </Text>
+  );
 }
 
 /* ===================== Sticky Decision Bar ===================== */
@@ -751,11 +976,17 @@ function DecisionBar({
       style={{ paddingBottom: bottomInset + 16 }}
     >
       <View className="flex-row gap-3">
-        <Pressable className="flex-1 rounded-xl bg-zinc-200 py-3 items-center" onPress={onReject}>
+        <Pressable
+          className="flex-1 rounded-xl bg-zinc-200 py-3 items-center"
+          onPress={onReject}
+        >
           <Text className="text-sm font-semibold text-zinc-900">Reject</Text>
         </Pressable>
 
-        <Pressable className="flex-1 rounded-xl bg-zinc-700 py-3 items-center" onPress={onApprove}>
+        <Pressable
+          className="flex-1 rounded-xl bg-zinc-700 py-3 items-center"
+          onPress={onApprove}
+        >
           <Text className="text-sm font-semibold text-white">Approve</Text>
         </Pressable>
       </View>
