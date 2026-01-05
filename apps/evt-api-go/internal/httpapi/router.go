@@ -22,14 +22,25 @@ func NewRouter(cfg *config.Config) http.Handler {
 	}
 
 	s := &Server{
-	cfg:    cfg,
-	s3:     s3,
-	policy: storage.DefaultEvidencePolicy(),
+		cfg:    cfg,
+		s3:     s3,
+		policy: storage.DefaultEvidencePolicy(),
 	}
 
 	mux := http.NewServeMux()
+
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"ok": "true"})
+	})
+
+	// Auth (NEW)
+	mux.HandleFunc("/auth/exchange", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("[auth:exchange] called method=%s path=%s remote=%s", r.Method, r.URL.Path, r.RemoteAddr)
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		s.HandleAuthExchange(w, r)
 	})
 
 	// Contract paths:
@@ -40,10 +51,17 @@ func NewRouter(cfg *config.Config) http.Handler {
 	mux.HandleFunc("POST /v1/evidence/init", s.HandleEvidenceInit)
 	mux.HandleFunc("POST /v1/evidence/commit", s.HandleEvidenceComplete)
 
-	return withJSON(withCORS(mux))
+	return withReqLog(withCORS(mux))
 }
 
 func (s *Server) HandleEvidenceComplete(w http.ResponseWriter, r *http.Request) {
-	  log.Printf("[evidence:complete] called path=%s", r.URL.Path)
+	log.Printf("[evidence:complete] called path=%s", r.URL.Path)
 	writeErr(w, http.StatusNotImplemented, "evidence_complete_requires_persistence")
+}
+
+func withReqLog(next http.Handler) http.Handler {
+  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    log.Printf("[req] %s %s remote=%s", r.Method, r.URL.Path, r.RemoteAddr)
+    next.ServeHTTP(w, r)
+  })
 }

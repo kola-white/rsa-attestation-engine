@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Certis",
+    "name": "Cvera",
     "slug": "evt-ui-expo",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,7 +14,8 @@
           "cameraPermission": "Allow $(PRODUCT_NAME) to use your camera to capture verification evidence.",
           "microphonePermission": "Allow $(PRODUCT_NAME) to use your microphone when recording video evidence."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "newArchEnabled": true,
     "splash": {
@@ -36,6 +37,9 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
+    },
+    "extra": {
+      "kratosUrl": "https://auth.cvera.app"
     }
   }
 }

@@ -15,6 +15,8 @@ import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Crypto from "expo-crypto";
 
+console.log("[HRReview] module loaded");
+
 /**
  * NOTE (intentional for MVP):
  * - `evidence:complete` is DISABLED because your server currently returns 501.
@@ -464,7 +466,8 @@ async function uploadViaInitAndPut(
   return { storageKey: upload.storageKey };
 }
 
-export default function HRReviewScreenSettingsStyle() {
+export const HRReviewScreenSettingsStyle = () => {
+  console.log("[HRReview] render");
   const insets = useSafeAreaInsets();
   const status: CaseStatus = "PENDING";
 
@@ -821,10 +824,10 @@ export default function HRReviewScreenSettingsStyle() {
 
           {/* FOOTNOTE */}
           <Footnote
-            text="I consent to Certis processing uploaded evidence solely for the purpose of verifying employment claims. 
-          Certis processes uploaded evidence solely to verify employment claims. 
+            text="I consent to Cvera processing uploaded evidence solely for the purpose of verifying employment claims. 
+          Cvera processes uploaded evidence solely to verify employment claims. 
           Raw evidence is retained only as long as necessary to complete verification and is then deleted. 
-          Certis issues cryptographic verification tokens that do not expose underlying documents."
+          Cvera issues cryptographic verification tokens that do not expose underlying documents."
           />
 
           <View style={{ paddingBottom: insets.bottom }} />
