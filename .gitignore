@@ -5,3 +5,6 @@ reports/
 **/.env
 *.pdf
 **/*.pdf
+*.exe
+*.out
+*.test

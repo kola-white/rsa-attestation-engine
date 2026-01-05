@@ -9,8 +9,20 @@ import (
 
 type Config struct {
 	Addr string
-
 	Spaces SpacesConfig
+
+	Kratos KratosConfig
+	Auth   AuthConfig
+}
+
+type KratosConfig struct {
+	PublicBaseURL string // e.g. https://auth.cvera.app
+}
+
+type AuthConfig struct {
+	JWTSecret string // HS256 secret (long random)
+	Issuer    string // e.g. cvera-api
+	Audience  string // e.g. cvera-app
 }
 
 type SpacesConfig struct {
@@ -35,6 +47,14 @@ func Load() (Config, error) {
 			Endpoint:  os.Getenv("DO_ENDPOINT"),
 			Bucket:    os.Getenv("EVT_S3_BUCKET"),
 		},
+		Kratos: KratosConfig{
+		PublicBaseURL: getenv("KRATOS_PUBLIC_BASE_URL", "https://auth.cvera.app"),
+	},
+		Auth: AuthConfig{
+		JWTSecret: os.Getenv("EVT_JWT_SECRET"),
+		Issuer:    getenv("EVT_JWT_ISS", "cvera-api"),
+		Audience:  getenv("EVT_JWT_AUD", "cvera-app"),
+	},
 	}
 
 	// Normalize endpoint slightly (optional but helps prevent silly mistakes)
