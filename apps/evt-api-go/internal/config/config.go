@@ -23,6 +23,8 @@ type AuthConfig struct {
 	JWTSecret string // HS256 secret (long random)
 	Issuer    string // e.g. cvera-api
 	Audience  string // e.g. cvera-app
+	DBDSN	 string 
+	RefreshTokenHMACKey string 
 }
 
 type SpacesConfig struct {
@@ -54,6 +56,8 @@ func Load() (Config, error) {
 		JWTSecret: os.Getenv("EVT_JWT_SECRET"),
 		Issuer:    getenv("EVT_JWT_ISS", "cvera-api"),
 		Audience:  getenv("EVT_JWT_AUD", "cvera-app"),
+		DBDSN:     os.Getenv("EVT_DB_DSN"),
+		RefreshTokenHMACKey: os.Getenv("EVT_REFRESH_TOKEN_HMAC_KEY"),
 	},
 	}
 
@@ -76,6 +80,16 @@ func Load() (Config, error) {
 	}
 	if cfg.Spaces.Bucket == "" {
 		errs = append(errs, errors.New("missing EVT_S3_BUCKET (certis-evidence-uploads)"))
+	}
+
+	if cfg.Auth.JWTSecret == "" {
+			errs = append(errs, errors.New("missing EVT_JWT_SECRET"))
+	}
+	if cfg.Auth.DBDSN == "" {
+			errs = append(errs, errors.New("missing EVT_DB_DSN"))
+	}
+	if cfg.Auth.RefreshTokenHMACKey == "" {
+			errs = append(errs, errors.New("missing EVT_REFRESH_TOKEN_HMAC_KEY"))
 	}
 
 	if len(errs) > 0 {
