@@ -2,29 +2,57 @@ package httpapi
 
 import (
 	"context"
+	"database/sql"
+	"encoding/hex"
 	"log"
 	"net/http"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/config"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/storage"
 )
 
-type Server struct {
-	cfg    *config.Config
-	s3     *storage.S3Store
-	policy storage.EvidencePolicy
-}
+	type Server struct {
+		cfg    *config.Config
+		db     *sql.DB
+		s3     *storage.S3Store
+		policy storage.EvidencePolicy
+		hmacKey []byte
+	}
 
-func NewRouter(cfg *config.Config) http.Handler {
+	func NewRouter(cfg *config.Config) http.Handler {
+	// --- Open DB ------------------------------------------------------------
+	db, err := sql.Open("pgx", cfg.Auth.DBDSN)
+	if err != nil {
+		log.Fatalf("db open failed: %v", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		log.Fatalf("db ping failed: %v", err)
+	}
+
+	// --- Decode HMAC key ----------------------------------------------------
+	hmacKey, err := hex.DecodeString(cfg.Auth.RefreshTokenHMACKey)
+	if err != nil {
+		log.Fatalf("invalid EVT_REFRESH_TOKEN_HMAC_KEY (must be hex): %v", err)
+	}	
+	if len(hmacKey) < 32 {
+	log.Fatalf("EVT_REFRESH_TOKEN_HMAC_KEY too short: got %d bytes, need >= 32", len(hmacKey))
+	}
+
+	// --- S3 ---------------------------------------------------------------
 	s3, err := storage.NewS3Store(context.Background(), cfg.Spaces)
 	if err != nil {
-		panic(err)
+		log.Fatalf("s3 init failed: %v", err)
 	}
 
 	s := &Server{
 		cfg:    cfg,
+		db:   	db,
 		s3:     s3,
 		policy: storage.DefaultEvidencePolicy(),
+		hmacKey: hmacKey,
 	}
 
 	mux := http.NewServeMux()
@@ -33,14 +61,24 @@ func NewRouter(cfg *config.Config) http.Handler {
 		writeJSON(w, http.StatusOK, map[string]string{"ok": "true"})
 	})
 
-	// Auth (NEW)
-	mux.HandleFunc("/auth/exchange", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("[auth:exchange] called method=%s path=%s remote=%s", r.Method, r.URL.Path, r.RemoteAddr)
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		s.HandleAuthExchange(w, r)
+	// Auth (EXCHANGE, REFRESH, LOGOUT)
+	mux.HandleFunc("POST /auth/exchange", s.HandleAuthExchange)
+	mux.HandleFunc("/auth/refresh", func(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[auth:refresh] called method=%s path=%s remote=%s", r.Method, r.URL.Path, r.RemoteAddr)
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.HandleAuthRefresh(w, r)
+	})
+
+	mux.HandleFunc("/auth/logout", func(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[auth:logout] called method=%s path=%s remote=%s", r.Method, r.URL.Path, r.RemoteAddr)
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.HandleAuthLogout(w, r)
 	})
 
 	// Contract paths:
