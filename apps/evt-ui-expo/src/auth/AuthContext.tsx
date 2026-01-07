@@ -65,10 +65,15 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
 
+  useEffect(() => {
+  console.log("[Auth][state] status:", status, "user:", user?.id ?? null);
+}, [status, user]);
+
   // --- Helpers: refresh token storage --------------------------------------
 
   const storeRefreshToken = useCallback(async (token: string) => {
     await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token);
+    console.log("[Auth][storeRefreshToken] stored refresh token prefix:", token.slice(0, 12));
   }, []);
 
   const getStoredRefreshToken = useCallback(async (): Promise<string | null> => {
@@ -77,6 +82,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
 
   const clearStoredRefreshToken = useCallback(async () => {
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+    console.log("[Auth][clearStoredRefreshToken] refresh token cleared");
   }, []);
 
   // --- Token exchange with your API ----------------------------------------
@@ -108,19 +114,26 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
   // --- Refresh -------------------------------------------------------------
 
   const refresh: AuthContextValue['refresh'] = useCallback(async () => {
+    console.log("[Auth][refresh] called");
     const refreshToken = await getStoredRefreshToken();
+    console.log("[Auth][refresh] stored refresh token present?", !!refreshToken);
     if (!refreshToken) {
+    console.log("[Auth][refresh] no token -> unauthenticated");
       setAccessToken(null);
       setUser(null);
       setStatus('unauthenticated');
       return;
     }
 
+    console.log("[Auth][refresh] sending refresh token prefix:", refreshToken.slice(0, 12));
+
     const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
+
+    console.log("[Auth][refresh] response status:", res.status);
 
     if (!res.ok) {
       await clearStoredRefreshToken();
@@ -131,6 +144,9 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
     }
 
     const data = (await res.json()) as TokenPair;
+    console.log("[Auth][refresh] OK new access prefix:", data.access_token.slice(0, 12));
+    console.log("[Auth][refresh] OK new refresh prefix:", data.refresh_token.slice(0, 12));
+
     setAccessToken(data.access_token);
     setUser(data.user);
     await storeRefreshToken(data.refresh_token);
@@ -139,99 +155,78 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
 
   // --- Login via Kratos native flow ----------------------------------------
 
-  const login: AuthContextValue['login'] = useCallback(
+    const login: AuthContextValue["login"] = useCallback(
     async (email: string, password: string) => {
-      setStatus('checking');
+        setStatus("checking");
 
-      // 1) Create a native login flow in Kratos
-      const flowRes = await fetch(
-        `${KRATOS_BASE_URL}/self-service/login/api`,
-        {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-        },
-      );
+        // 1) Create flow
+        const flowRes = await fetch(`${KRATOS_BASE_URL}/self-service/login/api`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        });
 
-      if (!flowRes.ok) {
+        if (!flowRes.ok) {
         const text = await flowRes.text();
-        console.log("[AuthProvider][login] create flow failed", flowRes.status, text);
-        setStatus('unauthenticated');
-        throw new AuthError(
-          'create_login_flow_failed',
-          'Unable to start sign-in. Please try again.',
-          text,
-        );
-      }
+        setStatus("unauthenticated");
+        throw new AuthError("create_login_flow_failed", "Unable to start sign-in.", text);
+        }
 
-      const flow = (await flowRes.json()) as KratosLoginFlow;
+        const flow = (await flowRes.json()) as KratosLoginFlow;
 
-    // 2) Submit credentials to the flow's action
-    const identifier = (email ?? '').trim().toLowerCase();
+        // 2) Submit credentials
+        const identifier = (email ?? "").trim().toLowerCase();
+        const submitUrl = `${KRATOS_BASE_URL}/self-service/login?flow=${flow.id}`;
 
-    const payload = {
-    method: 'password',
-    identifier,
-    password,
-    };
+        const submitRes = await fetch(submitUrl, {
+        method: "POST",
+        headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({
+            method: "password",
+            identifier,
+            password,
+        }),
+        });
 
-    const body = JSON.stringify(payload);
-    console.log('[AuthProvider][login] identifier computed =', identifier);
-    console.log('[AuthProvider][login] submit body =', body);
+        const submitJson = await submitRes.json();
 
-    const submitUrl = `${KRATOS_BASE_URL}/self-service/login?flow=${flow.id}`;
+        // 400: Kratos form / credential error
+        if (submitRes.status === 400) {
+        const msg = extractLoginErrorMessage(submitJson as KratosErrorResponse);
+        setStatus("unauthenticated");
+        throw new AuthError("invalid_credentials", msg);
+        }
 
-    const submitRes = await fetch(submitUrl, {
-    method: 'POST',
-    headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json; charset=utf-8',
+        if (!submitRes.ok) {
+        setStatus("unauthenticated");
+        throw new AuthError("login_failed", "Sign-in failed unexpectedly.", JSON.stringify(submitJson));
+        }
+
+        const loginResult = submitJson as KratosSuccessfulNativeLogin;
+
+        if (!loginResult.session_token) {
+        setStatus("unauthenticated");
+        throw new AuthError("missing_session_token", "Kratos did not return a session token.");
+        }
+
+        // DEV: prove you got a token (prefix only)
+        console.log("[AuthProvider][login] session_token prefix", loginResult.session_token.slice(0, 12));
+
+        // 3) Exchange for YOUR tokens
+        const tokens = await exchangeSessionToken(loginResult.session_token);
+
+        console.log("[Auth][login] exchange OK. access_token prefix:", tokens.access_token.slice(0, 12));
+        console.log("[Auth][login] exchange OK. refresh_token prefix:", tokens.refresh_token.slice(0, 12));
+
+        await storeRefreshToken(tokens.refresh_token);
+        setAccessToken(tokens.access_token);
+        setUser(tokens.user);
+        setStatus("authenticated");
     },
-    body,
-    });
-        
-      if (submitRes.status === 400) {
-        // Validation error or bad credentials
-        const data = (await submitRes.json()) as KratosErrorResponse;
-        console.log("[AuthProvider][login] submit 400", JSON.stringify(data, null, 2));
-        const msg = extractLoginErrorMessage(data);
-        setStatus('unauthenticated');
-        throw new AuthError('invalid_credentials', msg);
-      }
-
-      if (!submitRes.ok) {
-        const text = await submitRes.text();
-        console.log("[AuthProvider][login] submit failed", submitRes.status, text);
-        setStatus('unauthenticated');
-        throw new AuthError(
-          'login_failed',
-          'Sign-in failed unexpectedly. Please try again.',
-          text,
-        );
-      }
-
-      const loginResult =
-        (await submitRes.json()) as KratosSuccessfulNativeLogin;
-
-      if (!loginResult.session_token) {
-        console.log("[AuthProvider][login] missing session_token", JSON.stringify(loginResult, null, 2));
-        setStatus('unauthenticated');
-        throw new AuthError(
-          'missing_session_token',
-          'Sign-in did not return a session token from the identity service.',
-        );
-      }
-
-      // 3) Exchange Kratos session_token for your JWTs
-      const tokens = await exchangeSessionToken(loginResult.session_token);
-
-      await storeRefreshToken(tokens.refresh_token);
-      setAccessToken(tokens.access_token);
-      setUser(tokens.user);
-      setStatus('authenticated');
-      console.log("[AuthProvider] AUTHENTICATED -> should render MainAppNavigator");
-    },
-    [exchangeSessionToken, storeRefreshToken, clearStoredRefreshToken]
-  );
+    [exchangeSessionToken, storeRefreshToken],
+);
 
   // --- Register via Kratos native flow (NEW) -------------------------------
 
@@ -332,24 +327,31 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
   // --- Logout --------------------------------------------------------------
 
   const logout: AuthContextValue['logout'] = useCallback(async () => {
-    const refreshToken = await getStoredRefreshToken();
-    if (refreshToken) {
-      try {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        });
-      } catch {
-        // ignore network errors on logout
-      }
-    }
+  console.log("[Auth][logout] called");
 
-    await clearStoredRefreshToken();
-    setAccessToken(null);
-    setUser(null);
-    setStatus('unauthenticated');
-  }, [getStoredRefreshToken, clearStoredRefreshToken]);
+  const refreshToken = await getStoredRefreshToken();
+  console.log("[Auth][logout] has refresh token?", !!refreshToken);
+
+  if (refreshToken) {
+    console.log("[Auth][logout] sending token prefix:", refreshToken.slice(0, 12));
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      console.log("[Auth][logout] server status:", res.status);
+    } catch (e) {
+      console.log("[Auth][logout] server call failed:", String(e));
+    }
+  }
+
+  await clearStoredRefreshToken();
+  setAccessToken(null);
+  setUser(null);
+  setStatus('unauthenticated');
+  console.log("[Auth][logout] complete -> unauthenticated");
+}, [getStoredRefreshToken, clearStoredRefreshToken]);
 
   // --- Bootstrap on app startup --------------------------------------------
 

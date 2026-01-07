@@ -1,4 +1,4 @@
-version: v0.14.
+version: v0.13.0
 
 dsn: postgres://evt-app:norstarSystemsCveraBabyl0n!@db:5432/evt_kratos?sslmode=disable
 
