@@ -1,4 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useLayoutEffect, useMemo, useState } from "react";
+import { useAuth } from "@/src/auth/AuthContext";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { AppStackParamList } from "@/src/navigation/MainAppNavigator";
 import {
   View,
   Text,
@@ -23,6 +27,8 @@ console.log("[HRReview] module loaded");
  * - This implementation reuses your existing `evidence:init` + presigned PUT flow exactly.
  * - UI “Upload complete” continues to mean “PUT succeeded”.
  */
+
+type HRNav = NativeStackNavigationProp<AppStackParamList, "HRReview">;
 
 type CaseStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -637,16 +643,42 @@ export const HRReviewScreenSettingsStyle = () => {
     }
   };
 
+  // Auth + Navigation setup logic simple login/logout + header
+  const { logout } = useAuth();
+  const navigation = useNavigation<HRNav>();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: "HR Review",
+      headerLargeTitle: true,
+      headerRight: () => (
+        <Pressable
+          onPress={logout}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
+          hitSlop={10}
+          className="px-3 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-700"
+          style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+        >
+          <Text className="text-sm font-semibold text-zinc-900 dark:text-white">
+            Sign out
+          </Text>
+        </Pressable>
+      ),
+    });
+  }, [navigation, logout]);
+
+
   return (
     <View
       className="flex-1 bg-white dark:bg-zinc-900"
       style={{
-        paddingTop: insets.top,
         paddingLeft: insets.left,
         paddingRight: insets.right,
       }}
     >
       <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           flexGrow: 1,
@@ -654,7 +686,6 @@ export const HRReviewScreenSettingsStyle = () => {
         }}
       >
         <View className="px-4 pt-4 flex-1">
-          <TopBar />
 
           {/* CASE */}
           <SectionHeader title="Case" />
