@@ -15,9 +15,16 @@ const Stack = createNativeStackNavigator<AppStackParamList>();
 export const MainAppNavigator: React.FC = () => {
 console.log("[MainAppNavigator] render");
   return (
-<Stack.Navigator initialRouteName="HRReview" screenOptions={{ headerShown: false }}>
-  <Stack.Screen name="HRReview" component={HRReviewScreenSettingsStyle} />
-  <Stack.Screen name="Home" component={HomeScreen} />
+<Stack.Navigator initialRouteName="HRReview">
+  <Stack.Screen 
+    name="HRReview" 
+    component={HRReviewScreenSettingsStyle} 
+  />
+  <Stack.Screen 
+    name="Home" 
+    component={HomeScreen}
+    options={{ headerShown: false }} 
+  />
 </Stack.Navigator>
 
   );
