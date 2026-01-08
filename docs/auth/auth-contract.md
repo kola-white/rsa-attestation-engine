@@ -1,16 +1,3 @@
-Here’s a tightened **v0.4 auth contract** that *explicitly* aligns your new infra:
-
-* Kratos at **`auth.cvera.app`**
-* EVT API (Go) at **`api.cvera.app`**
-* Postgres: `evt` (API) + `evt_kratos` (Kratos)
-* Docker + Nginx + TLS + basic hardening
-
-This is written so you can hand it straight to your principal auth engineer and say:
-
-> “This is the current intended model. Please sanity-check, poke holes, and refine.”
-
----
-
 # Authentication & Session Contract – v0.4
 
 **System:** Cvera / EVT
@@ -79,6 +66,7 @@ This is written so you can hand it straight to your principal auth engineer and 
 
 ### 1.3 High-Level Auth Architecture
 
+```mermaid
 flowchart LR
     subgraph Client["Expo iOS Client"]
         A[Expo App<br/>React Native / SDK 54]
@@ -104,21 +92,17 @@ flowchart LR
         end
     end
 
-    %% Client → Kratos (login / identity)
     A -->|"HTTPS\nemail/password,\nself-service login flows"| NAuth
     NAuth -->|"HTTP :4434"| KPub
     KPub -->|"identities / sessions"| PK
 
-    %% Client → EVT API (token exchange + domain APIs)
     A -->|"HTTPS\naccess_token (JWT),\nrefresh_token (opaque hex)"| NApi
     NApi -->|"HTTP :8080"| API
     API -->|"SQL\n(domain data,\nrefresh token hashes)"| PE
 
-    %% EVT API → Kratos Admin (session/identity validation)
     API -->|"HTTP :4435\nKratos admin API\n(session / identity lookup)"| KAdm
     KAdm -->|"SQL\n(identity state)"| PK
 
-    %% Notes
     classDef client fill:#e3f2fd,stroke:#1e88e5,color:#0d47a1;
     classDef ingress fill:#ede7f6,stroke:#5e35b1,color:#311b92;
     classDef kratos fill:#fff3e0,stroke:#fb8c00,color:#e65100;
@@ -130,7 +114,7 @@ flowchart LR
     class KratosCluster kratos;
     class EvtAPI api;
     class DBK,DBA db;
-
+```
 ---
 
 ## 2. Identity Model
