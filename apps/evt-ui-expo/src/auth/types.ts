@@ -1,4 +1,13 @@
-export type AuthStatus = 'checking' | 'unauthenticated' | 'authenticated';
+export type AuthStatus = 
+  | 'checking' 
+  | 'unauthenticated' 
+  | 'authenticated' 
+  | 'session-expired';
+
+export type SessionExpiredReason =
+  | "refresh_unauthorized"
+  | "api_unauthorized"
+  | "api_forbidden";
 
 export interface User {
   id: string;
@@ -27,8 +36,11 @@ export interface AuthContextValue {
   user: User | null;
   login(email: string, password: string): Promise<void>;
   logout(): Promise<void>;
-  refresh(): Promise<void>;
   register(input: RegisterInput): Promise<void>;
+  sessionExpiredReason: "refresh_unauthorized" | "api_unauthorized" | "api_forbidden" | null;
+  beginReauth: () => void;
+  // refresh should be boolean now:
+  refresh: () => Promise<boolean>;
 }
 
 
