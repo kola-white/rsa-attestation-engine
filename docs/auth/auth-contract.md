@@ -88,7 +88,7 @@ flowchart LR
     subgraph EvtAPI["EVT Domain API"]
         API[EVT Go API<br/>api.cvera.app]
         subgraph DBA["Postgres DB\n`evt`"]
-            PE[(domain users, cases,<br/>refresh_tokens (hashes))]
+            PE[(domain users, cases,<br/>refresh_tokens - (hashes))]
         end
     end
 
@@ -109,11 +109,11 @@ flowchart LR
     classDef api fill:#e8f5e9,stroke:#43a047,color:#1b5e20;
     classDef db fill:#f5f5f5,stroke:#757575,color:#424242,font-size:11px;
 
-    class Client client;
-    class Edge ingress;
-    class KratosCluster kratos;
-    class EvtAPI api;
-    class DBK,DBA db;
+    class A client;
+    class NAuth,NApi ingress;
+    class KPub,KAdm kratos;
+    class API api;
+    class PK,PE db;
 ```
 ---
 
@@ -298,6 +298,7 @@ Concretely, introduce:
 
 ### 4.4 Auth Flow (Sequence): Kratos -> /auth/exchange -> JWT + Refresh
 
+```mermaid
 sequenceDiagram
     autonumber
 
@@ -336,7 +337,7 @@ sequenceDiagram
     Note over C: Store refresh_token in SecureStore.<br/>Keep access_token in memory only.
 
     C-->>U: User is now signed in to EVT API<br/>(Case list, evidence, approve/reject)
-
+```
 ---
 
 ## 5. EVT API Auth Endpoints (Phase 1)

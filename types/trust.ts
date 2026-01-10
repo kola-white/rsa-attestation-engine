@@ -2,6 +2,7 @@ export type TrustCfg = {
   base_url?: string;
   jwks_path?: string;
   status_path?: string;
+  policy_path?: string;
   latest_pointer?: string;
 };
 
