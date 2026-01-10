@@ -1,29 +1,6 @@
 export type SignatureBadge = "verified" | "invalid" | "unknown";
 export type TrustBadge = "trusted" | "untrusted" | "unknown";
 
-export type  RecruiterFiltersInitial = {
-  search: string;
-  trust_mode: "any" | "trusted" | "untrusted";
-  signature_status: SignatureBadge[];
-  company_ids: string[];
-  sort: "most_recent" | "least_recent";
-};
-
-export type RecruiterQueryState = {
-  search: string;
-  trust_mode: "any" | "trusted_only" | "include_untrusted";
-  signature_status: Array<"verified" | "invalid" | "unknown">;
-  company_ids: string[];
-  title_query?: string;
-  dates?: {
-    start_after?: string;
-    end_before?: string;
-    include_current?: boolean;
-  };
-  sort?: "most_recent" | "name_az" | "trust_first";
-  page?: { cursor?: string; limit?: number };
-};
-
 export type CandidateRowSnapshot = {
   candidate_id: string;
   subject: { full_name: string; employee_id?: string };
@@ -40,6 +17,29 @@ export type CandidateRowSnapshot = {
   };
   updated_at: string;
 };
+
+export type RecruiterTrustMode = "any" | "trusted_only" | "include_untrusted";
+export type RecruiterSort = "most_recent" | "name_az" | "trust_first";
+
+export type RecruiterQueryState = {
+  search: string;
+  trust_mode: RecruiterTrustMode;
+  signature_status: SignatureBadge[];
+  company_ids: string[];
+
+  title_query?: string;
+  dates?: {
+    start_after?: string;
+    end_before?: string;
+    include_current?: boolean;
+  };
+
+  sort?: RecruiterSort;
+  page?: { cursor?: string; limit?: number };
+};
+
+// UI “initial” state is exactly the same shape as query state
+export type RecruiterFiltersInitial = RecruiterQueryState;
 
 export type CandidateDetailParams = {
   candidate_id: string;
