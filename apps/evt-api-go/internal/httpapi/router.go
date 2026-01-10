@@ -81,6 +81,10 @@ import (
 	s.HandleAuthLogout(w, r)
 	})
 
+	// Verification outcome (server-authoritative)
+	mux.HandleFunc("POST /v1/verification/outcome", s.HandleVerificationOutcome)
+
+
 	// Contract paths:
 	mux.HandleFunc("POST /v1/cases/{caseId}/checks/{checkId}/evidence:init", s.HandleEvidenceInit)
 	mux.HandleFunc("POST /v1/cases/{caseId}/checks/{checkId}/evidence:complete", s.HandleEvidenceComplete)

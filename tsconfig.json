@@ -1,17 +1,9 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": ".",
-    "outDir": "dist",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "target": "ES2022",
-    "lib": ["ES2022"],
-    "types": ["node"],
-    "strict": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "esModuleInterop": true
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
   },
-  "include": ["pkg/**/*.ts", "scripts/**/*.ts", "**/*.ts"],
-  "exclude": ["node_modules", "dist","apps/**"]
+  "include": ["pkg/**/*.ts", "src/**/*.ts", "types/**/*.ts"],
+  "exclude": ["node_modules", "dist", "build", "out"]
 }

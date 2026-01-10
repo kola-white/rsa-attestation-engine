@@ -15,11 +15,17 @@ function loadTrustConfig(): Required<TrustCfg> {
   const env = process.env;
 
   const base_url = (env.TRUST_BASE_URL || fileCfg.base_url || "").trim();
+
   const jwks_path = (env.TRUST_JWKS_PATH || fileCfg.jwks_path || "/trust/jwks.json").trim();
   const status_path = (env.TRUST_STATUS_PATH || fileCfg.status_path || "/trust/statuslist.json").trim();
+
+  // ✅ NEW: policy path (remote)
+  const policy_path = (env.TRUST_POLICY_PATH || (fileCfg as any).policy_path || "/trust/policy.json").trim();
+
   const latest_pointer = (env.TRUST_LATEST_PATH || fileCfg.latest_pointer || "/attestation-engine/latest.json").trim();
 
-  return { base_url, jwks_path, status_path, latest_pointer };
+  // Cast is safe: Required<TrustCfg> for runtime defaults
+  return { base_url, jwks_path, status_path, policy_path, latest_pointer } as Required<TrustCfg>;
 }
 
 /* ---------- Fetch JSON (typed) ---------- */
@@ -42,20 +48,20 @@ function joinUrl(base: string, p: string) {
 }
 
 type TrustUrls =
-  | { mode: "local"; jwksUrl: ""; statusUrl: ""; latestPtrUrl: "" }
-  | { mode: "stable" | "pinned"; jwksUrl: string; statusUrl: string; latestPtrUrl: string };
+  | { mode: "local"; jwksUrl: ""; statusUrl: ""; policyUrl: ""; latestPtrUrl: "" }
+  | { mode: "stable" | "pinned"; jwksUrl: string; statusUrl: string; policyUrl: string; latestPtrUrl: string };
 
 /**
  * Resolve URLs for trust artifacts.
- * mode = "stable" → CDN /trust/jwks.json, /trust/statuslist.json
+ * mode = "stable" → CDN /trust/*.json
  * mode = "pinned" → reads /attestation-engine/latest.json, prefixes versioned paths
  */
 export async function getTrustUrls(mode: "stable" | "pinned" = "stable"): Promise<TrustUrls> {
-  const { base_url, jwks_path, status_path, latest_pointer } = loadTrustConfig();
+  const { base_url, jwks_path, status_path, policy_path, latest_pointer } = loadTrustConfig();
 
   // Explicit local mode or no remote configured
   if (process.env.TRUST_MODE === "local" || !base_url) {
-    return { mode: "local", jwksUrl: "", statusUrl: "", latestPtrUrl: "" };
+    return { mode: "local", jwksUrl: "", statusUrl: "", policyUrl: "", latestPtrUrl: "" };
   }
 
   if (mode === "pinned") {
@@ -63,10 +69,12 @@ export async function getTrustUrls(mode: "stable" | "pinned" = "stable"): Promis
     const latest = await fetchJson<LatestJson>(latestPtrUrl);
     const prefix = latest?.prefix?.trim();
     if (!prefix) throw new Error(`latest.json missing 'prefix' at ${latestPtrUrl}`);
+
     return {
       mode: "pinned",
       jwksUrl: joinUrl(base_url, `/${prefix}${jwks_path}`),
       statusUrl: joinUrl(base_url, `/${prefix}${status_path}`),
+      policyUrl: joinUrl(base_url, `/${prefix}${policy_path}`),
       latestPtrUrl,
     };
   }
@@ -76,6 +84,7 @@ export async function getTrustUrls(mode: "stable" | "pinned" = "stable"): Promis
     mode: "stable",
     jwksUrl: joinUrl(base_url, jwks_path),
     statusUrl: joinUrl(base_url, status_path),
+    policyUrl: joinUrl(base_url, policy_path),
     latestPtrUrl: joinUrl(base_url, latest_pointer),
   };
 }
@@ -93,6 +102,7 @@ export async function fetchTrustArtifacts(opts?: { mode?: "stable" | "pinned" })
   // Local: read from ./trust (dev or TRUST_MODE=local)
   if (urls.mode === "local") {
     const TRUST_DIR = path.resolve(process.cwd(), "trust");
+
     const jwks = JSON.parse(fs.readFileSync(path.join(TRUST_DIR, "jwks.json"), "utf8")) as Jwks;
     const statuslist = JSON.parse(fs.readFileSync(path.join(TRUST_DIR, "statuslist.json"), "utf8")) as StatusList;
 
@@ -104,17 +114,12 @@ export async function fetchTrustArtifacts(opts?: { mode?: "stable" | "pinned" })
     return { source: "local", jwks, statuslist, policy };
   }
 
-  // Remote (CDN)
-  const [jwks, statuslist] = await Promise.all([
+  // ✅ Remote (CDN): fetch policy from CDN too (no split-brain)
+  const [jwks, statuslist, policy] = await Promise.all([
     fetchJson<Jwks>(urls.jwksUrl),
     fetchJson<StatusList>(urls.statusUrl),
+    fetchJson<Policy>(urls.policyUrl),
   ]);
-
-  // keep policy local for now (or publish it later)
-  const policyPath = path.resolve(process.cwd(), "trust", "policy.json");
-  const policy = fs.existsSync(policyPath)
-    ? (JSON.parse(fs.readFileSync(policyPath, "utf8")) as Policy)
-    : ({ allowed_assurance: [], schema_uri: "" } as Policy);
 
   return { source: urls.mode, jwks, statuslist, policy };
 }

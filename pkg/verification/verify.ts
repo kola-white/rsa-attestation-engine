@@ -1,6 +1,6 @@
 // pkg/verification/verify.ts
 import { jwtVerify, createLocalJWKSet, type JWK } from "jose";
-import { fetchTrustArtifacts } from "./trust-endpoints.js";
+import { fetchTrustArtifacts } from "./trust-endpoints";
 import { audit } from "../logger.js";
 
 const isoNow = () => new Date().toISOString();

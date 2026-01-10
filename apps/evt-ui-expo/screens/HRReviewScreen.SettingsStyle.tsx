@@ -648,10 +648,24 @@ export const HRReviewScreenSettingsStyle = () => {
   const navigation = useNavigation<HRNav>();
 
   useLayoutEffect(() => {
-    navigation.setOptions({
-      title: "HR Review",
-      headerLargeTitle: true,
-      headerRight: () => (
+  navigation.setOptions({
+    title: "HR Review",
+    headerLargeTitle: true,
+    headerRight: () => (
+      <View className="flex-row items-center gap-2">
+        <Pressable
+          onPress={() => navigation.navigate("Recruiter")}
+          accessibilityRole="button"
+          accessibilityLabel="Open Recruiter demo"
+          hitSlop={10}
+          className="px-3 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-700"
+          style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+        >
+          <Text className="text-sm font-semibold text-zinc-900 dark:text-white">
+            Recruiter
+          </Text>
+        </Pressable>
+
         <Pressable
           onPress={logout}
           accessibilityRole="button"
@@ -664,9 +678,10 @@ export const HRReviewScreenSettingsStyle = () => {
             Sign out
           </Text>
         </Pressable>
-      ),
-    });
-  }, [navigation, logout]);
+      </View>
+    ),
+  });
+}, [navigation, logout]);
 
 
   return (

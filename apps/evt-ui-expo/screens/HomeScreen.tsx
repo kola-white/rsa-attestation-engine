@@ -14,16 +14,14 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <View className="flex-1 bg-slate-950 px-6 justify-center">
-      <Text className="text-3xl font-semibold text-white mb-2">
-        Welcome
-      </Text>
+      <Text className="text-3xl font-semibold text-white mb-2">Welcome</Text>
 
       <Text className="text-base text-slate-300 mb-6">
         {user?.email ?? "Signed in user"}
       </Text>
 
       <Pressable
-        className="h-12 items-center justify-center rounded-xl bg-emerald-500 active:bg-emerald-600 mb-3"
+        className="h-12 items-center justify-center rounded-xl bg-sky-400 active:bg-emerald-600 mb-3"
         onPress={() => navigation.navigate("HRReview")}
       >
         <Text className="text-base font-semibold text-slate-950">
@@ -32,12 +30,19 @@ export const HomeScreen: React.FC = () => {
       </Pressable>
 
       <Pressable
+        className="h-12 items-center justify-center rounded-xl bg-slate-700 active:bg-slate-800 mb-3"
+        onPress={() => navigation.navigate("Recruiter")}
+      >
+        <Text className="text-base font-semibold text-white">
+          Recruiter demo
+        </Text>
+      </Pressable>
+
+      <Pressable
         className="h-12 items-center justify-center rounded-xl bg-slate-700 active:bg-slate-800"
         onPress={logout}
       >
-        <Text className="text-base font-semibold text-white">
-          Sign out
-        </Text>
+        <Text className="text-base font-semibold text-white">Sign out</Text>
       </Pressable>
     </View>
   );
