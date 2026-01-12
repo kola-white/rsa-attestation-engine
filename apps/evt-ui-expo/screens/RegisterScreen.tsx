@@ -185,14 +185,14 @@ const navigation = useNavigation<AuthNav>();
 
           {/* Submit button */}
           <Pressable
-            className="mt-2 h-11 rounded-xl bg-sky-500 items-center justify-center disabled:opacity-50"
+            className="mt-2 h-11 rounded-xl bg-sky-400 items-center justify-center disabled:opacity-50"
             disabled={isSubmitting}
             onPress={handleSubmit}
           >
             {isSubmitting ? (
               <ActivityIndicator size="small" />
             ) : (
-              <Text className="text-sm font-semibold text-white">
+              <Text className="text-base font-semibold text-slate-950">
                 Create account
               </Text>
             )}
@@ -203,15 +203,8 @@ const navigation = useNavigation<AuthNav>();
             <Text className="text-sm text-slate-400">
               Already have an account?{' '}
             </Text>
-            <Pressable
-              onPress={() => {
-                // TODO: wire to your navigation stack, e.g.:
-                // navigation.navigate('Login');
-              }}
-            >
             <Pressable onPress={() => navigation.navigate("Login")}>
                 <Text className="text-sm font-semibold text-sky-400">Sign in</Text>
-            </Pressable>
             </Pressable>
           </View>
         </View>

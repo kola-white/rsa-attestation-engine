@@ -75,3 +75,9 @@ export class KratosFormError extends Error {
     this.name = 'KratosFormError';
   }
 }
+
+export interface KratosRecoveryFlow {
+  id: string;
+  type: "api" | "browser";
+  ui: KratosUiContainer; // re-use existing container shape (messages live here)
+}
