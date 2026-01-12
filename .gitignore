@@ -8,3 +8,6 @@ reports/
 *.exe
 *.out
 *.test
+
+# macOS
+.DS_Store
