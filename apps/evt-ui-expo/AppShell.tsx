@@ -49,7 +49,7 @@ export const AppShell: React.FC = () => {
   console.log("[AppShell] AUTH STATUS", status);
 
   if (status === "session-expired") {
-    console.log("[AppShell] AUTH STATUS session_expired (SessionExpiredScreen)");
+    console.log("[AppShell] AUTH STATUS session-expired (SessionExpiredScreen)");
     return <SessionExpiredScreen />;
   }
 

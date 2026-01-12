@@ -55,21 +55,18 @@ export const LoginScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView
     className="flex-1 bg-slate-950"
-    style={{ flex: 1 }}
     behavior={Platform.OS === "ios" ? "padding" : undefined}
   >
     <View
       className="flex-1 px-6 justify-center"
-      style={{ flex: 1, paddingHorizontal: 24, justifyContent: "center" }}
     >
       <Text
         className="text-3xl font-semibold text-white mb-2"
-        style={{ color: "black", fontSize: 28, fontWeight: "600", marginBottom: 8 }}
       >
         Sign in
       </Text>
 
-      <Text className="text-base text-slate-300 mb-6" style={{ color: "#334155" }}>
+      <Text className="text-base text-slate-300 mb-6" >
         HR access to employment verification cases.
       </Text>
 
@@ -128,7 +125,7 @@ export const LoginScreen: React.FC = () => {
         <Pressable
           className="mt-4"
           onPress={() => {
-            // TODO: navigate to Recovery screen using Kratos native recovery flow
+            navigation.navigate("ForgotPassword")
           }}
         >
           <Text className="text-sm text-sky-400">

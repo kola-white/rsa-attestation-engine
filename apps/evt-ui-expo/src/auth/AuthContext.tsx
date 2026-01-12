@@ -67,9 +67,9 @@ const extractRegistrationErrorMessage = (data: KratosErrorResponse): string => {
 // --- Provider --------------------------------------------------------------
 
 export const AuthProvider: React.FC<Props> = ({ children }) => {
-  // NOTE: We keep your AuthStatus type, but we WILL use "session_expired".
+  // NOTE: We keep your AuthStatus type, but we WILL use "session-expired".
   // If your ./types AuthStatus union does not include it yet, add it there:
-  // 'checking' | 'authenticated' | 'unauthenticated' | 'session_expired'
+  // 'checking' | 'authenticated' | 'unauthenticated' | 'session-expired'
   const [status, setStatus] = useState<AuthStatus>("checking");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -120,7 +120,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         // ignore
       }
 
-      setStatus("session_expired" as AuthStatus);
+      setStatus("session-expired" as AuthStatus);
     },
     [clearStoredRefreshToken]
   );
@@ -307,7 +307,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
 
       const ok = await refresh();
       if (!ok) {
-        // refresh() itself will set session_expired on refresh 401
+        // refresh() itself will set session-expired on refresh 401
         return res;
       }
 
