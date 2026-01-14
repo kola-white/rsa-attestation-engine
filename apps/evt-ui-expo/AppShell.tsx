@@ -6,11 +6,15 @@ import { runBiometricCheck } from "@/src/auth/biometrics";
 import { AuthNavigator } from "@/src/navigation/AuthNavigator";
 import { MainAppNavigator } from "@/src/navigation/MainAppNavigator";
 import { SessionExpiredScreen } from "screens/SessionExpiredScreen";
+import { RequestorNavigator } from "@/src/navigation/RequestorNavigator";
+import { RecruiterNavigator } from "@/src/navigation/RecruiterNavigator";
 
 export const AppShell: React.FC = () => {
   console.log("[AppShell] render");
   const { status } = useAuth();
   const [biometricGateDone, setBiometricGateDone] = useState(false);
+  const { user } = useAuth();
+
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +60,22 @@ export const AppShell: React.FC = () => {
   if (status === "unauthenticated") {
     console.log("[AppShell] AUTH STATUS unauthenticated (AuthNavigator)");
     return <AuthNavigator />;
+  }
+    console.log("[AppShell] user snapshot", JSON.stringify(user));
+  if (!user?.role) {
+    return <MainAppNavigator />; // fallback for now
+  }
+
+  if (user.role === "requestor") {
+    return <RequestorNavigator />;
+  }
+
+  if (user.role === "recruiter") {
+    return <RecruiterNavigator />;
+  }
+
+  if (user.role === "hr" || user.role === "hr_reviewer") {
+  return <MainAppNavigator />; // HRReview lives here
   }
 
   return <MainAppNavigator />;

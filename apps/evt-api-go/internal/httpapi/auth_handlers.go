@@ -80,14 +80,18 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 	email := pickStringTrait(who.Identity.Traits, "email")
 	name := pickStringTrait(who.Identity.Traits, "name")
 
-	// 3) Map to your Phase-1 role (hard-coded here; later map from DB)
+	// 3) Map to Phase-1 role (Phase 1A: simple rule)
+	// Default requestor; promote to hr_reviewer by allowlist rule.
 	role := "requestor"
 
 	emailLower := strings.ToLower(strings.TrimSpace(email))
 
-	if strings.HasSuffix(emailLower, "@protonmail.com") {
-    		role = "hr_reviewer"
+	if strings.HasSuffix(emailLower, "@cvera.app") {
+    role = "requestor"
+	} else if strings.HasSuffix(emailLower, "@protonmail.com") {
+		role = "hr_reviewer"
 	}
+
 
 	// 4) Mint tokens
 	access, err := auth.MintAccessTokenHS256(
@@ -99,13 +103,6 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 		[]string{role},
 		15*time.Minute,
 	)
-	if err != nil {
-		log.Printf("[auth:exchange] token_mint_failed: access token: %v", err)
-		writeErr(w, http.StatusInternalServerError, "token_mint_failed")
-		return
-	}
-
-	rawRefresh, err := randomHex(32) // 256-bit
 	if err != nil {
 		log.Printf("[auth:exchange] token_mint_failed: access token: %v", err)
 		writeErr(w, http.StatusInternalServerError, "token_mint_failed")
@@ -126,7 +123,7 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 	INSERT INTO domain_users (kratos_identity_id, email, name, role, status)
 	VALUES ($1,$2,$3,$4,'active')
 	ON CONFLICT (kratos_identity_id)
-	DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, updated_at = now()
+	DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, role = EXCLUDED.role, updated_at = now()
 	RETURNING id
 	`, who.Identity.ID, email, name, role).Scan(&userID)
 	if err != nil {
@@ -148,6 +145,7 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3) Mint + store refresh token (raw returned to client, hash stored)
+	var rawRefresh string
 	rawRefresh, err = randomHex(32)
 	if err != nil {
 		log.Printf("[auth:exchange] mint refresh: %v", err)

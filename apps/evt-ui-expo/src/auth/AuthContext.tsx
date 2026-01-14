@@ -348,6 +348,8 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       }
 
       const flow = (await flowRes.json()) as KratosLoginFlow;
+      console.log("[Auth][register] flow.ui.action", flow.ui?.action);
+
 
       // 2) Submit credentials
       const identifier = (email ?? "").trim().toLowerCase();
@@ -366,7 +368,14 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         }),
       });
 
+      // ✅ log response status immediately (no JSON needed yet)
+      console.log("[Auth][login] submitRes.status", submitRes.status);
+      console.log("[Auth][login] submitRes.ok", submitRes.ok);
+
       const submitJson = await submitRes.json();
+
+      // ✅ now you can log the JSON
+      console.log("[Auth][login] submitJson", JSON.stringify(submitJson));
 
       if (submitRes.status === 400) {
         const msg = extractLoginErrorMessage(submitJson as KratosErrorResponse);
@@ -422,7 +431,6 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
     async (input: RegisterInput) => {
       const email = input.email.trim().toLowerCase();
       const password = input.password;
-      const fullName = input.fullName?.trim();
 
       setStatus("checking");
 
@@ -433,8 +441,12 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
           headers: { Accept: "application/json" },
         });
 
+        console.log("[Auth][register] create flow.status", flowRes.status);
+        console.log("[Auth][register] create flow.ok", flowRes.ok);
+
         if (!flowRes.ok) {
           const text = await flowRes.text();
+          console.log("[Auth][register] create flow.body", text);
           setStatus("unauthenticated");
           throw new AuthError(
             "create_registration_flow_failed",
@@ -444,6 +456,14 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         }
 
         const flow = (await flowRes.json()) as KratosRegistrationFlow;
+        console.log("[Auth][register] flow.id", flow.id);
+        console.log("[Auth][register] flow.ui.action", flow.ui?.action);
+        console.log("[Auth][register] flow.ui.method", flow.ui?.method);
+
+        // ✅ TS-safe: your types say KratosUi doesn't have nodes, but runtime DOES.
+        // We log it without breaking compilation.
+        const uiAny = flow.ui as unknown as { nodes?: unknown };
+        console.log("[Auth][register] flow.ui.nodes", JSON.stringify(uiAny.nodes ?? []));
 
         // 2) Submit registration data to the flow's action
         const submitRes = await fetch(flow.ui.action, {
@@ -458,29 +478,50 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
             password,
             traits: {
               email,
-              full_name: fullName,
             },
           }),
         });
 
+        console.log("[Auth][register] submitRes.status", submitRes.status);
+        console.log("[Auth][register] submitRes.ok", submitRes.ok);
+
+        // ✅ Read the response body ONCE
+        const submitText = await submitRes.text();
+        console.log("[Auth][register] submitRes.bodyText", submitText);
+
         if (submitRes.status === 400) {
-          const data = (await submitRes.json()) as KratosErrorResponse;
-          const msg = extractRegistrationErrorMessage(data);
+          // ✅ Try to parse Kratos JSON error, but don't assume it's JSON
+          let errJson: KratosErrorResponse | null = null;
+          try {
+            errJson = JSON.parse(submitText) as KratosErrorResponse;
+          } catch {
+            errJson = null;
+          }
+
+          if (errJson) {
+            const msg = extractRegistrationErrorMessage(errJson);
+            setStatus("unauthenticated");
+            throw new KratosFormError(msg);
+          }
+
+          // Non-JSON 400 (rare, but possible)
           setStatus("unauthenticated");
-          throw new KratosFormError(msg);
+          throw new KratosFormError(
+            "We could not create your account. Please check your details and try again."
+          );
         }
 
         if (!submitRes.ok) {
-          const text = await submitRes.text();
           setStatus("unauthenticated");
           throw new AuthError(
             "registration_failed",
             "Registration failed unexpectedly. Please try again.",
-            text
+            submitText
           );
         }
 
-        const regResult = (await submitRes.json()) as KratosSuccessfulNativeRegistration;
+        // ✅ Success path: parse from the same captured body
+        const regResult = JSON.parse(submitText) as KratosSuccessfulNativeRegistration;
 
         if (!regResult.session_token) {
           setStatus("unauthenticated");
