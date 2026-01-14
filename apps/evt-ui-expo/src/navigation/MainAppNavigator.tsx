@@ -4,11 +4,14 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { HomeScreen } from "@/screens/HomeScreen";
 import { HRReviewScreenSettingsStyle } from "@/screens/HRReviewScreen.SettingsStyle";
 import { RecruiterNavigator } from "@/src/navigation/RecruiterNavigator";
+import { RequestorNavigator } from "@/src/navigation/RequestorNavigator";
+
 
 export type AppStackParamList = {
   Home: undefined;
   HRReview: undefined;
   Recruiter: undefined; // mounts the Phase-1 recruiter stack
+  ReqHome: undefined; // requestor home screen
 };
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -38,6 +41,12 @@ export const MainAppNavigator: React.FC = () => {
         options={{
           headerShown: false, // RecruiterNavigator manages its own headers
         }}
+      />
+
+      <Stack.Screen
+        name="ReqHome"
+        component={RequestorNavigator}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
