@@ -81,7 +81,13 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 	name := pickStringTrait(who.Identity.Traits, "name")
 
 	// 3) Map to your Phase-1 role (hard-coded here; later map from DB)
-	role := "hr_reviewer"
+	role := "requestor"
+
+	emailLower := strings.ToLower(strings.TrimSpace(email))
+
+	if strings.HasSuffix(emailLower, "@protonmail.com") {
+    		role = "hr_reviewer"
+	}
 
 	// 4) Mint tokens
 	access, err := auth.MintAccessTokenHS256(
