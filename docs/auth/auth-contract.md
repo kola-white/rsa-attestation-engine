@@ -303,11 +303,11 @@ sequenceDiagram
     autonumber
 
     participant U as User (HR)
-    participant C as Expo App<br/>iOS (SDK 54)
-    participant KP as Kratos Public<br/>auth.cvera.app
-    participant KA as Kratos Admin<br/>kratos:4435
-    participant A as EVT Go API<br/>api.cvera.app
-    participant D as EVT DB<br/>evt.refresh_tokens
+    participant C as Expo App\niOS (SDK 54)
+    participant KP as Kratos Public\nauth.cvera.app
+    participant KA as Kratos Admin\nkratos:4435
+    participant A as EVT Go API\napi.cvera.app
+    participant D as EVT DB\nevt.refresh_tokens
 
     Note over C,KP: Phase 1 login is delegated to Kratos (IDP).
 
@@ -316,10 +316,10 @@ sequenceDiagram
     KP->>KP: Validate credentials, create session
     KP-->>C: 200 OK + Kratos session (token/cookie)
 
-    Note over C: App now has a valid Kratos session.<br/>Next: exchange for API tokens.
+    Note over C: App now has a valid Kratos session.\nNext: exchange for API tokens.
 
-    C->>A: HTTPS POST /auth/exchange<br/>{ kratos_session_token, device_id? }
-    A->>KA: HTTP GET /sessions/whoami or /sessions/{id}<br/>(using kratos_session_token)
+    C->>A: HTTPS POST /auth/exchange\n{ kratos_session_token, device_id? }
+    A->>KA: HTTP GET /sessions/whoami or /sessions/{id}\n(using kratos_session_token)
     KA->>KA: Validate session, load identity
     KA-->>A: Identity payload (id, email, traits...)
 
@@ -328,15 +328,15 @@ sequenceDiagram
 
     A->>A: Generate access_token (JWT, 15m)
     A->>A: Generate refresh_token (32-byte random hex)
-    A->>D: INSERT refresh_tokens<br/>(sha256(refresh_token), user_id, device_id, expires_at)
+    A->>D: INSERT refresh_tokens\n(sha256(refresh_token), user_id, device_id, expires_at)
 
     D-->>A: OK
 
-    A-->>C: 200 OK<br/>{ access_token, refresh_token, user }
+    A-->>C: 200 OK\n{ access_token, refresh_token, user }
 
-    Note over C: Store refresh_token in SecureStore.<br/>Keep access_token in memory only.
+    Note over C: Store refresh_token in SecureStore.\nKeep access_token in memory only.
 
-    C-->>U: User is now signed in to EVT API<br/>(Case list, evidence, approve/reject)
+    C-->>U: User is now signed in to EVT API\n(Case list, evidence, approve/reject)
 ```
 ---
 
