@@ -88,7 +88,7 @@ flowchart LR
     subgraph EvtAPI["EVT Domain API"]
         API[EVT Go API<br/>api.cvera.app]
         subgraph DBA["Postgres DB\n`evt`"]
-            PE[(domain users, cases,<br/>refresh_tokens - [hashes])]
+            PE[(domain users, cases,<br/>refresh_tokens SHA-256)]
         end
     end
 
@@ -114,7 +114,6 @@ flowchart LR
     class KPub,KAdm kratos;
     class API api;
     class PK,PE db;
-K,PE db;
 ```
 ---
 
