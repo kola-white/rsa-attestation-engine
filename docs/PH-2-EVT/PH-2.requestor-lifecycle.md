@@ -137,6 +137,12 @@ State:
 SUBMITTED
 ```
 
+## Notes (Dispatch gating — policy layer)
+
+* SUBMITTED means the candidate has formally requested verification and the claim snapshot is immutable.
+* Employer dispatch may be immediate or delayed by employer policy. If an employer requires HR approval before contacting the employer signing system, the request remains SUBMITTED until dispatch occurs.
+* This dispatch gating is a policy configuration, not a change to the canonical lifecycle states.
+
 ---
 
 ### 5.3 ATTESTED
@@ -325,7 +331,7 @@ The UI lifecycle maps to the following **system-level persistence states**:
 | --------------------- | ----------------------------------------- |
 | `DRAFT`               | Candidate is editing claims               |
 | `SUBMITTED`           | Candidate formally requested verification |
-| `ATTESTATION_PENDING` | Employer request dispatched               |
+| `ATTESTATION_PENDING`*| Employer request dispatched               |
 | `ATTESTED`            | Employer cryptographically responded      |
 | `REJECTED`            | Employer declined or no record            |
 | `VERIFIED`            | Cvera validated the attestation           |
@@ -334,6 +340,11 @@ The UI lifecycle maps to the following **system-level persistence states**:
 | `CLOSED`              | Lifecycle complete                        |
 
 ---
+
+## Notes (Dispatch semantics)
+
+* \*ATTESTATION_PENDING is entered only after dispatch has occurred; (awaiting employer response)
+* A request may remain SUBMITTED while awaiting dispatch approval under employer policy. 
 
 # **10. Role-Based Visibility & Actions**
 
