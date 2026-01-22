@@ -20,6 +20,11 @@ services:
       - "8080:8080"
     environment:
       EVT_API_ADDR: "0.0.0.0:8080"
+      
+      # === REQUIRED AUTH SECRETS ===
+      EVT_JWT_SECRET: "${EVT_JWT_SECRET}"
+      EVT_DB_DSN: "${EVT_DB_DSN}"
+      EVT_REFRESH_TOKEN_HMAC_KEY: "${EVT_REFRESH_TOKEN_HMAC_KEY}"
 
       # DB inside docker network
       DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable"
