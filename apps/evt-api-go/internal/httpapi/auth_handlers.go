@@ -18,6 +18,8 @@ import (
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/auth"
 )
 
+var errKratosWhoamiNon200 = errors.New("kratos whoami non-200")
+
 type AuthExchangeRequest struct {
 	KratosSessionToken string `json:"kratos_session_token"`
 	DeviceID           string `json:"device_id,omitempty"`
@@ -39,7 +41,7 @@ type ExchangeUser struct {
 // Minimal shape from Kratos /sessions/whoami (public endpoint).
 type kratosWhoami struct {
 	Identity struct {
-		ID     string         `json:"request_id"`
+		ID     string         `json:"id"`
 		Traits map[string]any `json:"traits"`
 	} `json:"identity"`
 	Active bool `json:"active"`
@@ -63,12 +65,25 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1) Validate session with Kratos public whoami using X-Session-Token
 	who, err := s.kratosWhoami(r.Context(), req.KratosSessionToken)
-	if err != nil || who == nil || who.Identity.ID == "" {
+	if err != nil {
+		log.Printf("[auth:exchange] kratos whoami error: %v", err)
+
+		// Non-200 from Kratos whoami => invalid session token
+		if errors.Is(err, errKratosWhoamiNon200) {
+			writeErr(w, http.StatusUnauthorized, "invalid_kratos_session")
+			return
+		}
+
+		// Network / DNS / TLS / timeout => kratos unreachable
+		writeErr(w, http.StatusBadGateway, "kratos_unreachable")
+		return
+	}
+	if who == nil || strings.TrimSpace(who.Identity.ID) == "" {
 		writeErr(w, http.StatusUnauthorized, "invalid_kratos_session")
 		return
 	}
+
 
 	// 2) Extract traits (best-effort)
 	email := pickStringTrait(who.Identity.Traits, "email")
@@ -206,12 +221,13 @@ func (s *Server) kratosWhoami(ctx context.Context, sessionToken string) (*kratos
 	cli := &http.Client{Timeout: 10 * time.Second}
 	resp, err := cli.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, err // <-- network/DNS/TLS/timeout path
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("kratos whoami non-200")
+		log.Printf("[auth:kratosWhoami] non-200 status=%d", resp.StatusCode)
+		return nil, errKratosWhoamiNon200 // <-- non-200 path
 	}
 
 	var out kratosWhoami
