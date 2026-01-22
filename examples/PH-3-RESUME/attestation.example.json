@@ -1,9 +1,9 @@
 {
-  "id": "att-ULID-01HXYZ...",
+  "request_id": "att-ULID-01HXYZ...",
   "schema_uri": "schema/employment.role/v1",
   "version": "1.0.0",
   "issuer": {
-    "id": "did:org:apple",
+    "request_id": "did:org:apple",
     "name": "Apple Inc.",
     "ca_chain": ["urn:ca:root:...", "urn:ca:int:..."]
   },

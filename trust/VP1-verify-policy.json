@@ -1,5 +1,5 @@
 {
-  "id": "vp-1.verify-v1",
+  "request_id": "vp-1.verify-v1",
   "version": "1.0.0",
   "description": "Legacy verifier policy v1 aligned to VP-1. Medium-risk ATS/HR verification with fail-closed revocation.",
   "risk_tier": "MEDIUM",

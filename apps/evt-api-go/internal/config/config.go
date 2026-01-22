@@ -13,6 +13,10 @@ type Config struct {
 
 	Kratos KratosConfig
 	Auth   AuthConfig
+	// in type Config struct:
+	JWTSecret   string
+	JWTIssuer   string
+	JWTAudience string
 }
 
 type KratosConfig struct {

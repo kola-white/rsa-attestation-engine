@@ -53,7 +53,7 @@ Just **clean, signed employment facts**.
 ```jsonc
 {
   "schema_uri": "schema/PH-1-EVT/employment.verification.v1",
-  "issuer": { "id": "did:org:employer" },
+  "issuer": { "request_id": "did:org:employer" },
   "key": { "kid": "issuer-dev-key-1", "alg": "RS256" },
 
   "subject": {

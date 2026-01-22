@@ -1,7 +1,7 @@
 {
-  "id": "evt-ULID-01J0A7E6FR2VH9C8YQG3N8KZ5G",
+  "request_id": "evt-ULID-01J0A7E6FR2VH9C8YQG3N8KZ5G",
   "issuer": {
-    "id": "did:org:acme-corp",
+    "request_id": "did:org:acme-corp",
     "name": "Acme Corporation"
   },
   "subject": {

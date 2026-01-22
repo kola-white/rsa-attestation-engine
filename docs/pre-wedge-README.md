@@ -385,12 +385,12 @@ Schemas are responsible for validating:
 
 ```jsonc
 {
-  "id": "string",                         // stable attestation ID (UUID/ULID)
+  "request_id": "string",                         // stable attestation ID (UUID/ULID)
   "schema_uri": "https://.../skill/v1",   // versioned claim schema
   "version": "1.0.0",
 
   "issuer": {
-    "id": "did:org:apple",                // issuer identifier (DID/URI)
+    "request_id": "did:org:apple",                // issuer identifier (DID/URI)
     "name": "Apple Inc.",                 // optional display value
     "ca_chain": ["urn:ca:root:...", "urn:ca:int:..."] // references to trust anchors
   },
@@ -467,10 +467,10 @@ Schemas are responsible for validating:
 
 ```jsonc
 {
-  "id": "vr-ULID-01HABC...",
+  "request_id": "vr-ULID-01HABC...",
   "attestation_id": "att-ULID-01HXYZ...",
   "verifier": {
-    "id": "did:org:acme-ats",
+    "request_id": "did:org:acme-ats",
     "name": "Acme ATS"
   },
   "time": "2025-11-06T20:06:11Z",
@@ -527,10 +527,10 @@ Schemas are responsible for validating:
 
 ```jsonc
 {
-  "id": "rev-ULID-01HDEF...",
+  "request_id": "rev-ULID-01HDEF...",
   "attestation_id": "att-ULID-01HXYZ...",
   "issuer": {
-    "id": "did:org:apple"
+    "request_id": "did:org:apple"
   },
 
   "reason_code": "key_compromise|cessation|superseded|administrative",

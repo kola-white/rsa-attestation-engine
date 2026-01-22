@@ -1,0 +1,355 @@
+package evt
+
+import (
+	"context"
+	"encoding/json"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db")
+
+type Repo struct {
+	DB *db.DB
+}
+
+func ptr(s string) *string { return &s }
+
+func insertEvent(
+	ctx context.Context,
+	tx pgx.Tx,
+	requestID string,
+	actorRole string,
+	actorPersonID *string,
+	eventType string,
+	fromStatus *string,
+	toStatus *string,
+	payload any,
+) error {
+	b, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(ctx, `
+		INSERT INTO evt_request_events
+		  (request_id, actor_role, actor_personid, event_type, from_status, to_status, payload)
+		VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb)
+	`, requestID, actorRole, actorPersonID, eventType, fromStatus, toStatus, string(b))
+	return err
+}
+
+func ensureEmployerConfig(ctx context.Context, tx pgx.Tx, employerID string) error {
+	_, err := tx.Exec(ctx, `
+		INSERT INTO evt_employer_config (employer_id, dispatch_mode)
+		VALUES ($1, 'AUTO')
+		ON CONFLICT (employer_id) DO NOTHING
+	`, employerID)
+	return err
+}
+
+/* ---------------- Candidate writes ---------------- */
+
+func (r *Repo) CandidateCreateDraft(ctx context.Context, tx pgx.Tx, candidatePersonID, employerID string, claim json.RawMessage) (string, error) {
+	if err := ensureEmployerConfig(ctx, tx, employerID); err != nil {
+		return "", err
+	}
+
+	var requestID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO evt_requests (candidate_personid, employer_id, status, claim_snapshot)
+		VALUES ($1, $2, 'DRAFT', COALESCE($3::jsonb, '{}'::jsonb))
+		RETURNING request_id
+	`, candidatePersonID, employerID, string(claim)).Scan(&requestID); err != nil {
+		return "", err
+	}
+
+	actor := candidatePersonID
+	_ = insertEvent(ctx, tx, requestID, "candidate", &actor, "DRAFT_CREATED", nil, ptr("DRAFT"), map[string]any{
+		"employer_id": employerID,
+	})
+	return requestID, nil
+}
+
+func (r *Repo) CandidateUpdateDraft(ctx context.Context, tx pgx.Tx, requestID, candidatePersonID string, expectedVersion int, claim json.RawMessage) error {
+	ct, err := tx.Exec(ctx, `
+		UPDATE evt_requests
+		SET claim_snapshot = $1::jsonb,
+		    version = version + 1
+		WHERE request_id = $2
+		  AND candidate_personid = $3
+		  AND status = 'DRAFT'
+		  AND version = $4
+	`, string(claim), requestID, candidatePersonID, expectedVersion)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return db.ErrConflict
+	}
+	actor := candidatePersonID
+	return insertEvent(ctx, tx, requestID, "candidate", &actor, "DRAFT_UPDATED", ptr("DRAFT"), ptr("DRAFT"), map[string]any{
+		"expected_version": expectedVersion,
+	})
+}
+
+func (r *Repo) CandidateSubmit(ctx context.Context, tx pgx.Tx, requestID, candidatePersonID string) (finalStatus string, err error) {
+	var curStatus string
+	var employerID string
+
+	err = tx.QueryRow(ctx, `
+		SELECT status, employer_id
+		FROM evt_requests
+		WHERE request_id=$1 AND candidate_personid=$2
+		FOR UPDATE
+	`, requestID, candidatePersonID).Scan(&curStatus, &employerID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", db.ErrNotFound
+		}
+		return "", err
+	}
+	if curStatus != "DRAFT" {
+		return "", db.ErrConflict
+	}
+
+	_, err = tx.Exec(ctx, `
+		UPDATE evt_requests
+		SET status='SUBMITTED', submitted_at=now(), version=version+1
+		WHERE request_id=$1
+	`, requestID)
+	if err != nil {
+		return "", err
+	}
+
+	actor := candidatePersonID
+	_ = insertEvent(ctx, tx, requestID, "candidate", &actor, "REQUEST_SUBMITTED", ptr("DRAFT"), ptr("SUBMITTED"), map[string]any{})
+
+	var dispatchMode string
+	if err := tx.QueryRow(ctx, `
+		SELECT dispatch_mode FROM evt_employer_config WHERE employer_id=$1
+	`, employerID).Scan(&dispatchMode); err != nil {
+		return "", err
+	}
+
+	if dispatchMode == "AUTO" {
+		_, err = tx.Exec(ctx, `
+			UPDATE evt_requests
+			SET status='ATTESTATION_PENDING', attestation_dispatched_at=now(), version=version+1
+			WHERE request_id=$1 AND status='SUBMITTED'
+		`, requestID)
+		if err != nil {
+			return "", err
+		}
+		_ = insertEvent(ctx, tx, requestID, "cvera", nil, "ATTESTATION_DISPATCHED", ptr("SUBMITTED"), ptr("ATTESTATION_PENDING"), map[string]any{
+			"dispatch_mode": "AUTO",
+		})
+		return "ATTESTATION_PENDING", nil
+	}
+
+	_ = insertEvent(ctx, tx, requestID, "cvera", nil, "DISPATCH_GUARD_BLOCKED", ptr("SUBMITTED"), ptr("SUBMITTED"), map[string]any{
+		"dispatch_mode": "MANUAL",
+	})
+	return "SUBMITTED", nil
+}
+
+func (r *Repo) CandidateCancel(ctx context.Context, tx pgx.Tx, requestID, candidatePersonID string) error {
+	var curStatus string
+	err := tx.QueryRow(ctx, `
+		SELECT status
+		FROM evt_requests
+		WHERE request_id=$1 AND candidate_personid=$2
+		FOR UPDATE
+	`, requestID, candidatePersonID).Scan(&curStatus)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return db.ErrNotFound
+		}
+		return err
+	}
+	if curStatus != "DRAFT" && curStatus != "SUBMITTED" {
+		return db.ErrConflict
+	}
+
+	_, err = tx.Exec(ctx, `
+		UPDATE evt_requests
+		SET status='CANCELED', canceled_at=now(), version=version+1
+		WHERE request_id=$1
+	`, requestID)
+	if err != nil {
+		return err
+	}
+
+	actor := candidatePersonID
+	return insertEvent(ctx, tx, requestID, "candidate", &actor, "REQUEST_CANCELED", &curStatus, ptr("CANCELED"), map[string]any{})
+}
+
+/* ---------------- Employer HR writes ---------------- */
+
+func (r *Repo) EmployerAttest(ctx context.Context, tx pgx.Tx, requestID, employerID, employerHRPersonID, responseType string, responseBody json.RawMessage, attestationJWS string) error {
+	var curStatus string
+	err := tx.QueryRow(ctx, `
+		SELECT status
+		FROM evt_requests
+		WHERE request_id=$1 AND employer_id=$2
+		FOR UPDATE
+	`, requestID, employerID).Scan(&curStatus)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return db.ErrNotFound
+		}
+		return err
+	}
+	if curStatus != "ATTESTATION_PENDING" {
+		return db.ErrConflict
+	}
+
+	toStatus := "ATTESTED"
+	if responseType == "REJECTED_NO_RECORD" || responseType == "REJECTED_POLICY" {
+		toStatus = "REJECTED"
+	} else if attestationJWS == "" {
+		return db.ErrConflict
+	}
+
+	if toStatus == "ATTESTED" {
+		_, err = tx.Exec(ctx, `
+			UPDATE evt_requests
+			SET status='ATTESTED',
+			    employer_response_type=$1::employer_response_type,
+			    employer_response=COALESCE($2::jsonb, '{}'::jsonb),
+			    attestation_jws=$3,
+			    attested_at=now(),
+			    version=version+1
+			WHERE request_id=$4
+		`, responseType, string(responseBody), attestationJWS, requestID)
+	} else {
+		_, err = tx.Exec(ctx, `
+			UPDATE evt_requests
+			SET status='REJECTED',
+			    employer_response_type=$1::employer_response_type,
+			    employer_response=COALESCE($2::jsonb, '{}'::jsonb),
+			    attested_at=now(),
+			    version=version+1
+			WHERE request_id=$3
+		`, responseType, string(responseBody), requestID)
+	}
+	if err != nil {
+		return err
+	}
+
+	actor := employerHRPersonID
+	return insertEvent(ctx, tx, requestID, "employer_hr", &actor, "HR_ATTESTED", &curStatus, &toStatus, map[string]any{
+		"response_type": responseType,
+	})
+}
+
+/* ---------------- Internal Cvera writes ---------------- */
+
+func (r *Repo) InternalVerify(ctx context.Context, tx pgx.Tx, requestID string, trustResult string, trustFlags json.RawMessage, trustSummary string, evtTokenJWS string) error {
+	var curStatus string
+	err := tx.QueryRow(ctx, `
+		SELECT status FROM evt_requests WHERE request_id=$1 FOR UPDATE
+	`, requestID).Scan(&curStatus)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return db.ErrNotFound
+		}
+		return err
+	}
+	if curStatus != "ATTESTED" {
+		return db.ErrConflict
+	}
+
+	toStatus := "VERIFIED"
+	if trustResult == "UNVERIFIED" {
+		toStatus = "UNVERIFIED"
+	}
+	if len(trustFlags) == 0 {
+		trustFlags = json.RawMessage(`[]`)
+	}
+
+	_, err = tx.Exec(ctx, `
+		UPDATE evt_requests
+		SET status=$1::evt_request_status,
+		    trust_result=$2::trust_result_type,
+		    trust_flags=$3::jsonb,
+		    trust_summary=$4,
+		    evt_token_jws=COALESCE($5, evt_token_jws),
+		    verified_at=now(),
+		    version=version+1
+		WHERE request_id=$6
+	`, toStatus, trustResult, string(trustFlags), trustSummary, evtTokenJWS, requestID)
+	if err != nil {
+		return err
+	}
+
+	return insertEvent(ctx, tx, requestID, "cvera", nil, "TRUST_EVALUATED", &curStatus, &toStatus, map[string]any{
+		"trust_result": trustResult,
+	})
+}
+
+func (r *Repo) InternalClose(ctx context.Context, tx pgx.Tx, requestID string) error {
+	var curStatus string
+	err := tx.QueryRow(ctx, `
+		SELECT status FROM evt_requests WHERE request_id=$1 FOR UPDATE
+	`, requestID).Scan(&curStatus)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return db.ErrNotFound
+		}
+		return err
+	}
+	if curStatus != "CONSUMED" {
+		return db.ErrConflict
+	}
+
+	_, err = tx.Exec(ctx, `
+		UPDATE evt_requests
+		SET status='CLOSED', closed_at=now(), version=version+1
+		WHERE request_id=$1
+	`, requestID)
+	if err != nil {
+		return err
+	}
+
+	return insertEvent(ctx, tx, requestID, "cvera", nil, "REQUEST_CLOSED", &curStatus, ptr("CLOSED"), map[string]any{})
+}
+
+/* ---------------- Recruiter writes ---------------- */
+
+func (r *Repo) RecruiterConsume(ctx context.Context, tx pgx.Tx, requestID, recruiterPersonID, userAgent, ipHash string) error {
+	var curStatus string
+	err := tx.QueryRow(ctx, `
+		SELECT status FROM evt_requests WHERE request_id=$1 FOR UPDATE
+	`, requestID).Scan(&curStatus)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return db.ErrNotFound
+		}
+		return err
+	}
+	if curStatus != "VERIFIED" && curStatus != "UNVERIFIED" && curStatus != "CONSUMED" {
+		return db.ErrConflict
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO evt_token_consumptions (request_id, recruiter_personid, user_agent, ip_hash)
+		VALUES ($1,$2,$3,$4)
+	`, requestID, recruiterPersonID, userAgent, ipHash)
+	if err != nil {
+		return err
+	}
+
+	if curStatus != "CONSUMED" {
+		_, err = tx.Exec(ctx, `
+			UPDATE evt_requests
+			SET status='CONSUMED', consumed_at=now(), version=version+1
+			WHERE request_id=$1
+		`, requestID)
+		if err != nil {
+			return err
+		}
+		actor := recruiterPersonID
+		_ = insertEvent(ctx, tx, requestID, "recruiter", &actor, "TOKEN_CONSUMED", &curStatus, ptr("CONSUMED"), map[string]any{})
+	}
+
+	return nil
+}

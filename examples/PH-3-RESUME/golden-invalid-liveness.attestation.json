@@ -1,9 +1,9 @@
 {
-  "id": "att-ULID-01HNOTYETVALID01",
+  "request_id": "att-ULID-01HNOTYETVALID01",
   "schema_uri": "schema/employment.role/v1",
   "version": "1.0.0",
   "issuer": {
-    "id": "did:org:acme-corp",
+    "request_id": "did:org:acme-corp",
     "name": "Acme Corp",
     "ca_chain": ["urn:ca:root:acme-root", "urn:ca:int:acme-issuing"]
   },
