@@ -386,7 +386,7 @@ Content-Type: application/json
   "access_token": "<jwt-access-token>",
   "refresh_token": "819bd37e8dd478a8f3c4945b882be1c0afd75c3edc48281e2a7f6cb4bc3fcd3a",
   "user": {
-    "id": "user-uuid-or-kratos-id",
+    "request_id": "user-uuid-or-kratos-id",
     "email": "hr@example.com",
     "name": "HR Manager Name",
     "role": "hr_reviewer"
@@ -480,7 +480,7 @@ Authorization: Bearer <access_token>
 ```json
 {
   "user": {
-    "id": "user-uuid-or-kratos-id",
+    "request_id": "user-uuid-or-kratos-id",
     "email": "hr@example.com",
     "name": "HR Manager Name",
     "role": "hr_reviewer"

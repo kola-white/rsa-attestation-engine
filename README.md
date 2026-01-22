@@ -305,8 +305,8 @@ Schemas validate required fields, timestamps, nested objects, key metadata, and 
 
 ```jsonc
 {
-  "id": "evt-ULID-01HXYZ...",
-  "issuer": { "id": "did:org:acme-electric", "name": "Acme Electric, Inc." },
+  "request_id": "evt-ULID-01HXYZ...",
+  "issuer": { "request_id": "did:org:acme-electric", "name": "Acme Electric, Inc." },
   "subject": { "full_name": "Jane Doe", "employee_id": "E12345" },
   "employment": {
     "title": "Project Manager",
@@ -329,9 +329,9 @@ Schemas validate required fields, timestamps, nested objects, key metadata, and 
 
 ```jsonc
 {
-  "id": "vr-ULID-01HABC...",
+  "request_id": "vr-ULID-01HABC...",
   "attestation_id": "evt-ULID-01HXYZ...",
-  "verifier": { "id": "did:org:acme-ats", "name": "Acme ATS" },
+  "verifier": { "request_id": "did:org:acme-ats", "name": "Acme ATS" },
   "time": "2025-11-06T20:06:11Z",
   "signature_check": {
     "valid": true,
@@ -372,9 +372,9 @@ Schemas validate required fields, timestamps, nested objects, key metadata, and 
 
 ```jsonc
 {
-  "id": "rev-ULID-01HDEF...",
+  "request_id": "rev-ULID-01HDEF...",
   "attestation_id": "evt-ULID-01HXYZ...",
-  "issuer": { "id": "did:org:acme-electric" },
+  "issuer": { "request_id": "did:org:acme-electric" },
   "reason_code": "administrative",
   "reason_text": "Record superseded by corrected employment dates",
   "time": "2026-04-03T09:22:00Z",

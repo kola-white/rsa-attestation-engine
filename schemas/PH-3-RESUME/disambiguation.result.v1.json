@@ -5,7 +5,7 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "id": {
+    "request_id": {
       "type": "string",
       "description": "Unique identifier for this disambiguation run (e.g., ULID or UUID)."
     },
@@ -52,7 +52,7 @@
       "description": "Final decision and tie-break details."
     }
   },
-  "required": ["id", "schema_uri", "version", "context", "candidates", "decision"],
+  "required": ["request_id", "schema_uri", "version", "context", "candidates", "decision"],
   "definitions": {
     "OutcomeCode": {
       "type": "string",

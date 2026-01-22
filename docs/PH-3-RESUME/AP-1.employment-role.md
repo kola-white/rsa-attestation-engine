@@ -61,7 +61,7 @@ That schema:
 
   ```json
   [
-    "id",
+    "request_id",
     "schema_uri",
     "version",
     "issuer",

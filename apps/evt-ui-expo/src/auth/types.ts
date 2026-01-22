@@ -30,6 +30,8 @@ export interface RegisterInput {
   fullName?: string;
 }
 
+export type RefreshResult = { ok: true; accessToken: string } | { ok: false };
+
 export interface AuthContextValue {
   status: AuthStatus;
   accessToken: string | null;
@@ -39,8 +41,7 @@ export interface AuthContextValue {
   register(input: RegisterInput): Promise<void>;
   sessionExpiredReason: "refresh_unauthorized" | "api_unauthorized" | "api_forbidden" | null;
   beginReauth: () => void;
-  // refresh should be boolean now:
-  refresh: () => Promise<boolean>;
+  refresh: () => Promise<RefreshResult>;
 }
 
 

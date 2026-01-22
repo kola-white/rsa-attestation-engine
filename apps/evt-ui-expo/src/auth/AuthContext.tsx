@@ -16,6 +16,7 @@ import {
   TokenPair,
   AuthError,
   RegisterInput,
+  RefreshResult
 } from "./types";
 import {
   KratosLoginFlow,
@@ -158,99 +159,95 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
     []
   );
 
-  // --- Refresh (wrapped, single-flight, returns boolean) --------------------
+  // --- Refresh (wrapped, single-flight, returns *new access token*) ----------
 
-  const refreshInFlightRef = useRef<Promise<boolean> | null>(null);
+type RefreshResult = { ok: true; accessToken: string } | { ok: false };
 
-  const refresh = useCallback(async (): Promise<boolean> => {
-    if (refreshInFlightRef.current) return refreshInFlightRef.current;
+const refreshInFlightRef = useRef<Promise<RefreshResult> | null>(null);
 
-    refreshInFlightRef.current = (async () => {
-      console.log("[Auth][refresh] called");
+const refresh = useCallback(async (): Promise<RefreshResult> => {
+  if (refreshInFlightRef.current) return refreshInFlightRef.current;
 
-      const refreshToken = await getStoredRefreshToken();
-      console.log(
-        "[Auth][refresh] stored refresh token present?",
-        !!refreshToken
-      );
+  refreshInFlightRef.current = (async () => {
+    console.log("[Auth][refresh] called");
 
-      if (!refreshToken) {
-        console.log("[Auth][refresh] no token -> unauthenticated");
-        setAccessToken(null);
-        setUser(null);
-        setSessionExpiredReason(null);
-        setStatus("unauthenticated");
-        return false;
-      }
+    const refreshToken = await getStoredRefreshToken();
+    console.log("[Auth][refresh] stored refresh token present?", !!refreshToken);
 
-      console.log(
-        "[Auth][refresh] sending refresh token prefix:",
-        refreshToken.slice(0, 12)
-      );
-
-      let res: Response;
-      try {
-        res = await fetch(`${API_BASE_URL}/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        });
-      } catch (e) {
-        console.log("[Auth][refresh] network exception:", String(e));
-        // Non-auth failure => normal unauthenticated (not session expired)
-        await clearStoredRefreshToken();
-        setAccessToken(null);
-        setUser(null);
-        setSessionExpiredReason(null);
-        setStatus("unauthenticated");
-        return false;
-      }
-
-      console.log("[Auth][refresh] response status:", res.status);
-
-      if (res.status === 401) {
-        await markSessionExpired("refresh_unauthorized");
-        return false;
-      }
-
-      if (!res.ok) {
-        await clearStoredRefreshToken();
-        setAccessToken(null);
-        setUser(null);
-        setSessionExpiredReason(null);
-        setStatus("unauthenticated");
-        return false;
-      }
-
-      const data = (await res.json()) as TokenPair;
-      console.log(
-        "[Auth][refresh] OK new access prefix:",
-        data.access_token.slice(0, 12)
-      );
-      console.log(
-        "[Auth][refresh] OK new refresh prefix:",
-        data.refresh_token.slice(0, 12)
-      );
-
-      setAccessToken(data.access_token);
-      setUser(data.user);
+    if (!refreshToken) {
+      console.log("[Auth][refresh] no token -> unauthenticated");
+      setAccessToken(null);
+      setUser(null);
       setSessionExpiredReason(null);
-      await storeRefreshToken(data.refresh_token);
-      setStatus("authenticated");
-      return true;
-    })();
-
-    try {
-      return await refreshInFlightRef.current;
-    } finally {
-      refreshInFlightRef.current = null;
+      setStatus("unauthenticated");
+      return { ok: false };
     }
-  }, [
-    getStoredRefreshToken,
-    clearStoredRefreshToken,
-    storeRefreshToken,
-    markSessionExpired,
-  ]);
+
+    console.log(
+      "[Auth][refresh] sending refresh token prefix:",
+      refreshToken.slice(0, 12)
+    );
+
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+    } catch (e) {
+      console.log("[Auth][refresh] network exception:", String(e));
+      await clearStoredRefreshToken();
+      setAccessToken(null);
+      setUser(null);
+      setSessionExpiredReason(null);
+      setStatus("unauthenticated");
+      return { ok: false };
+    }
+
+    console.log("[Auth][refresh] response status:", res.status);
+
+    if (res.status === 401) {
+      await markSessionExpired("refresh_unauthorized");
+      return { ok: false };
+    }
+
+    if (!res.ok) {
+      await clearStoredRefreshToken();
+      setAccessToken(null);
+      setUser(null);
+      setSessionExpiredReason(null);
+      setStatus("unauthenticated");
+      return { ok: false };
+    }
+
+    const data = (await res.json()) as TokenPair;
+
+    console.log("[Auth][refresh] OK new access prefix:", data.access_token.slice(0, 12));
+    console.log("[Auth][refresh] OK new refresh prefix:", data.refresh_token.slice(0, 12));
+
+    // IMPORTANT: update state, but ALSO return the new access token
+    setAccessToken(data.access_token);
+    setUser(data.user);
+    setSessionExpiredReason(null);
+    await storeRefreshToken(data.refresh_token);
+    setStatus("authenticated");
+
+    return { ok: true, accessToken: data.access_token };
+  })();
+
+  try {
+    return await refreshInFlightRef.current;
+  } finally {
+    refreshInFlightRef.current = null;
+  }
+}, [
+  getStoredRefreshToken,
+  clearStoredRefreshToken,
+  storeRefreshToken,
+  markSessionExpired,
+]);
+
 
   // --- Global fetch interceptor (API_BASE_URL only) -------------------------
 
@@ -305,21 +302,19 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         return res;
       }
 
-      const ok = await refresh();
-      if (!ok) {
+      const result = await refresh();
+      if (!result.ok) {
         // refresh() itself will set session-expired on refresh 401
         return res;
       }
 
-      // Retry once with new token
+      // Retry once with the *new* token returned from refresh()
       const retryHeaders = new Headers(init?.headers);
       retryHeaders.set("x-auth-retry", "1");
-      if (accessToken) {
-        retryHeaders.set("Authorization", `Bearer ${accessToken}`);
-      }
+      retryHeaders.set("Authorization", `Bearer ${result.accessToken}`);
 
       return origFetch(input as any, { ...init, headers: retryHeaders });
-    }) as any;
+    });
 
     return () => {
       if (originalFetchRef.current) {

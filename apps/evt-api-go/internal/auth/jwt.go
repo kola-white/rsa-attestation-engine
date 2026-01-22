@@ -10,25 +10,17 @@ import (
 	"time"
 )
 
-type Claims struct {
-	Sub   string   `json:"sub"`
-	Email string   `json:"email,omitempty"`
-	Roles []string `json:"roles,omitempty"`
-	Typ   string   `json:"typ"` // "access"
-	Iat   int64    `json:"iat"`
-	Exp   int64    `json:"exp"`
-	Iss   string   `json:"iss"`
-	Aud   string   `json:"aud"`
-}
-
-func MintAccessTokenHS256(secret, iss, aud, sub, email string, roles []string, ttl time.Duration) (string, error) {
+func MintAccessTokenHS256(secret, iss, aud, sub, email string, roles []Role, ttl time.Duration) (string, error) {
 	secret = strings.TrimSpace(secret)
 	if secret == "" {
 		return "", errors.New("jwt secret is empty")
 	}
+	if len(roles) == 0 {
+		return "", errors.New("jwt roles is empty")
+	}
 
 	now := time.Now().Unix()
-	claims := Claims{
+	claims := AccessClaims{
 		Sub:   sub,
 		Email: email,
 		Roles: roles,

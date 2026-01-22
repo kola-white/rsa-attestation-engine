@@ -1,7 +1,7 @@
 {
-  "id": "vr-ULID-01HABC...",
+  "request_id": "vr-ULID-01HABC...",
   "attestation_id": "att-ULID-01HXYZ...",
-  "verifier": { "id": "did:org:acme-ats", "name": "Acme ATS" },
+  "verifier": { "request_id": "did:org:acme-ats", "name": "Acme ATS" },
   "time": "2025-11-06T20:06:11Z",
   "signature_check": { "valid": true, "alg": "RS256", "kid": "apple-key-2025q1" },
   "chain_check": { "trusted": true, "path": ["urn:ca:int:apple-issuing-2025", "urn:ca:root:digicert-G3"] },

@@ -2,15 +2,15 @@
   "$id": "https://attested.example.com/schemas/PH-1-EVT/employment-verification.v1.json",
   "title": "Employment Verification Token v1",
   "type": "object",
-  "required": ["id", "issuer", "subject", "employment", "validity", "signature"],
+  "required": ["request_id", "issuer", "subject", "employment", "validity", "signature"],
   "properties": {
-    "id": { "type": "string" },
+    "request_id": { "type": "string" },
 
     "issuer": {
       "type": "object",
-      "required": ["id", "name"],
+      "required": ["request_id", "name"],
       "properties": {
-        "id":   { "type": "string" },
+        "request_id":   { "type": "string" },
         "name": { "type": "string" }
       }
     },

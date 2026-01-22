@@ -1,5 +1,5 @@
 {
-  "id": "dp1-ULID-01HX1AMBIG",
+  "request_id": "dp1-ULID-01HX1AMBIG",
   "schema_uri": "schema/disambiguation.result/v1",
   "version": "1.0.0",
   "context": {

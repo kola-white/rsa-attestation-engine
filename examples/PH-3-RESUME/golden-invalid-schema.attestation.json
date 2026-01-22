@@ -1,9 +1,9 @@
 {
-  "id": 12345,
+  "request_id": 12345,
   "schema_uri": "schema/employment.role/v1",
   "version": "1.0.0",
   "issuer": {
-    "id": "did:org:acme-corp"
+    "request_id": "did:org:acme-corp"
   },
   "claim": {
     "type": "employment.role",

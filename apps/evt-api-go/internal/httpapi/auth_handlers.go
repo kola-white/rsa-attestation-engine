@@ -30,17 +30,16 @@ type AuthExchangeResponse struct {
 }
 
 type ExchangeUser struct {
-	ID    string `json:"id"`
+	ID    string `json:"request_id"`
 	Email string `json:"email,omitempty"`
 	Name  string `json:"name,omitempty"`
 	Role  string `json:"role"`
 }
 
 // Minimal shape from Kratos /sessions/whoami (public endpoint).
-// We only parse what we need.
 type kratosWhoami struct {
 	Identity struct {
-		ID     string         `json:"id"`
+		ID     string         `json:"request_id"`
 		Traits map[string]any `json:"traits"`
 	} `json:"identity"`
 	Active bool `json:"active"`
@@ -66,46 +65,30 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 
 	// 1) Validate session with Kratos public whoami using X-Session-Token
 	who, err := s.kratosWhoami(r.Context(), req.KratosSessionToken)
-	if err != nil {
-		// Treat as invalid/expired token from client’s POV
-		writeErr(w, http.StatusUnauthorized, "invalid_kratos_session")
-		return
-	}
-	if who.Identity.ID == "" {
+	if err != nil || who == nil || who.Identity.ID == "" {
 		writeErr(w, http.StatusUnauthorized, "invalid_kratos_session")
 		return
 	}
 
-	// 2) Extract traits (best-effort, no assumptions about schema beyond common keys)
+	// 2) Extract traits (best-effort)
 	email := pickStringTrait(who.Identity.Traits, "email")
 	name := pickStringTrait(who.Identity.Traits, "name")
 
-	// 3) Map to Phase-1 role (Phase 1A: simple rule)
-	// Default requestor; promote to hr_reviewer by allowlist rule.
-	role := "requestor"
-
+	// 3) Determine role (Phase 1A)
+	roleStr := "requestor"
 	emailLower := strings.ToLower(strings.TrimSpace(email))
 
 	if strings.HasSuffix(emailLower, "@cvera.app") {
-    role = "requestor"
+		roleStr = "requestor"
 	} else if strings.HasSuffix(emailLower, "@protonmail.com") {
-		role = "hr_reviewer"
+		roleStr = "hr_reviewer"
 	}
 
-
-	// 4) Mint tokens
-	access, err := auth.MintAccessTokenHS256(
-		s.cfg.Auth.JWTSecret,
-		s.cfg.Auth.Issuer,
-		s.cfg.Auth.Audience,
-		who.Identity.ID,
-		email,
-		[]string{role},
-		15*time.Minute,
-	)
+	// 3b) Parse into canonical typed role
+	userRole, err := auth.ParseRole(roleStr)
 	if err != nil {
-		log.Printf("[auth:exchange] token_mint_failed: access token: %v", err)
-		writeErr(w, http.StatusInternalServerError, "token_mint_failed")
+		log.Printf("[auth:exchange] invalid role computed role=%q: %v", roleStr, err)
+		writeErr(w, http.StatusInternalServerError, "server_error")
 		return
 	}
 
@@ -117,7 +100,7 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	// 1) Upsert domain user mapped to Kratos identity id
+	// 4) Upsert domain user mapped to Kratos identity id
 	var userID uuid.UUID
 	err = tx.QueryRowContext(r.Context(), `
 	INSERT INTO domain_users (kratos_identity_id, email, name, role, status)
@@ -125,14 +108,14 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 	ON CONFLICT (kratos_identity_id)
 	DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, role = EXCLUDED.role, updated_at = now()
 	RETURNING id
-	`, who.Identity.ID, email, name, role).Scan(&userID)
+	`, who.Identity.ID, email, name, userRole.String()).Scan(&userID)
 	if err != nil {
 		log.Printf("[auth:exchange] upsert domain_user: %v", err)
 		writeErr(w, http.StatusInternalServerError, "server_error")
 		return
 	}
 
-	// 2) Create auth session
+	// 5) Create auth session
 	sessionID := uuid.New()
 	_, err = tx.ExecContext(r.Context(), `
 	INSERT INTO auth_sessions (session_id, user_id, device_id, created_at, last_used_at)
@@ -144,15 +127,14 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3) Mint + store refresh token (raw returned to client, hash stored)
-	var rawRefresh string
-	rawRefresh, err = randomHex(32)
+	// 6) Mint + store refresh token (raw returned to client, hash stored)
+	rawRefresh, err := randomHex(32)
 	if err != nil {
 		log.Printf("[auth:exchange] mint refresh: %v", err)
 		writeErr(w, http.StatusInternalServerError, "token_mint_failed")
 		return
 	}
-	
+
 	hash, err := s.refreshTokenHash(rawRefresh)
 	if err != nil {
 		log.Printf("[auth:exchange] hash refresh: %v", err)
@@ -179,17 +161,16 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// access token should use the *domain user UUID* as subject
-	access, err = auth.MintAccessTokenHS256(
+	// 7) Mint access token (sub must be domain user UUID)
+	access, err := auth.MintAccessTokenHS256(
 		s.cfg.Auth.JWTSecret,
 		s.cfg.Auth.Issuer,
 		s.cfg.Auth.Audience,
 		userID.String(),
 		email,
-		[]string{role},
+		[]auth.Role{userRole},
 		15*time.Minute,
 	)
-
 	if err != nil {
 		log.Printf("[auth:exchange] token_mint_failed: access token: %v", err)
 		writeErr(w, http.StatusInternalServerError, "token_mint_failed")
@@ -203,74 +184,72 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 			ID:    userID.String(),
 			Email: email,
 			Name:  name,
-			Role:  role,
+			Role:  userRole.String(),
 		},
 	})
+}
+
+func (s *Server) kratosWhoami(ctx context.Context, sessionToken string) (*kratosWhoami, error) {
+	base := strings.TrimRight(strings.TrimSpace(s.cfg.Kratos.PublicBaseURL), "/")
+	if base == "" {
+		return nil, errors.New("kratos public base url empty")
+	}
+	url := base + "/sessions/whoami"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("X-Session-Token", sessionToken)
+	req.Header.Set("Accept", "application/json")
+
+	cli := &http.Client{Timeout: 10 * time.Second}
+	resp, err := cli.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("kratos whoami non-200")
 	}
 
-	func (s *Server) kratosWhoami(ctx context.Context, sessionToken string) (*kratosWhoami, error) {
-		base := strings.TrimRight(strings.TrimSpace(s.cfg.Kratos.PublicBaseURL), "/")
-		if base == "" {
-			return nil, errors.New("kratos public base url empty")
-		}
-		url := base + "/sessions/whoami"
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Set("X-Session-Token", sessionToken)
-		req.Header.Set("Accept", "application/json")
-
-		cli := &http.Client{Timeout: 10 * time.Second}
-		resp, err := cli.Do(req)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return nil, errors.New("kratos whoami non-200")
-		}
-
-		var out kratosWhoami
-		if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-			return nil, err
-		}
-		return &out, nil
+	var out kratosWhoami
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
 	}
+	return &out, nil
+}
 
-	func pickStringTrait(traits map[string]any, key string) string {
-		if traits == nil {
-			return ""
-		}
-		v, ok := traits[key]
-		if !ok || v == nil {
-			return ""
-		}
-		switch t := v.(type) {
-		case string:
-			return strings.TrimSpace(t)
-		default:
-			return ""
-		}
+func pickStringTrait(traits map[string]any, key string) string {
+	if traits == nil {
+		return ""
 	}
-
-	func randomHex(nBytes int) (string, error) {
-		b := make([]byte, nBytes)
-		if _, err := rand.Read(b); err != nil {
-			return "", err
-		}
-		return hex.EncodeToString(b), nil
+	v, ok := traits[key]
+	if !ok || v == nil {
+		return ""
 	}
-
-	
-
-	func (s *Server) refreshTokenHash(token string) (string, error) {
-		if len(s.hmacKey) == 0 {
-			return "", errors.New("hmac key not configured")
-		}
-		mac := hmac.New(sha256.New, s.hmacKey)
-		_, _ = mac.Write([]byte(token))
-		return hex.EncodeToString(mac.Sum(nil)), nil
+	switch t := v.(type) {
+	case string:
+		return strings.TrimSpace(t)
+	default:
+		return ""
 	}
+}
+
+func randomHex(nBytes int) (string, error) {
+	b := make([]byte, nBytes)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+func (s *Server) refreshTokenHash(token string) (string, error) {
+	if len(s.hmacKey) == 0 {
+		return "", errors.New("hmac key not configured")
+	}
+	mac := hmac.New(sha256.New, s.hmacKey)
+	_, _ = mac.Write([]byte(token))
+	return hex.EncodeToString(mac.Sum(nil)), nil
+}

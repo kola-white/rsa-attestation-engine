@@ -37,12 +37,12 @@ func (s *Server) HandleAuthRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now()
-  incomingHash, err := s.refreshTokenHash(req.RefreshToken)
-  if err != nil {
-    log.Printf("[auth:refresh] hash: %v", err)
-    writeErr(w, http.StatusInternalServerError, "server_error")
-    return
-  }
+	incomingHash, err := s.refreshTokenHash(req.RefreshToken)
+	if err != nil {
+		log.Printf("[auth:refresh] hash: %v", err)
+		writeErr(w, http.StatusInternalServerError, "server_error")
+		return
+	}
 
 	tx, err := s.db.BeginTx(r.Context(), &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
@@ -70,7 +70,6 @@ func (s *Server) HandleAuthRefresh(w http.ResponseWriter, r *http.Request) {
   `, incomingHash).Scan(&tokenID, &sessionID, &userID, &isCurrent, &expiresAt, &revokedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		// Unknown token => treat as invalid
 		writeErr(w, http.StatusUnauthorized, "invalid_refresh_token")
 		return
 	}
@@ -86,8 +85,7 @@ func (s *Server) HandleAuthRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !isCurrent {
-		// REUSE DETECTED: token was already rotated away.
-		// Revoke entire session family (all tokens for this session_id).
+		// REUSE DETECTED: revoke entire session family
 		if _, err := tx.ExecContext(r.Context(), `
       UPDATE refresh_tokens
       SET revoked_at = now(), revoke_reason = 'reuse_detected', is_current = FALSE
@@ -114,20 +112,19 @@ func (s *Server) HandleAuthRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Load user for response + JWT claims (and optional status check)
-	var email, name, role, status string
+	// Load user for response + JWT claims
+	var email, name, roleStr, status string
 	err = tx.QueryRowContext(r.Context(), `
     SELECT email, name, role, status
     FROM domain_users
     WHERE id = $1
-  `, userID).Scan(&email, &name, &role, &status)
+  `, userID).Scan(&email, &name, &roleStr, &status)
 	if err != nil {
 		log.Printf("[auth:refresh] load user: %v", err)
 		writeErr(w, http.StatusInternalServerError, "server_error")
 		return
 	}
 	if status != "active" {
-		// revoke family on disabled/locked
 		_, _ = tx.ExecContext(r.Context(), `
       UPDATE refresh_tokens SET revoked_at = now(), revoke_reason='user_inactive', is_current=FALSE
       WHERE session_id=$1 AND revoked_at IS NULL
@@ -138,6 +135,14 @@ func (s *Server) HandleAuthRefresh(w http.ResponseWriter, r *http.Request) {
     `, sessionID)
 		_ = tx.Commit()
 		writeErr(w, http.StatusForbidden, "account_inactive")
+		return
+	}
+
+	// Parse role from DB into canonical typed role
+	userRole, err := auth.ParseRole(roleStr)
+	if err != nil {
+		log.Printf("[auth:refresh] invalid role in db user_id=%s role=%q: %v", userID.String(), roleStr, err)
+		writeErr(w, http.StatusUnauthorized, "invalid_role")
 		return
 	}
 
@@ -159,12 +164,12 @@ func (s *Server) HandleAuthRefresh(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "server_error")
 		return
 	}
-  newHash, err := s.refreshTokenHash(newRaw)
-  if err != nil {
-    log.Printf("[auth:refresh] hash new: %v", err)
-    writeErr(w, http.StatusInternalServerError, "server_error")
-    return
-  }
+	newHash, err := s.refreshTokenHash(newRaw)
+	if err != nil {
+		log.Printf("[auth:refresh] hash new: %v", err)
+		writeErr(w, http.StatusInternalServerError, "server_error")
+		return
+	}
 	newTokenID := uuid.New()
 	newExp := now.Add(30 * 24 * time.Hour)
 
@@ -187,13 +192,14 @@ func (s *Server) HandleAuthRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Mint access token (sub = domain user UUID)
 	access, err := auth.MintAccessTokenHS256(
 		s.cfg.Auth.JWTSecret,
 		s.cfg.Auth.Issuer,
 		s.cfg.Auth.Audience,
 		userID.String(),
 		email,
-		[]string{role},
+		[]auth.Role{userRole},
 		15*time.Minute,
 	)
 	if err != nil {
@@ -215,7 +221,7 @@ func (s *Server) HandleAuthRefresh(w http.ResponseWriter, r *http.Request) {
 			ID:    userID.String(),
 			Email: email,
 			Name:  name,
-			Role:  role,
+			Role:  userRole.String(),
 		},
 	})
 }

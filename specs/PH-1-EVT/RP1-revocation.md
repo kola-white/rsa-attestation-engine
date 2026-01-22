@@ -121,9 +121,9 @@ Issuers SHOULD record revocation events using the following structure:
 
 ```jsonc
 {
-  "id": "rev-ULID-01HDEF...",
+  "request_id": "rev-ULID-01HDEF...",
   "attestation_id": "att-ULID-01HXYZ...",
-  "issuer": { "id": "did:org:acme-corp" },
+  "issuer": { "request_id": "did:org:acme-corp" },
   "reason_code": "key_compromise",
   "reason_text": "Role misattributed; corrected record issued",
   "time": "2026-04-03T09:22:00Z",

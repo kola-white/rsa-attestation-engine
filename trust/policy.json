@@ -1,5 +1,5 @@
 {
-  "id": "vp-1.employment-role.high-hiring",
+  "request_id": "vp-1.employment-role.high-hiring",
   "version": "1.0.0",
   "description": "High-assurance hiring policy for employment.role attestations. Strict recency, strong trust path, and high TAL level required.",
 
