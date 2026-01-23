@@ -38,6 +38,14 @@ type SpacesConfig struct {
 	Endpoint  string
 	Bucket    string
 }
+func firstEnv(keys []string, def string) string {
+	for _, k := range keys {
+		if v := strings.TrimSpace(os.Getenv(k)); v != "" {
+			return v
+		}
+	}
+	return def
+}
 
 // Load reads environment variables and returns a validated config.
 // - EVT_API_ADDR optional (defaults to 127.0.0.1:8080)
@@ -54,8 +62,14 @@ func Load() (Config, error) {
 			Bucket:    os.Getenv("EVT_S3_BUCKET"),
 		},
 		Kratos: KratosConfig{
-		PublicBaseURL: getenv("KRATOS_PUBLIC_BASE_URL", "https://auth.cvera.app"),
+		// Preferred: EVT_KRATOS_PUBLIC_URL (matches your compose)
+		// Back-compat: KRATOS_PUBLIC_BASE_URL
+		PublicBaseURL: firstEnv(
+			[]string{"EVT_KRATOS_PUBLIC_URL", "KRATOS_PUBLIC_BASE_URL"},
+			"https://auth.cvera.app",
+		),
 	},
+
 		Auth: AuthConfig{
 		JWTSecret: os.Getenv("EVT_JWT_SECRET"),
 		Issuer:    getenv("EVT_JWT_ISS", "cvera-api"),
