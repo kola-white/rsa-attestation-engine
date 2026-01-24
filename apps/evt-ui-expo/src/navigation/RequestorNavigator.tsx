@@ -3,8 +3,8 @@ import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { RequestorStackParamList } from "@/src/navigation/requestorTypes";
 import { RequestorHomeScreen } from "@/screens/RequestorHomeScreen";
-//import { RequestorNewRequestScreen } from "@/screens/RequestorNewRequestScreen";
-//import { RequestorRequestDetailScreen } from "@/screens/RequestorRequestDetailScreen";
+import { RequestorNewRequestScreen } from "@/screens/RequestorNewRequestScreen";
+import { RequestorRequestDetailScreen } from "@/screens/RequestorRequestDetailScreen";
 
 const Stack = createNativeStackNavigator<RequestorStackParamList>();
 
@@ -22,7 +22,7 @@ export const RequestorNavigator: React.FC = () => {
         component={RequestorHomeScreen}
         options={{ title: "Request" }}
       />
-      {/*
+      
       <Stack.Screen
         name="RequestorNewRequest"
         component={RequestorNewRequestScreen}
@@ -32,8 +32,7 @@ export const RequestorNavigator: React.FC = () => {
         name="RequestorRequestDetail"
         component={RequestorRequestDetailScreen}
         options={{ title: "Status" }}
-      />}
-      */}
+      />
     </Stack.Navigator>
   );
 };

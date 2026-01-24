@@ -14,7 +14,7 @@ export const RequestorHomeScreen: React.FC = () => {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: "Request",
+      title: "Back",
       headerLargeTitle: true,
       headerRight: () => (
         <Pressable
