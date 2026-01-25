@@ -248,7 +248,7 @@ export const RequestorRequestDetailScreen: React.FC = () => {
         <View className="border-t border-zinc-200 dark:border-zinc-800 px-5 pt-3 pb-4">
           {!canEdit ? (
             <Text className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-              Submitted requests can’t be edited or canceled.
+              Submitted requests can`t be edited or canceled.
             </Text>
           ) : (
             <Text className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
