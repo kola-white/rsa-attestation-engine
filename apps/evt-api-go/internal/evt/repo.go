@@ -3,10 +3,12 @@ package evt
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db")
+	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db"
+)
 
 type Repo struct {
 	DB *db.DB
@@ -90,6 +92,64 @@ func (r *Repo) CandidateUpdateDraft(ctx context.Context, tx pgx.Tx, requestID, c
 		"expected_version": expectedVersion,
 	})
 }
+
+	// CandidateList returns the requestor's requests in descending updated order.
+	// Minimal list shape only (matches RequestorListRow JSON contract).
+	func (r *Repo) CandidateList(ctx context.Context, tx pgx.Tx, candidatePersonID string, limit int) ([]RequestorListRow, error) {
+		if limit <= 0 || limit > 200 {
+			limit = 100
+		}
+
+		const q = `
+	SELECT
+	request_id,
+	status,
+	COALESCE(claim_snapshot, '{}'::jsonb) AS claim_snapshot,
+	created_at,
+	updated_at
+	FROM evt_requests
+	WHERE candidate_personid = $1
+	ORDER BY updated_at DESC
+	LIMIT $2
+	`
+
+	rows, err := tx.Query(ctx, q, candidatePersonID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]RequestorListRow, 0, 16)
+
+	for rows.Next() {
+		var (
+			requestID string
+			status    string
+			snap      []byte
+			createdAt time.Time
+			updatedAt time.Time
+		)
+
+		if err := rows.Scan(&requestID, &status, &snap, &createdAt, &updatedAt); err != nil {
+			return nil, err
+		}
+
+		out = append(out, RequestorListRow{
+			RequestID:     requestID,
+			Status:        status,
+			ClaimSnapshot: json.RawMessage(snap),
+			CreatedAt:     createdAt.UTC().Format(time.RFC3339Nano),
+			UpdatedAt:     updatedAt.UTC().Format(time.RFC3339Nano),
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
 
 func (r *Repo) CandidateSubmit(ctx context.Context, tx pgx.Tx, requestID, candidatePersonID string) (finalStatus string, err error) {
 	var curStatus string
