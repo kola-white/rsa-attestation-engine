@@ -21,6 +21,49 @@ type CreateDraftReq struct {
 	ClaimSnapshot json.RawMessage `json:"claim_snapshot"`
 }
 
+type RequestorListRow struct {
+	RequestID     string          `json:"request_id"`
+	Status        string          `json:"status"`
+	ClaimSnapshot json.RawMessage `json:"claim_snapshot"`
+	CreatedAt     string          `json:"created_at"`
+	UpdatedAt     string          `json:"updated_at"`
+}
+
+type RequestorListResp struct {
+	Items []RequestorListRow `json:"items"`
+}
+
+func (h *CandidateHandlers) List(c *gin.Context) {
+	claims := auth.MustClaims(c)
+	if claims == nil {
+		return
+	}
+	if !auth.HasRole(claims, auth.RoleRequestor) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		return
+	}
+
+	personID := claims.Sub
+
+	var items []RequestorListRow
+	err := h.DB.WithTx(c.Request.Context(), func(tx pgx.Tx) error {
+		rows, err := h.Repo.CandidateList(c.Request.Context(), tx, personID, 100)
+		if err != nil {
+			return err
+		}
+		items = rows
+		return nil
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "list_failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, RequestorListResp{Items: items})
+}
+
+
 type CreateDraftResp struct {
 	RequestID string `json:"request_id"`
 	Status    string `json:"status"`

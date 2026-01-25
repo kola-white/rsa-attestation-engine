@@ -42,7 +42,7 @@ export const RequestorHomeScreen: React.FC = () => {
         start_mm_yyyy: "08/2023",
         end_mm_yyyy: "05/2025",
       },
-      status: "IN_REVIEW",
+      status: "ATTESTATION_PENDING",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },

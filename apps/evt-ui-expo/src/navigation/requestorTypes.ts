@@ -2,10 +2,13 @@
 export type RequestStatus =
   | "DRAFT"
   | "SUBMITTED"
-  | "IN_REVIEW"
-  | "NEEDS_INFO"
+  | "ATTESTATION_PENDING"
+  | "ATTESTED"
+  | "REJECTED"
   | "VERIFIED"
-  | "REJECTED";
+  | "UNVERIFIED"
+  | "CONSUMED"
+  | "CLOSED";
 
 export type EmploymentClaimDraft = {
   employer: string;
