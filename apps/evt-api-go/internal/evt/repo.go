@@ -150,6 +150,64 @@ func (r *Repo) CandidateUpdateDraft(ctx context.Context, tx pgx.Tx, requestID, c
 	return out, nil
 }
 
+	// CandidateGet returns a single request owned by the candidate.
+	// Shape matches RequestorGetResp (adds version).
+	func (r *Repo) CandidateGet(
+		ctx context.Context,
+		tx pgx.Tx,
+		requestID string,
+		candidatePersonID string,
+	) (RequestorGetResp, error) {
+
+		const q = `
+	SELECT
+	request_id,
+	status,
+	COALESCE(claim_snapshot, '{}'::jsonb) AS claim_snapshot,
+	created_at,
+	updated_at,
+	version
+	FROM evt_requests
+	WHERE request_id = $1
+	AND candidate_personid = $2
+	LIMIT 1
+	`
+
+		var (
+			id        string
+			status    string
+			snap      []byte
+			createdAt time.Time
+			updatedAt time.Time
+			version   int
+		)
+
+		err := tx.QueryRow(ctx, q, requestID, candidatePersonID).Scan(
+			&id,
+			&status,
+			&snap,
+			&createdAt,
+			&updatedAt,
+			&version,
+		)
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return RequestorGetResp{}, db.ErrNotFound
+			}
+			return RequestorGetResp{}, err
+		}
+
+		return RequestorGetResp{
+			RequestID:     id,
+			Status:        status,
+			ClaimSnapshot: json.RawMessage(snap),
+			CreatedAt:     createdAt.UTC().Format(time.RFC3339Nano),
+			UpdatedAt:     updatedAt.UTC().Format(time.RFC3339Nano),
+			Version:       version,
+		}, nil
+	}
+
+
 
 func (r *Repo) CandidateSubmit(ctx context.Context, tx pgx.Tx, requestID, candidatePersonID string) (finalStatus string, err error) {
 	var curStatus string
