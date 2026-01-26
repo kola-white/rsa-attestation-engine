@@ -21,6 +21,15 @@ type CreateDraftReq struct {
 	ClaimSnapshot json.RawMessage `json:"claim_snapshot"`
 }
 
+type RequestorGetResp struct {
+	RequestID     string          `json:"request_id"`
+	Status        string          `json:"status"`
+	ClaimSnapshot json.RawMessage `json:"claim_snapshot"`
+	CreatedAt     string          `json:"created_at"`
+	UpdatedAt     string          `json:"updated_at"`
+	Version       int             `json:"version"`
+}
+
 type RequestorListRow struct {
 	RequestID     string          `json:"request_id"`
 	Status        string          `json:"status"`
@@ -189,6 +198,56 @@ func (h *CandidateHandlers) Submit(c *gin.Context) {
 
 	c.JSON(http.StatusOK, SubmitResp{Status: status})
 }
+
+func (h *CandidateHandlers) Get(c *gin.Context) {
+	claims := auth.MustClaims(c)
+	if claims == nil {
+		return
+	}
+	if !auth.HasRole(claims, auth.RoleRequestor) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		return
+	}
+
+	requestID := c.Param("request_id")
+	personID := claims.Sub // ✅ sub = domain_users.id (UUID string)
+
+	var out RequestorGetResp
+
+	err := h.DB.WithTx(c.Request.Context(), func(tx pgx.Tx) error {
+		row, err := h.Repo.CandidateGet(c.Request.Context(), tx, requestID, personID)
+		if err != nil {
+			return err
+		}
+
+		out = RequestorGetResp{
+			RequestID:     row.RequestID,
+			Status:        row.Status,
+			ClaimSnapshot: row.ClaimSnapshot,
+			CreatedAt:     row.CreatedAt,
+			UpdatedAt:     row.UpdatedAt,
+			Version:       row.Version,
+		}
+		return nil
+	})
+
+	if err != nil {
+		if err == db.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not_found"})
+			return
+		}
+		// If your repo uses db.ErrConflict for access/state issues, keep this.
+		if err == db.ErrConflict {
+			c.JSON(http.StatusConflict, gin.H{"error": "conflict_or_invalid_state"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "get_failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, out)
+}
+
 
 func (h *CandidateHandlers) Cancel(c *gin.Context) {
 	claims := auth.MustClaims(c)

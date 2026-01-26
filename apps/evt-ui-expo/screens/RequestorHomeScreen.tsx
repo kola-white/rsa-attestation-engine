@@ -1,20 +1,26 @@
-// screens/RequestorHomeScreen.tsx
-import React, { useLayoutEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, ScrollView } from "react-native";
+import React, { useLayoutEffect, useMemo, useEffect, useState, useCallback } from "react";
+import { View, Text, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { RequestorStackParamList, RequestRowSnapshot } from "@/src/navigation/requestorTypes";
+import type { RequestorStackParamList, RequestRowSnapshot, RequestStatus } from "@/src/navigation/requestorTypes";
 import { useAuth } from "@/src/auth/AuthContext";
+import { fetchRequestorRequests, claimFromSnapshot } from "@/src/api/requestor";
 
 type Nav = NativeStackNavigationProp<RequestorStackParamList, "RequestorHome">;
+
+const API_BASE_URL = process.env.EXPO_PUBLIC_EVT_API_BASE_URL ?? "";
 
 export const RequestorHomeScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
   const { logout, user } = useAuth();
 
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [items, setItems] = useState<RequestRowSnapshot[]>([]);
+
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: "Back",
+      title: "Logout",
       headerLargeTitle: true,
       headerRight: () => (
         <Pressable
@@ -32,21 +38,40 @@ export const RequestorHomeScreen: React.FC = () => {
     });
   }, [navigation, logout]);
 
-  // Placeholder list for now (until API exists)
-  const [items] = useState<RequestRowSnapshot[]>([
-    {
-      request_id: "req_demo_001",
-      claim: {
-        employer: "ACME Electric (AEI)",
-        job_title: "Senior Project Manager",
-        start_mm_yyyy: "08/2023",
-        end_mm_yyyy: "05/2025",
-      },
-      status: "ATTESTATION_PENDING",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ]);
+  const load = useCallback(async () => {
+    if (!API_BASE_URL) {
+      setErrorMsg("Config error: EXPO_PUBLIC_EVT_API_BASE_URL is empty.");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg(null);
+
+    try {
+      const resp = await fetchRequestorRequests(API_BASE_URL);
+
+      // Map API rows -> existing UI snapshot shape
+      const mapped: RequestRowSnapshot[] = resp.items.map((r) => ({
+        request_id: r.request_id,
+        status: r.status as RequestStatus,
+        claim: claimFromSnapshot(r.claim_snapshot),
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+      }));
+
+      setItems(mapped);
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Failed to load requests.");
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const rows = useMemo(() => items, [items]);
 
@@ -66,34 +91,64 @@ export const RequestorHomeScreen: React.FC = () => {
               Start a new request
             </Text>
           </Pressable>
+
+          <Pressable
+            onPress={load}
+            className="mt-3 rounded-xl bg-zinc-200 dark:bg-zinc-800 px-4 py-3"
+          >
+            <Text className="text-zinc-900 dark:text-zinc-50 font-semibold">
+              Refresh
+            </Text>
+          </Pressable>
         </View>
 
         <Text className="text-[12px] text-zinc-600 dark:text-zinc-400 mt-8 mb-2">
           REQUESTS
         </Text>
 
-        {rows.map((r) => (
-          <Pressable
-            key={r.request_id}
-            onPress={() =>
-              navigation.navigate("RequestorRequestDetail", {
-                request_id: r.request_id,
-                snapshot: r,
-              })
-            }
-            className="py-4 border-b border-zinc-200 dark:border-zinc-800"
-          >
-            <Text className="text-base font-semibold text-zinc-950 dark:text-zinc-50">
-              {r.claim.employer}
+        {loading ? (
+          <View className="py-10 items-center">
+            <ActivityIndicator />
+            <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-3">
+              Loading…
             </Text>
-            <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-1">
-              {r.claim.job_title} • {r.claim.start_mm_yyyy} — {r.claim.end_mm_yyyy ?? "Present"}
+          </View>
+        ) : errorMsg ? (
+          <View className="py-6">
+            <Text className="text-sm text-red-600 dark:text-red-400">
+              {errorMsg}
             </Text>
-            <Text className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-              Status: {r.status}
+          </View>
+        ) : rows.length === 0 ? (
+          <View className="py-10">
+            <Text className="text-sm text-zinc-600 dark:text-zinc-300">
+              No requests yet.
             </Text>
-          </Pressable>
-        ))}
+          </View>
+        ) : (
+          rows.map((r) => (
+            <Pressable
+              key={r.request_id}
+              onPress={() =>
+                navigation.navigate("RequestorRequestDetail", {
+                  request_id: r.request_id,
+                  snapshot: r,
+                })
+              }
+              className="py-4 border-b border-zinc-200 dark:border-zinc-800"
+            >
+              <Text className="text-base font-semibold text-zinc-950 dark:text-zinc-50">
+                {r.claim.employer}
+              </Text>
+              <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-1">
+                {r.claim.job_title} • {r.claim.start_mm_yyyy} — {r.claim.end_mm_yyyy ?? "Present"}
+              </Text>
+              <Text className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                Status: {r.status}
+              </Text>
+            </Pressable>
+          ))
+        )}
       </ScrollView>
     </View>
   );

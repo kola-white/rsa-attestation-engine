@@ -37,10 +37,8 @@ func (m *Module) Register(v1 *gin.RouterGroup) {
 	// -----------------------------
 	req := v1.Group("", auth.GinRequireRole(auth.RoleRequestor))
 	{
-		// Optional but strongly recommended for your RequestorHome list/detail screens.
-		// Uncomment only if these handlers exist.
 		req.GET("/requests", m.Candidate.List)
-		// req.GET("/requests/:request_id", m.Candidate.Get)
+		req.GET("/requests/:request_id", m.Candidate.Get)
 
 		req.POST("/requests", m.Candidate.CreateDraft)
 		req.PATCH("/requests/:request_id", m.Candidate.PatchDraft)
