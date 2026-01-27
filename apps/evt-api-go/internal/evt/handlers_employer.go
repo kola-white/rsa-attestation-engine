@@ -28,6 +28,28 @@ type AttestResp struct {
 	Status string `json:"status"`
 }
 
+type HRQueueRow struct {
+	RequestID     string          `json:"request_id"`
+	Status        string          `json:"status"`
+	ClaimSnapshot json.RawMessage `json:"claim_snapshot"`
+	CreatedAt     string          `json:"created_at"`
+	UpdatedAt     string          `json:"updated_at"`
+}
+
+type HRQueueResp struct {
+	Items []HRQueueRow `json:"items"`
+}
+
+type HRGetResp struct {
+	RequestID     string          `json:"request_id"`
+	Status        string          `json:"status"`
+	ClaimSnapshot json.RawMessage `json:"claim_snapshot"`
+	CreatedAt     string          `json:"created_at"`
+	UpdatedAt     string          `json:"updated_at"`
+	Version       int             `json:"version"`
+}
+
+
 func (h *EmployerHandlers) Attest(c *gin.Context) {
 	claims := auth.MustClaims(c)
 	if claims == nil {
@@ -84,3 +106,85 @@ func (h *EmployerHandlers) Attest(c *gin.Context) {
 
 	c.JSON(http.StatusOK, AttestResp{Status: status})
 }
+
+func (h *EmployerHandlers) List(c *gin.Context) {
+	claims := auth.MustClaims(c)
+	if claims == nil {
+		return
+	}
+	if !auth.HasRole(claims, auth.RoleHRReviewer) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		return
+	}
+
+	employerID := strings.TrimSpace(c.Query("employer_id"))
+	if employerID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing_employer_id"})
+		return
+	}
+
+	var items []HRQueueRow
+	err := h.DB.WithTx(c.Request.Context(), func(tx pgx.Tx) error {
+		rows, err := h.Repo.EmployerList(c.Request.Context(), tx, employerID, 100)
+		if err != nil {
+			return err
+		}
+		items = rows
+		return nil
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "list_failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, HRQueueResp{Items: items})
+}
+
+func (h *EmployerHandlers) Get(c *gin.Context) {
+	claims := auth.MustClaims(c)
+	if claims == nil {
+		return
+	}
+	if !auth.HasRole(claims, auth.RoleHRReviewer) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		return
+	}
+
+	employerID := strings.TrimSpace(c.Query("employer_id"))
+	if employerID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing_employer_id"})
+		return
+	}
+
+	requestID := c.Param("request_id")
+
+	var out HRGetResp
+	err := h.DB.WithTx(c.Request.Context(), func(tx pgx.Tx) error {
+		row, err := h.Repo.EmployerGet(c.Request.Context(), tx, requestID, employerID)
+		if err != nil {
+			return err
+		}
+
+		out = HRGetResp{
+			RequestID:     row.RequestID,
+			Status:        row.Status,
+			ClaimSnapshot: row.ClaimSnapshot,
+			CreatedAt:     row.CreatedAt,
+			UpdatedAt:     row.UpdatedAt,
+			Version:       row.Version,
+		}
+		return nil
+	})
+
+	if err != nil {
+		if err == db.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not_found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "get_failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, out)
+}
+
