@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useMemo, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/auth/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -21,12 +21,40 @@ import * as Crypto from "expo-crypto";
 
 console.log("[HRReview] module loaded");
 
-/**
- * NOTE (intentional for MVP):
- * - `evidence:complete` is DISABLED because your server currently returns 501.
- * - This implementation reuses your existing `evidence:init` + presigned PUT flow exactly.
- * - UI “Upload complete” continues to mean “PUT succeeded”.
- */
+type HRQueueRow = {
+  request_id: string;
+  status: string;
+  claim_snapshot: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+type HRQueueResp = { items: HRQueueRow[] };
+
+type HRGetResp = HRQueueRow & { version: number };
+
+type DisplayClaim = {
+  employer: string;
+  job_title: string;
+  start_mm_yyyy: string;
+  end_mm_yyyy: string | null;
+};
+
+function toDisplayClaim(snap: Record<string, unknown>): DisplayClaim {
+  const employer = typeof snap.employer === "string" ? snap.employer : "";
+  const jobTitle = typeof snap.job_title === "string" ? snap.job_title : "";
+  const start = typeof snap.start_mm_yyyy === "string" ? snap.start_mm_yyyy : "";
+  const endRaw = snap.end_mm_yyyy;
+  const end =
+    endRaw === null ? null : typeof endRaw === "string" ? endRaw : null;
+
+  return {
+    employer,
+    job_title: jobTitle,
+    start_mm_yyyy: start,
+    end_mm_yyyy: end,
+  };
+}
 
 type HRNav = NativeStackNavigationProp<AppStackParamList, "HRReview">;
 
@@ -644,8 +672,151 @@ export const HRReviewScreenSettingsStyle = () => {
   };
 
   // Auth + Navigation setup logic simple login/logout + header
-  const { logout } = useAuth();
+  const { logout, accessToken } = useAuth();
   const navigation = useNavigation<HRNav>();
+
+  const [loading, setLoading] = useState(true);
+  const [queue, setQueue] = useState<HRQueueRow[]>([]);
+  const [selected, setSelected] = useState<HRGetResp | null>(null);
+  const employerId = "emp_demo_001"; // demo constant for now
+
+  const displayClaim = useMemo(() => {
+  const snap = (selected?.claim_snapshot ?? {}) as Record<string, unknown>;
+  return toDisplayClaim(snap);
+}, [selected]);
+
+const handleChooseRequest = () => {
+  if (!queue.length) return;
+
+  const options = ["Cancel", ...queue.map((q) => q.request_id)];
+
+  if (Platform.OS === "ios") {
+    ActionSheetIOS.showActionSheetWithOptions(
+      { title: "Select request", options, cancelButtonIndex: 0 },
+      (idx) => {
+        if (idx <= 0) return;
+        const chosen = queue[idx - 1];
+        void (async () => {
+          setLoading(true);
+          try {
+            const d = await fetchDetail(chosen.request_id);
+            setSelected(d);
+          } finally {
+            setLoading(false);
+          }
+        })();
+      }
+    );
+  } else {
+    Alert.alert(
+      "Select request",
+      undefined,
+      [
+        ...queue.map((q) => ({
+          text: q.request_id,
+          onPress: () => void (async () => {
+            setLoading(true);
+            try {
+              const d = await fetchDetail(q.request_id);
+              setSelected(d);
+            } finally {
+              setLoading(false);
+            }
+          })(),
+        })),
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  }
+};
+
+async function fetchDetail(requestId: string): Promise<HRGetResp> {
+  if (!API_BASE_URL) throw new Error("Missing EXPO_PUBLIC_EVT_API_BASE_URL");
+  if (!accessToken) throw new Error("Missing access token (sign in again)");
+
+  const dRes = await fetch(
+    `${API_BASE_URL}/v1/employer/requests/${encodeURIComponent(
+      requestId
+    )}?employer_id=${encodeURIComponent(employerId)}`,
+    {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  const text = await dRes.text();
+  if (!dRes.ok) {
+    throw new Error(`Detail failed (${dRes.status}): ${text}`);
+  }
+
+  return (text ? JSON.parse(text) : null) as HRGetResp;
+}
+
+async function attest(responseType: "APPROVE" | "REJECTED_NO_RECORD") {
+  try {
+    if (!selected) {
+      Alert.alert("No request", "No request selected.");
+      return;
+    }
+    if (!API_BASE_URL) {
+      Alert.alert("Config error", "Missing API base URL.");
+      return;
+    }
+    if (!accessToken) {
+      Alert.alert("Auth error", "Missing access token.");
+      return;
+    }
+
+    const requestId = selected.request_id;
+
+    const res = await fetch(
+      `${API_BASE_URL}/v1/employer/requests/${encodeURIComponent(
+        requestId
+      )}/attest`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          employer_id: employerId,
+          response_type: responseType,
+          response_body: {},
+          attestation_jws: "demo-jws-placeholder",
+        }),
+      }
+    );
+
+    const text = await res.text();
+    if (!res.ok) {
+      let err = text || `HTTP ${res.status}`;
+      try {
+        const j = JSON.parse(text);
+        err = j?.error ?? err;
+      } catch {}
+      Alert.alert("Attest failed", err);
+      return;
+    }
+
+    const j = text ? JSON.parse(text) : null;
+    Alert.alert("Attested", `Status: ${j?.status ?? "ATTESTED"}`);
+
+    // ✅ Refresh detail after attest (recommended)
+    setLoading(true);
+    try {
+      const refreshed = await fetchDetail(requestId);
+      setSelected(refreshed);
+    } finally {
+      setLoading(false);
+    }
+  } catch (e: any) {
+    Alert.alert("Attest failed", String(e?.message ?? e));
+  }
+}
 
   useLayoutEffect(() => {
   navigation.setOptions({
@@ -654,19 +825,6 @@ export const HRReviewScreenSettingsStyle = () => {
     headerRight: () => (
       <View className="flex-row items-center gap-2">
         <Pressable
-          onPress={() => navigation.navigate("Recruiter")}
-          accessibilityRole="button"
-          accessibilityLabel="Open Recruiter demo"
-          hitSlop={10}
-          className="px-3 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-700"
-          style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
-        >
-          <Text className="text-sm font-semibold text-zinc-900 dark:text-white">
-            Recruiter
-          </Text>
-        </Pressable>
-
-        <Pressable
           onPress={logout}
           accessibilityRole="button"
           accessibilityLabel="Sign out"
@@ -674,7 +832,7 @@ export const HRReviewScreenSettingsStyle = () => {
           className="px-3 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-700"
           style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
         >
-          <Text className="text-sm font-semibold text-zinc-900 dark:text-white">
+          <Text className="text-sm font-semibold text-zinc-900 dark:text-zinc-700">
             Sign out
           </Text>
         </Pressable>
@@ -683,6 +841,69 @@ export const HRReviewScreenSettingsStyle = () => {
   });
 }, [navigation, logout]);
 
+useEffect(() => {
+  let cancelled = false;
+
+  async function run() {
+    try {
+      if (!API_BASE_URL) throw new Error("Missing EXPO_PUBLIC_EVT_API_BASE_URL");
+      if (!accessToken) throw new Error("Missing access token (sign in again)");
+
+      setLoading(true);
+
+      const qRes = await fetch(
+        `${API_BASE_URL}/v1/employer/requests?employer_id=${encodeURIComponent(employerId)}`,
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!qRes.ok) {
+        const t = await qRes.text();
+        throw new Error(`Queue failed (${qRes.status}): ${t}`);
+      }
+
+      const qJson = (await qRes.json()) as HRQueueResp;
+      if (cancelled) return;
+
+      setQueue(qJson.items ?? []);
+
+      const first = qJson.items?.[0];
+      if (!first) {
+        setSelected(null);
+        return;
+      }
+
+      const dRes = await fetch(
+        `${API_BASE_URL}/v1/employer/requests/${encodeURIComponent(first.request_id)}?employer_id=${encodeURIComponent(employerId)}`,
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!dRes.ok) {
+        const t = await dRes.text();
+        throw new Error(`Detail failed (${dRes.status}): ${t}`);
+      }
+
+    } catch (e: any) {
+      Alert.alert("HR load failed", String(e?.message ?? e));
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  }
+
+  void run();
+  return () => {
+    cancelled = true;
+  };
+}, [API_BASE_URL, accessToken, employerId]);
 
   return (
     <View
@@ -701,19 +922,58 @@ export const HRReviewScreenSettingsStyle = () => {
         }}
       >
         <View className="px-4 pt-4 flex-1">
+          {/* QUEUE */}
+          <SectionHeader title="Queue" />
+          <SettingsSection>
+            <SettingsRow>
+              <Text className="text-xs text-zinc-500 dark:text-zinc-400">
+                Pending requests
+              </Text>
+
+              <View className="mt-2 flex-row items-center justify-between">
+                <Text className="text-base text-zinc-900 dark:text-zinc-100">
+                  {loading ? "Loading…" : `${queue.length} request(s)`}
+                </Text>
+
+                <Pressable
+                  disabled={!queue.length || loading}
+                  onPress={handleChooseRequest}
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose request"
+                  className={[
+                    "px-3 py-2 rounded-lg",
+                    queue.length && !loading
+                      ? "bg-zinc-200 dark:bg-zinc-700"
+                      : "bg-zinc-100 dark:bg-zinc-800",
+                  ].join(" ")}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
+                >
+                  <Text className="text-sm font-semibold text-zinc-900 dark:text-white">
+                    Choose
+                  </Text>
+                </Pressable>
+              </View>
+
+              {selected?.request_id ? (
+                <Text className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                  Selected: {selected.request_id}
+                </Text>
+              ) : null}
+            </SettingsRow>
+          </SettingsSection>
 
           {/* CASE */}
           <SectionHeader title="Case" />
           <SettingsSection>
             <SettingsRow>
               <Text className="text-xs text-zinc-500 dark:text-zinc-400">
-                Case ID
+                Request ID
               </Text>
               <Text className="text-base font-medium text-zinc-900 dark:text-zinc-100 mt-0.5">
-                EVT-10324
+                {selected?.request_id ?? (loading ? "Loading…" : "No pending requests")}
               </Text>
               <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-0.5">
-                Submitted 2h ago
+                {selected?.updated_at ? `Updated ${selected.updated_at}` : ""}
               </Text>
             </SettingsRow>
 
@@ -749,7 +1009,7 @@ export const HRReviewScreenSettingsStyle = () => {
                 Employer
               </Text>
               <Text className="text-base text-zinc-900 dark:text-zinc-100 mt-0.5">
-                ACME Electric (AEI)
+                {displayClaim.employer || (loading ? "Loading…" : "employer name will show up here")}
               </Text>
             </SettingsRow>
 
@@ -760,10 +1020,14 @@ export const HRReviewScreenSettingsStyle = () => {
                 Role
               </Text>
               <Text className="text-base text-zinc-900 dark:text-zinc-100 mt-0.5">
-                Senior Project Manager
+                {displayClaim.job_title || (loading ? "Loading…" : "candidate role will show up here")}
               </Text>
               <Text className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
-                Aug 2023 — May 2025
+                {displayClaim.start_mm_yyyy
+                  ? `${displayClaim.start_mm_yyyy} — ${displayClaim.end_mm_yyyy ?? "Present"}`
+                  : loading
+                  ? "Loading…"
+                  : "employment dates will show up here"}
               </Text>
             </SettingsRow>
           </SettingsSection>
@@ -880,27 +1144,10 @@ export const HRReviewScreenSettingsStyle = () => {
 
           <DecisionBar
             bottomInset={insets.bottom}
-            onApprove={() => console.log("Approve")}
-            onReject={() => console.log("Reject")}
-          />
+            onApprove={() => void attest("APPROVE")}
+            onReject={() => void attest("REJECTED_NO_RECORD")} disabled={false}          />
         </View>
       </ScrollView>
-    </View>
-  );
-}
-
-/* ===================== Top Bar ===================== */
-
-function TopBar() {
-  return (
-    <View className="mb-4">
-      <Text className="text-[12px] text-zinc-500 dark:text-zinc-400">EVT</Text>
-      <Text className="text-3xl font-semibold text-zinc-950 dark:text-zinc-50 mt-1">
-        HR Review
-      </Text>
-      <Text className="text-sm text-zinc-500 dark:text-zinc-300 mt-1">
-        Validate employment details and decide whether to issue an EVT.
-      </Text>
     </View>
   );
 }
@@ -1014,10 +1261,12 @@ function DecisionBar({
   bottomInset,
   onApprove,
   onReject,
+  disabled,
 }: {
   bottomInset: number;
   onApprove: () => void;
   onReject: () => void;
+  disabled: boolean;
 }) {
   return (
     <View
@@ -1026,15 +1275,27 @@ function DecisionBar({
     >
       <View className="flex-row gap-3">
         <Pressable
-          className="flex-1 rounded-xl bg-zinc-200 py-3 items-center"
+          disabled={disabled}
+          className={[
+            "flex-1 rounded-xl py-3 items-center",
+            disabled ? "bg-zinc-200 opacity-50" : "bg-zinc-200",
+          ].join(" ")}
           onPress={onReject}
+          accessibilityRole="button"
+          accessibilityLabel="Reject"
         >
           <Text className="text-sm font-semibold text-zinc-900">Reject</Text>
         </Pressable>
 
         <Pressable
-          className="flex-1 rounded-xl bg-zinc-700 py-3 items-center"
+          disabled={disabled}
+          className={[
+            "flex-1 rounded-xl py-3 items-center",
+            disabled ? "bg-zinc-700 opacity-50" : "bg-zinc-700",
+          ].join(" ")}
           onPress={onApprove}
+          accessibilityRole="button"
+          accessibilityLabel="Approve"
         >
           <Text className="text-sm font-semibold text-white">Approve</Text>
         </Pressable>

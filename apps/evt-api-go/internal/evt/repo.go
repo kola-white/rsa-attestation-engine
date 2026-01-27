@@ -359,6 +359,109 @@ func (r *Repo) EmployerAttest(ctx context.Context, tx pgx.Tx, requestID, employe
 	})
 }
 
+func (r *Repo) EmployerList(ctx context.Context, tx pgx.Tx, employerID string, limit int) ([]HRQueueRow, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+
+	const q = `
+SELECT
+  request_id,
+  status,
+  COALESCE(claim_snapshot, '{}'::jsonb) AS claim_snapshot,
+  created_at,
+  updated_at
+FROM evt_requests
+WHERE employer_id = $1
+  AND status = 'ATTESTATION_PENDING'
+ORDER BY updated_at DESC
+LIMIT $2
+`
+	rows, err := tx.Query(ctx, q, employerID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]HRQueueRow, 0, 16)
+	for rows.Next() {
+		var (
+			requestID string
+			status    string
+			snap      []byte
+			createdAt time.Time
+			updatedAt time.Time
+		)
+		if err := rows.Scan(&requestID, &status, &snap, &createdAt, &updatedAt); err != nil {
+			return nil, err
+		}
+
+		out = append(out, HRQueueRow{
+			RequestID:     requestID,
+			Status:        status,
+			ClaimSnapshot: json.RawMessage(snap),
+			CreatedAt:     createdAt.UTC().Format(time.RFC3339Nano),
+			UpdatedAt:     updatedAt.UTC().Format(time.RFC3339Nano),
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+type EmployerGetRow struct {
+	RequestID     string
+	Status        string
+	ClaimSnapshot json.RawMessage
+	CreatedAt     string
+	UpdatedAt     string
+	Version       int
+}
+
+func (r *Repo) EmployerGet(ctx context.Context, tx pgx.Tx, requestID string, employerID string) (EmployerGetRow, error) {
+	const q = `
+SELECT
+  request_id,
+  status,
+  COALESCE(claim_snapshot, '{}'::jsonb) AS claim_snapshot,
+  created_at,
+  updated_at,
+  version
+FROM evt_requests
+WHERE request_id = $1
+  AND employer_id = $2
+LIMIT 1
+`
+	var (
+		id        string
+		status    string
+		snap      []byte
+		createdAt time.Time
+		updatedAt time.Time
+		version   int
+	)
+
+	if err := tx.QueryRow(ctx, q, requestID, employerID).Scan(&id, &status, &snap, &createdAt, &updatedAt, &version); err != nil {
+		if err == pgx.ErrNoRows {
+			return EmployerGetRow{}, db.ErrNotFound
+		}
+		return EmployerGetRow{}, err
+	}
+
+	return EmployerGetRow{
+		RequestID:     id,
+		Status:        status,
+		ClaimSnapshot: json.RawMessage(snap),
+		CreatedAt:     createdAt.UTC().Format(time.RFC3339Nano),
+		UpdatedAt:     updatedAt.UTC().Format(time.RFC3339Nano),
+		Version:       version,
+	}, nil
+}
+
+
+
 /* ---------------- Internal Cvera writes ---------------- */
 
 func (r *Repo) InternalVerify(ctx context.Context, tx pgx.Tx, requestID string, trustResult string, trustFlags json.RawMessage, trustSummary string, evtTokenJWS string) error {
