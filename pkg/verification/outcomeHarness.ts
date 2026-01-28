@@ -2,7 +2,7 @@
 
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { verifyOutcomeFromJws } from "../../../rsa-attestation-engine/apps/evt-ui-expo/src/verification/verifyOutcome";
+import { verifyOutcomeFromJws } from "../../apps/evt-ui-expo/src/verification/verifyOutcome";
 
 type Vector = { name: string; relPath: string };
 

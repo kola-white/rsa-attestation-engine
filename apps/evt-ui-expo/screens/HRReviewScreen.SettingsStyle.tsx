@@ -54,11 +54,28 @@ function toDisplayClaim(snap: Record<string, unknown>): DisplayClaim {
     start_mm_yyyy: start,
     end_mm_yyyy: end,
   };
+  
 }
+
 
 type HRNav = NativeStackNavigationProp<AppStackParamList, "HRReview">;
 
-type CaseStatus = "PENDING" | "APPROVED" | "REJECTED";
+type CaseStatus = "PENDING" | "FULL_MATCH" | "REJECTED_NO_RECORD" | "REJECTED_POLICY";
+
+function statusToCaseStatus(s: string): CaseStatus {
+  if (s === "REJECTED_NO_RECORD") return "REJECTED_NO_RECORD";
+  if (s === "REJECTED_POLICY") return "REJECTED_POLICY";
+  if (s === "FULL_MATCH") return "FULL_MATCH";
+  return "PENDING";
+}
+
+function formatRelativeOrDate(iso: string): string {
+  // keep it dead simple: show the raw date for now (no hand-wavy “2h ago”)
+  // You can swap this later for a real relative formatter.
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString();
+}
 
 type EvidenceInitResponse = {
   caseId: string;
@@ -503,7 +520,6 @@ async function uploadViaInitAndPut(
 export const HRReviewScreenSettingsStyle = () => {
   console.log("[HRReview] render");
   const insets = useSafeAreaInsets();
-  const status: CaseStatus = "PENDING";
 
   const [uploadState, setUploadState] = useState<UploadState>({
     status: "idle",
@@ -685,6 +701,15 @@ export const HRReviewScreenSettingsStyle = () => {
   return toDisplayClaim(snap);
 }, [selected]);
 
+const status: CaseStatus = useMemo(() => {
+    return selected ? statusToCaseStatus(selected.status) : "PENDING";
+  }, [selected]);
+
+  const submittedLabel = useMemo(() => {
+    // use updated_at as the safest “this is recent” value for now
+    return selected?.updated_at ? formatRelativeOrDate(selected.updated_at) : "";
+  }, [selected]);
+
 const handleChooseRequest = () => {
   if (!queue.length) return;
 
@@ -754,27 +779,21 @@ async function fetchDetail(requestId: string): Promise<HRGetResp> {
   return (text ? JSON.parse(text) : null) as HRGetResp;
 }
 
-async function attest(responseType: "APPROVE" | "REJECTED_NO_RECORD") {
+const [attesting, setAttesting] = useState<null | "FULL_MATCH" | "REJECTED_NO_RECORD" | "REJECTED_POLICY">(null);
+
+async function attest(responseType: "FULL_MATCH" | "REJECTED_NO_RECORD" | "REJECTED_POLICY") {
+  if (attesting) return;
   try {
-    if (!selected) {
-      Alert.alert("No request", "No request selected.");
-      return;
-    }
-    if (!API_BASE_URL) {
-      Alert.alert("Config error", "Missing API base URL.");
-      return;
-    }
-    if (!accessToken) {
-      Alert.alert("Auth error", "Missing access token.");
-      return;
-    }
+    if (!selected) return Alert.alert("No request selected.");
+    if (!API_BASE_URL) return Alert.alert("Config error", "Missing API base URL.");
+    if (!accessToken) return Alert.alert("Auth error", "Missing access token.");
+
+    setAttesting(responseType);
 
     const requestId = selected.request_id;
 
     const res = await fetch(
-      `${API_BASE_URL}/v1/employer/requests/${encodeURIComponent(
-        requestId
-      )}/attest`,
+      `${API_BASE_URL}/v1/employer/requests/${encodeURIComponent(requestId)}/attest`,
       {
         method: "POST",
         headers: {
@@ -785,7 +804,7 @@ async function attest(responseType: "APPROVE" | "REJECTED_NO_RECORD") {
         body: JSON.stringify({
           employer_id: employerId,
           response_type: responseType,
-          response_body: {},
+          response_body: {},                 // keep empty for demo
           attestation_jws: "demo-jws-placeholder",
         }),
       }
@@ -802,19 +821,20 @@ async function attest(responseType: "APPROVE" | "REJECTED_NO_RECORD") {
       return;
     }
 
+    // show result
     const j = text ? JSON.parse(text) : null;
     Alert.alert("Attested", `Status: ${j?.status ?? "ATTESTED"}`);
 
-    // ✅ Refresh detail after attest (recommended)
-    setLoading(true);
-    try {
-      const refreshed = await fetchDetail(requestId);
-      setSelected(refreshed);
-    } finally {
-      setLoading(false);
-    }
+    // ✅ Optional refresh detail after attest (CONCRETE)
+    const refreshed = await fetchDetail(requestId);
+    setSelected(refreshed);
+
+    // (Optional) also refresh queue so status changes reflect in list if you render it
+    // await refreshQueue();  // only if you have/need it
   } catch (e: any) {
     Alert.alert("Attest failed", String(e?.message ?? e));
+  } finally {
+    setAttesting(null);
   }
 }
 
@@ -905,6 +925,48 @@ useEffect(() => {
   };
 }, [API_BASE_URL, accessToken, employerId]);
 
+function handleReject() {
+  if (!selected) {
+    Alert.alert("No request selected");
+    return;
+  }
+
+  if (Platform.OS === "ios") {
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        title: "Reject reason",
+        options: [
+          "Cancel",
+          "No record found",
+          "Policy restriction",
+        ],
+        cancelButtonIndex: 0,
+      },
+      (idx) => {
+        if (idx === 1) void attest("REJECTED_NO_RECORD");
+        if (idx === 2) void attest("REJECTED_POLICY");
+      }
+    );
+  } else {
+    Alert.alert(
+      "Reject reason",
+      undefined,
+      [
+        {
+          text: "No record found",
+          onPress: () => void attest("REJECTED_NO_RECORD"),
+        },
+        {
+          text: "Policy restriction",
+          onPress: () => void attest("REJECTED_POLICY"),
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  }
+}
+
+
   return (
     <View
       className="flex-1 bg-white dark:bg-zinc-900"
@@ -970,16 +1032,20 @@ useEffect(() => {
                 Request ID
               </Text>
               <Text className="text-base font-medium text-zinc-900 dark:text-zinc-100 mt-0.5">
-                {selected?.request_id ?? (loading ? "Loading…" : "No pending requests")}
+                {selected?.request_id ?? "—"}
               </Text>
-              <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-0.5">
-                {selected?.updated_at ? `Updated ${selected.updated_at}` : ""}
-              </Text>
+
+              {submittedLabel ? (
+                <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-0.5">
+                  Updated: {submittedLabel}
+                </Text>
+              ) : null}
             </SettingsRow>
 
             <Separator />
 
             <SettingsRow>
+              {/* Keep these hardcoded for now if you don’t yet have employee identity fields in claim_snapshot */}
               <Text className="text-xs text-zinc-500 dark:text-zinc-400">
                 Employee
               </Text>
@@ -1009,7 +1075,7 @@ useEffect(() => {
                 Employer
               </Text>
               <Text className="text-base text-zinc-900 dark:text-zinc-100 mt-0.5">
-                {displayClaim.employer || (loading ? "Loading…" : "employer name will show up here")}
+                {displayClaim.employer || "Employer will show here"}
               </Text>
             </SettingsRow>
 
@@ -1020,14 +1086,11 @@ useEffect(() => {
                 Role
               </Text>
               <Text className="text-base text-zinc-900 dark:text-zinc-100 mt-0.5">
-                {displayClaim.job_title || (loading ? "Loading…" : "candidate role will show up here")}
+                {displayClaim.job_title || "Job title will show here"}
               </Text>
               <Text className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
-                {displayClaim.start_mm_yyyy
-                  ? `${displayClaim.start_mm_yyyy} — ${displayClaim.end_mm_yyyy ?? "Present"}`
-                  : loading
-                  ? "Loading…"
-                  : "employment dates will show up here"}
+                {displayClaim.start_mm_yyyy || "From"} —{" "}
+                {displayClaim.end_mm_yyyy ?? "Present"}
               </Text>
             </SettingsRow>
           </SettingsSection>
@@ -1099,7 +1162,7 @@ useEffect(() => {
 
                 {uploadState.status === "done" ? (
                   <View className="mt-1">
-                    <Text className="text-sm text-emerald-600">
+                    <Text className="text-sm text-sky-600">
                       Upload complete
                     </Text>
 
@@ -1141,11 +1204,13 @@ useEffect(() => {
           />
 
           <View style={{ paddingBottom: insets.bottom }} />
-
           <DecisionBar
             bottomInset={insets.bottom}
-            onApprove={() => void attest("APPROVE")}
-            onReject={() => void attest("REJECTED_NO_RECORD")} disabled={false}          />
+            onApprove={() => void attest("FULL_MATCH")}
+            onReject={handleReject}
+            disabled={!!attesting}
+            attesting={attesting}
+          />
         </View>
       </ScrollView>
     </View>
@@ -1184,9 +1249,9 @@ function Separator() {
 
 function StatusRow({ status }: { status: CaseStatus }) {
   const color =
-    status === "APPROVED"
-      ? "text-emerald-600"
-      : status === "REJECTED"
+    status === "FULL_MATCH"
+      ? "text-sky-600"
+      : status === "REJECTED_NO_RECORD" || status === "REJECTED_POLICY"
       ? "text-rose-600"
       : "text-amber-600";
 
@@ -1262,11 +1327,13 @@ function DecisionBar({
   onApprove,
   onReject,
   disabled,
+  attesting
 }: {
   bottomInset: number;
   onApprove: () => void;
   onReject: () => void;
-  disabled: boolean;
+  disabled?: boolean;
+  attesting: null | "FULL_MATCH" | "REJECTED_NO_RECORD" | "REJECTED_POLICY";
 }) {
   return (
     <View
@@ -1275,29 +1342,39 @@ function DecisionBar({
     >
       <View className="flex-row gap-3">
         <Pressable
-          disabled={disabled}
+          disabled={!!disabled}
           className={[
             "flex-1 rounded-xl py-3 items-center",
-            disabled ? "bg-zinc-200 opacity-50" : "bg-zinc-200",
+            disabled ? "bg-zinc-300" : "bg-zinc-200",
           ].join(" ")}
           onPress={onReject}
-          accessibilityRole="button"
-          accessibilityLabel="Reject"
-        >
-          <Text className="text-sm font-semibold text-zinc-900">Reject</Text>
+          >
+          {attesting && attesting !== "FULL_MATCH" ? (
+            <View className="flex-row items-center gap-2">
+              <ActivityIndicator />
+              <Text className="text-sm font-semibold text-zinc-900">Rejecting…</Text>
+            </View>
+          ) : (
+            <Text className="text-sm font-semibold text-zinc-900">Reject</Text>
+          )}
         </Pressable>
 
         <Pressable
-          disabled={disabled}
+          disabled={!!disabled}
           className={[
             "flex-1 rounded-xl py-3 items-center",
-            disabled ? "bg-zinc-700 opacity-50" : "bg-zinc-700",
+            disabled ? "bg-zinc-500" : "bg-zinc-700",
           ].join(" ")}
           onPress={onApprove}
-          accessibilityRole="button"
-          accessibilityLabel="Approve"
         >
-          <Text className="text-sm font-semibold text-white">Approve</Text>
+         {attesting === "FULL_MATCH" ? (
+            <View className="flex-row items-center gap-2">
+              <ActivityIndicator />
+              <Text className="text-sm font-semibold text-white">Approving…</Text>
+            </View>
+          ) : (
+            <Text className="text-sm font-semibold text-white">Approve</Text>
+          )}
         </Pressable>
       </View>
     </View>

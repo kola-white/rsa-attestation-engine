@@ -21,7 +21,7 @@ export const HomeScreen: React.FC = () => {
       </Text>
 
       <Pressable
-        className="h-12 items-center justify-center rounded-xl bg-sky-400 active:bg-emerald-600 mb-3"
+        className="h-12 items-center justify-center rounded-xl bg-sky-400 active:bg-sky-600 mb-3"
         onPress={() => navigation.navigate("HRReview")}
       >
         <Text className="text-base font-semibold text-slate-950">
