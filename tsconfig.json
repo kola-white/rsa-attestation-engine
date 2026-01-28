@@ -2,8 +2,9 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "module": "ESNext",
-    "moduleResolution": "Bundler"
+    "moduleResolution": "Bundler",
+    "baseUrl": ".",
   },
-  "include": ["pkg/**/*.ts", "src/**/*.ts", "types/**/*.ts"],
+  "include": ["pkg/**/*.ts", "types/**/*.ts", "scripts/**/*.ts"],
   "exclude": ["node_modules", "dist", "build", "out"]
 }

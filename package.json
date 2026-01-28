@@ -9,6 +9,8 @@
     "validate:evt:vectors:invalid": "sh -c '! ajv validate -s schemas/PH-1-EVT/employment.verification.v1.json -d \"examples/PH-1-EVT/invalid/*.json\" --spec=draft7 -c ajv-formats'",
     "test": "npm run test:ci",
     "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:expo": "tsc -p apps/evt-ui-expo/tsconfig.json --noEmit",
     "sign-file": "node dist/pkg/issuer/sign-file.js",
     "verify": "node dist/pkg/verification/run-verify.js",
     "test:ci": "npm run validate:evt:schema && npm run validate:evt:vectors:valid && npm run validate:evt:vectors:invalid"
