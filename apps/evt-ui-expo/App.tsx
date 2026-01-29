@@ -1,4 +1,5 @@
 import "./global.css";
+import { DefaultTheme, DarkTheme } from "@react-navigation/native";
 import React, { useEffect } from "react";
 import { View, useColorScheme } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -14,7 +15,7 @@ export default function App() {
 
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(
-      colorScheme === "dark" ? "#000000" : "#ffffff",
+      colorScheme === "dark" ? "#000000" : "#ffffff"
     );
   }, [colorScheme]);
 
@@ -22,13 +23,14 @@ export default function App() {
     <SafeAreaProvider>
       <View
         style={{
-          flex: 1, backgroundColor: colorScheme === "dark" ? "#000000" : "#18181b",
+          flex: 1,
+          backgroundColor: colorScheme === "dark" ? "#000000" : "#ffffff", // ✅ fix
         }}
       >
         <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
 
         <AuthProvider>
-          <NavigationContainer>
+          <NavigationContainer theme={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
             <AppShell />
           </NavigationContainer>
         </AuthProvider>
@@ -36,4 +38,3 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
-// --- END OF FILE ---
