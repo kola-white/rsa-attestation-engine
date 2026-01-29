@@ -897,7 +897,7 @@ async function fetchDetail(requestId: string): Promise<HRGetResp> {
               paddingHorizontal: 12,
               paddingVertical: 6,
               borderRadius: 10,
-              backgroundColor: isDark ? "#3f3f46" : "#e4e4e7", // zinc-700 / zinc-200
+              backgroundColor: isDark ? "#18181b" : "#e4e4e7", // zinc-900 / zinc-200
             },
           ]}
         >
@@ -905,7 +905,7 @@ async function fetchDetail(requestId: string): Promise<HRGetResp> {
           style={{
           fontSize: 14,
           fontWeight: "600",
-          color: isDark ? "#fafafa" : "#18181b", // ✅ this fixes the “Sign out” problem
+          color: isDark ? "#fafafa" : "#18181b", // zinc-900
           }}>
             Sign out
           </Text>
