@@ -2,6 +2,7 @@ package evt
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 
@@ -91,7 +92,11 @@ func (h *EmployerHandlers) Attest(c *gin.Context) {
 		return nil
 
 	})
-	if err != nil {
+		if err != nil {
+		log.Printf("[attest_failed] request_id=%s employer_id=%s hr_personid=%s response_type=%s err=%T %v",
+			requestID, req.EmployerID, hrPersonID, req.ResponseType, err, err,
+		)
+
 		if err == db.ErrNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not_found"})
 			return
@@ -100,6 +105,7 @@ func (h *EmployerHandlers) Attest(c *gin.Context) {
 			c.JSON(http.StatusConflict, gin.H{"error": "conflict_or_invalid_state"})
 			return
 		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "attest_failed"})
 		return
 	}

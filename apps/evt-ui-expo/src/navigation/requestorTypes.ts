@@ -8,7 +8,8 @@ export type RequestStatus =
   | "VERIFIED"
   | "UNVERIFIED"
   | "CONSUMED"
-  | "CLOSED";
+  | "CLOSED"
+  | "CANCELED";
 
 export type EmploymentClaimDraft = {
   employer: string;

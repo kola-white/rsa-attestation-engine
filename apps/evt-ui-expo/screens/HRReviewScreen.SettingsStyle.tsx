@@ -1,3 +1,4 @@
+import { useColorScheme } from "react-native";
 import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/auth/AuthContext";
 import { useNavigation } from "@react-navigation/native";
@@ -20,6 +21,12 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Crypto from "expo-crypto";
 
 console.log("[HRReview] module loaded");
+
+type EmployerResponseType =
+  | "FULL_MATCH"
+  | "PARTIAL_MATCH"
+  | "REJECTED_NO_RECORD"
+  | "REJECTED_POLICY";
 
 type HRQueueRow = {
   request_id: string;
@@ -60,12 +67,31 @@ function toDisplayClaim(snap: Record<string, unknown>): DisplayClaim {
 
 type HRNav = NativeStackNavigationProp<AppStackParamList, "HRReview">;
 
-type CaseStatus = "PENDING" | "FULL_MATCH" | "REJECTED_NO_RECORD" | "REJECTED_POLICY";
+type CaseStatus = "PENDING" | "ATTESTED" | "REJECTED_NO_RECORD" | "REJECTED_POLICY";
 
-function statusToCaseStatus(s: string): CaseStatus {
-  if (s === "REJECTED_NO_RECORD") return "REJECTED_NO_RECORD";
-  if (s === "REJECTED_POLICY") return "REJECTED_POLICY";
-  if (s === "FULL_MATCH") return "FULL_MATCH";
+function statusToCaseStatus(
+  backendStatus: string,
+  rejectReason?: string | null
+): CaseStatus {
+  // 1) Approved path
+  if (backendStatus === "ATTESTED") return "ATTESTED";
+
+  // 2) Rejected path (DB status is "REJECTED")
+  if (backendStatus === "REJECTED") {
+    // If your API includes a reason code, use it.
+    if (rejectReason === "REJECTED_POLICY" || rejectReason === "POLICY") {
+      return "REJECTED_POLICY";
+    }
+    if (rejectReason === "REJECTED_NO_RECORD" || rejectReason === "NO_RECORD") {
+      return "REJECTED_NO_RECORD";
+    }
+
+    // If reason is missing, pick a deterministic default.
+    // (You can also choose to always show REJECTED_POLICY instead.)
+    return "REJECTED_NO_RECORD";
+  }
+
+  // 3) Everything else is pending in UI
   return "PENDING";
 }
 
@@ -518,6 +544,8 @@ async function uploadViaInitAndPut(
 }
 
 export const HRReviewScreenSettingsStyle = () => {
+  const scheme = useColorScheme(); // "dark" | "light" | null
+  const isDark = scheme === "dark";
   console.log("[HRReview] render");
   const insets = useSafeAreaInsets();
 
@@ -702,8 +730,8 @@ export const HRReviewScreenSettingsStyle = () => {
 }, [selected]);
 
 const status: CaseStatus = useMemo(() => {
-    return selected ? statusToCaseStatus(selected.status) : "PENDING";
-  }, [selected]);
+  return selected ? statusToCaseStatus(selected.status, null) : "PENDING";
+}, [selected?.status]);
 
   const submittedLabel = useMemo(() => {
     // use updated_at as the safest “this is recent” value for now
@@ -779,9 +807,16 @@ async function fetchDetail(requestId: string): Promise<HRGetResp> {
   return (text ? JSON.parse(text) : null) as HRGetResp;
 }
 
-const [attesting, setAttesting] = useState<null | "FULL_MATCH" | "REJECTED_NO_RECORD" | "REJECTED_POLICY">(null);
+  type EmployerResponseType =
+    | "FULL_MATCH"
+    | "PARTIAL_MATCH"
+    | "REJECTED_NO_RECORD"
+    | "REJECTED_POLICY";
 
-async function attest(responseType: "FULL_MATCH" | "REJECTED_NO_RECORD" | "REJECTED_POLICY") {
+  const [attesting, setAttesting] = useState<EmployerResponseType | null>(null);
+
+  async function attest(responseType: EmployerResponseType) {
+
   if (attesting) return;
   try {
     if (!selected) return Alert.alert("No request selected.");
@@ -842,6 +877,12 @@ async function attest(responseType: "FULL_MATCH" | "REJECTED_NO_RECORD" | "REJEC
   navigation.setOptions({
     title: "HR Review",
     headerLargeTitle: true,
+
+    // ✅ make the header match the screen
+    headerStyle: { backgroundColor: isDark ? "#18181b" : "#ffffff" }, // zinc-900 / white
+    headerShadowVisible: true,
+    headerTintColor: isDark ? "#fafafa" : "#18181b", // text/icons in header
+
     headerRight: () => (
       <View className="flex-row items-center gap-2">
         <Pressable
@@ -850,9 +891,22 @@ async function attest(responseType: "FULL_MATCH" | "REJECTED_NO_RECORD" | "REJEC
           accessibilityLabel="Sign out"
           hitSlop={10}
           className="px-3 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-700"
-          style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+          style={({ pressed }) => [
+            {
+              opacity: pressed ? 0.8 : 1,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 10,
+              backgroundColor: isDark ? "#3f3f46" : "#e4e4e7", // zinc-700 / zinc-200
+            },
+          ]}
         >
-          <Text className="text-sm font-semibold text-zinc-900 dark:text-zinc-700">
+          <Text 
+          style={{
+          fontSize: 14,
+          fontWeight: "600",
+          color: isDark ? "#fafafa" : "#18181b", // ✅ this fixes the “Sign out” problem
+          }}>
             Sign out
           </Text>
         </Pressable>
@@ -1249,8 +1303,8 @@ function Separator() {
 
 function StatusRow({ status }: { status: CaseStatus }) {
   const color =
-    status === "FULL_MATCH"
-      ? "text-sky-600"
+    status === "ATTESTED"
+      ? "text-emerald-600"
       : status === "REJECTED_NO_RECORD" || status === "REJECTED_POLICY"
       ? "text-rose-600"
       : "text-amber-600";
@@ -1333,7 +1387,7 @@ function DecisionBar({
   onApprove: () => void;
   onReject: () => void;
   disabled?: boolean;
-  attesting: null | "FULL_MATCH" | "REJECTED_NO_RECORD" | "REJECTED_POLICY";
+  attesting: EmployerResponseType | null;
 }) {
   return (
     <View
@@ -1349,14 +1403,14 @@ function DecisionBar({
           ].join(" ")}
           onPress={onReject}
           >
-          {attesting && attesting !== "FULL_MATCH" ? (
-            <View className="flex-row items-center gap-2">
-              <ActivityIndicator />
-              <Text className="text-sm font-semibold text-zinc-900">Rejecting…</Text>
-            </View>
-          ) : (
-            <Text className="text-sm font-semibold text-zinc-900">Reject</Text>
-          )}
+          {attesting === "REJECTED_NO_RECORD" || attesting === "REJECTED_POLICY" ? (
+          <View className="flex-row items-center gap-2">
+            <ActivityIndicator />
+            <Text className="text-sm font-semibold text-zinc-900">Rejecting…</Text>
+          </View>
+        ) : (
+          <Text className="text-sm font-semibold text-zinc-900">Reject</Text>
+        )}
         </Pressable>
 
         <Pressable
@@ -1367,14 +1421,14 @@ function DecisionBar({
           ].join(" ")}
           onPress={onApprove}
         >
-         {attesting === "FULL_MATCH" ? (
-            <View className="flex-row items-center gap-2">
-              <ActivityIndicator />
-              <Text className="text-sm font-semibold text-white">Approving…</Text>
-            </View>
-          ) : (
-            <Text className="text-sm font-semibold text-white">Approve</Text>
-          )}
+         {attesting === "FULL_MATCH" || attesting === "PARTIAL_MATCH" ? (
+          <View className="flex-row items-center gap-2">
+            <ActivityIndicator />
+            <Text className="text-sm font-semibold text-white">Approving…</Text>
+          </View>
+        ) : (
+          <Text className="text-sm font-semibold text-white">Approve</Text>
+        )}
         </Pressable>
       </View>
     </View>
