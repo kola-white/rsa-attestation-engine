@@ -9,9 +9,16 @@ import (
 
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db"
 )
+type AttestResult struct {
+	Status            string
+	AttestationPresent bool
+	KID               string
+	JWSBytes          int
+}
 
 type Repo struct {
 	DB *db.DB
+	Signer *AttestationSigner
 }
 
 func ptr(s string) *string { return &s }
@@ -302,7 +309,13 @@ func (r *Repo) CandidateCancel(ctx context.Context, tx pgx.Tx, requestID, candid
 
 /* ---------------- Employer HR writes ---------------- */
 
-func (r *Repo) EmployerAttest(ctx context.Context, tx pgx.Tx, requestID, employerID, employerHRPersonID, responseType string, responseBody json.RawMessage, attestationJWS string) error {
+func (r *Repo) EmployerAttestServerSigned(
+	ctx context.Context,
+	tx pgx.Tx,
+	requestID, employerID, employerHRPersonID, responseType string,
+	responseBody json.RawMessage,
+) (AttestResult, error) {
+
 	var curStatus string
 	err := tx.QueryRow(ctx, `
 		SELECT status
@@ -312,22 +325,58 @@ func (r *Repo) EmployerAttest(ctx context.Context, tx pgx.Tx, requestID, employe
 	`, requestID, employerID).Scan(&curStatus)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return db.ErrNotFound
+			return AttestResult{}, db.ErrNotFound
 		}
-		return err
-	}
-	if curStatus != "ATTESTATION_PENDING" {
-		return db.ErrConflict
+		return AttestResult{}, err
 	}
 
+	if curStatus != "ATTESTATION_PENDING" {
+		return AttestResult{}, db.ErrConflict
+	}
+
+	// Decide new status based on enum (matches DB employer_response_type)
 	toStatus := "ATTESTED"
 	if responseType == "REJECTED_NO_RECORD" || responseType == "REJECTED_POLICY" {
 		toStatus = "REJECTED"
-	} else if attestationJWS == "" {
-		return db.ErrConflict
 	}
 
+	// Normalize body
+	if len(responseBody) == 0 {
+		responseBody = json.RawMessage(`{}`)
+	}
+
+	// Only generate JWS for ATTESTED (FULL_MATCH, PARTIAL_MATCH)
+	var (
+		jws     string
+		kid     string
+		jwsBytes int
+		present bool
+	)
+
 	if toStatus == "ATTESTED" {
+		if responseType != "FULL_MATCH" && responseType != "PARTIAL_MATCH" {
+			// Anything else trying to become ATTESTED is invalid
+			return AttestResult{}, db.ErrConflict
+		}
+		if r.Signer == nil {
+			return AttestResult{}, errSignerNotConfigured()
+		}
+
+		// IMPORTANT: The signer sets header kid that matches trust/jwks.json
+		jws, kid, err = r.Signer.SignAttestationJWS(AttestationClaims{
+			RequestID:      requestID,
+			EmployerID:     employerID,
+			HRPersonID:     employerHRPersonID,
+			ResponseType:   responseType,
+			ResponseBody:   responseBody,
+			IssuedAtUnix:   time.Now().UTC().Unix(),
+		})
+		if err != nil {
+			return AttestResult{}, err
+		}
+		jwsBytes = len(jws)
+		present = true
+
 		_, err = tx.Exec(ctx, `
 			UPDATE evt_requests
 			SET status='ATTESTED',
@@ -337,8 +386,13 @@ func (r *Repo) EmployerAttest(ctx context.Context, tx pgx.Tx, requestID, employe
 			    attested_at=now(),
 			    version=version+1
 			WHERE request_id=$4
-		`, responseType, string(responseBody), attestationJWS, requestID)
+		`, responseType, string(responseBody), jws, requestID)
+		if err != nil {
+			return AttestResult{}, err
+		}
+
 	} else {
+		// REJECTED path: no JWS stored
 		_, err = tx.Exec(ctx, `
 			UPDATE evt_requests
 			SET status='REJECTED',
@@ -348,15 +402,24 @@ func (r *Repo) EmployerAttest(ctx context.Context, tx pgx.Tx, requestID, employe
 			    version=version+1
 			WHERE request_id=$3
 		`, responseType, string(responseBody), requestID)
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return AttestResult{}, err
+		}
 	}
 
 	actor := employerHRPersonID
-	return insertEvent(ctx, tx, requestID, "employer_hr", &actor, "HR_ATTESTED", &curStatus, &toStatus, map[string]any{
+	_ = insertEvent(ctx, tx, requestID, "employer_hr", &actor, "HR_ATTESTED", &curStatus, &toStatus, map[string]any{
 		"response_type": responseType,
+		"attestation_present": present,
+		"kid": kid,
 	})
+
+	return AttestResult{
+		Status:             toStatus,
+		AttestationPresent: present,
+		KID:                kid,
+		JWSBytes:           jwsBytes,
+	}, nil
 }
 
 func (r *Repo) EmployerList(ctx context.Context, tx pgx.Tx, employerID string, limit int) ([]HRQueueRow, error) {
@@ -392,6 +455,7 @@ LIMIT $2
 			createdAt time.Time
 			updatedAt time.Time
 		)
+
 		if err := rows.Scan(&requestID, &status, &snap, &createdAt, &updatedAt); err != nil {
 			return nil, err
 		}
@@ -418,6 +482,7 @@ type EmployerGetRow struct {
 	CreatedAt     string
 	UpdatedAt     string
 	Version       int
+	EmployerResponseType *string
 }
 
 func (r *Repo) EmployerGet(ctx context.Context, tx pgx.Tx, requestID string, employerID string) (EmployerGetRow, error) {
@@ -428,7 +493,8 @@ SELECT
   COALESCE(claim_snapshot, '{}'::jsonb) AS claim_snapshot,
   created_at,
   updated_at,
-  version
+  version,
+employer_response_type
 FROM evt_requests
 WHERE request_id = $1
   AND employer_id = $2
@@ -459,8 +525,6 @@ LIMIT 1
 		Version:       version,
 	}, nil
 }
-
-
 
 /* ---------------- Internal Cvera writes ---------------- */
 
