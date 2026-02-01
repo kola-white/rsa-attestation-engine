@@ -22,11 +22,16 @@ type AttestReq struct {
 	EmployerID     string          `json:"employer_id" binding:"required"`
 	ResponseType   string          `json:"response_type" binding:"required"` // e.g. "approve" | "reject"
 	ResponseBody   json.RawMessage `json:"response_body,omitempty"`
-	AttestationJWS string          `json:"attestation_jws" binding:"required"`
 }
 
 type AttestResp struct {
 	Status string `json:"status"`
+	Attestation AttestationMeta  `json:"attestation"`
+}
+
+type AttestationMeta struct {
+	Present bool   `json:"present"`
+	KID     string `json:"kid,omitempty"`
 }
 
 type HRQueueRow struct {
@@ -65,17 +70,34 @@ func (h *EmployerHandlers) Attest(c *gin.Context) {
 	hrPersonID := claims.Sub
 
 	var req AttestReq
-	if err := c.ShouldBindJSON(&req); err != nil ||
-		strings.TrimSpace(req.EmployerID) == "" ||
-		strings.TrimSpace(req.ResponseType) == "" ||
-		strings.TrimSpace(req.AttestationJWS) == "" {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_body"})
 		return
 	}
 
-	var status string
+	req.EmployerID = strings.TrimSpace(req.EmployerID)
+	req.ResponseType = strings.TrimSpace(req.ResponseType)
+
+	if req.EmployerID == "" || req.ResponseType == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_body"})
+		return
+	}
+
+	// response_body can be empty; normalize to {} for stable DB behavior
+	if len(req.ResponseBody) == 0 {
+		req.ResponseBody = json.RawMessage(`{}`)
+	}
+
+	var (
+		status  string
+		present bool
+		kid     string
+		jwsLen  int
+	)
+
 	err := h.DB.WithTx(c.Request.Context(), func(tx pgx.Tx) error {
-		s, err := h.Repo.HREmployerAttest(
+		// IMPORTANT: Repo now generates JWS when needed and returns metadata
+		out, err := h.Repo.EmployerAttestServerSigned(
 			c.Request.Context(),
 			tx,
 			requestID,
@@ -83,16 +105,20 @@ func (h *EmployerHandlers) Attest(c *gin.Context) {
 			hrPersonID,
 			req.ResponseType,
 			req.ResponseBody,
-			req.AttestationJWS,
 		)
 		if err != nil {
 			return err
 		}
-		status = s
-		return nil
 
+		status = out.Status
+		present = out.AttestationPresent
+		kid = out.KID
+		jwsLen = out.JWSBytes
+
+		return nil
 	})
-		if err != nil {
+
+	if err != nil {
 		log.Printf("[attest_failed] request_id=%s employer_id=%s hr_personid=%s response_type=%s err=%T %v",
 			requestID, req.EmployerID, hrPersonID, req.ResponseType, err, err,
 		)
@@ -110,7 +136,18 @@ func (h *EmployerHandlers) Attest(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, AttestResp{Status: status})
+	// Mandatory success log (your requested shape)
+	log.Printf("[attest] request_id=%s employer_id=%s hr_personid=%s generated_jws=%t kid=%s bytes=%d response_type=%s status=%s",
+		requestID, req.EmployerID, hrPersonID, present, kid, jwsLen, req.ResponseType, status,
+	)
+
+	c.JSON(http.StatusOK, AttestResp{
+		Status: status,
+		Attestation: AttestationMeta{
+			Present: present,
+			KID:     kid,
+		},
+	})
 }
 
 func (h *EmployerHandlers) List(c *gin.Context) {

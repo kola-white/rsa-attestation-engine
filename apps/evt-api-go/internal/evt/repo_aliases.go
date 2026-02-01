@@ -7,8 +7,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// HREmployerAttest is a handler-facing adapter that maps to Repo.EmployerAttest.
-// It returns the new status string so handlers can respond consistently.
+// HREmployerAttest is a backward-compatible alias that now delegates to the
+// server-signed implementation and returns the resulting status.
 func (r *Repo) HREmployerAttest(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -17,12 +17,20 @@ func (r *Repo) HREmployerAttest(
 	employerHRPersonID string,
 	responseType string,
 	responseBody json.RawMessage,
-	attestationJWS string,
+	attestationJWS string, // kept to avoid changing callers; ignored now
 ) (string, error) {
-	if err := r.EmployerAttest(ctx, tx, requestID, employerID, employerHRPersonID, responseType, responseBody, attestationJWS); err != nil {
+	out, err := r.EmployerAttestServerSigned(
+		ctx,
+		tx,
+		requestID,
+		employerID,
+		employerHRPersonID,
+		responseType,
+		responseBody,
+	)
+	if err != nil {
 		return "", err
 	}
-	// Your repo method returns error only; the new status is deterministically "ATTESTED".
-	// If you later make status dynamic, change Repo.EmployerAttest to return status.
-	return "ATTESTED", nil
+
+	return out.Status, nil
 }

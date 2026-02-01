@@ -38,7 +38,11 @@ type HRQueueRow = {
 
 type HRQueueResp = { items: HRQueueRow[] };
 
-type HRGetResp = HRQueueRow & { version: number };
+type HRGetResp = HRQueueRow & {
+  version: number;
+  employer_response_type?: EmployerResponseType | null;
+};
+
 
 type DisplayClaim = {
   employer: string;
@@ -67,32 +71,20 @@ function toDisplayClaim(snap: Record<string, unknown>): DisplayClaim {
 
 type HRNav = NativeStackNavigationProp<AppStackParamList, "HRReview">;
 
-type CaseStatus = "PENDING" | "ATTESTED" | "REJECTED_NO_RECORD" | "REJECTED_POLICY";
+type CaseStatus = "PENDING" | "ATTESTED" | "REJECTED";
 
-function statusToCaseStatus(
-  backendStatus: string,
-  rejectReason?: string | null
-): CaseStatus {
-  // 1) Approved path
+function statusToCaseStatus(backendStatus: string): CaseStatus {
   if (backendStatus === "ATTESTED") return "ATTESTED";
-
-  // 2) Rejected path (DB status is "REJECTED")
-  if (backendStatus === "REJECTED") {
-    // If your API includes a reason code, use it.
-    if (rejectReason === "REJECTED_POLICY" || rejectReason === "POLICY") {
-      return "REJECTED_POLICY";
-    }
-    if (rejectReason === "REJECTED_NO_RECORD" || rejectReason === "NO_RECORD") {
-      return "REJECTED_NO_RECORD";
-    }
-
-    // If reason is missing, pick a deterministic default.
-    // (You can also choose to always show REJECTED_POLICY instead.)
-    return "REJECTED_NO_RECORD";
-  }
-
-  // 3) Everything else is pending in UI
+  if (backendStatus === "REJECTED") return "REJECTED";
   return "PENDING";
+}
+
+function rejectionReasonLabel(
+  employerResponseType?: EmployerResponseType | null
+): string | null {
+  if (employerResponseType === "REJECTED_NO_RECORD") return "No record found";
+  if (employerResponseType === "REJECTED_POLICY") return "Policy restriction";
+  return null; // ✅ no inference, no default
 }
 
 function formatRelativeOrDate(iso: string): string {
@@ -730,8 +722,16 @@ export const HRReviewScreenSettingsStyle = () => {
 }, [selected]);
 
 const status: CaseStatus = useMemo(() => {
-  return selected ? statusToCaseStatus(selected.status, null) : "PENDING";
+  return selected ? statusToCaseStatus(selected.status) : "PENDING";
 }, [selected?.status]);
+
+const rejectLabel = useMemo(() => {
+  if (!selected) return null;
+  if (selected.status !== "REJECTED") return null;
+  return rejectionReasonLabel(selected.employer_response_type);
+}, [selected?.status, selected?.employer_response_type]);
+
+const isEmpty = !loading && queue.length === 0;
 
   const submittedLabel = useMemo(() => {
     // use updated_at as the safest “this is recent” value for now
@@ -807,12 +807,6 @@ async function fetchDetail(requestId: string): Promise<HRGetResp> {
   return (text ? JSON.parse(text) : null) as HRGetResp;
 }
 
-  type EmployerResponseType =
-    | "FULL_MATCH"
-    | "PARTIAL_MATCH"
-    | "REJECTED_NO_RECORD"
-    | "REJECTED_POLICY";
-
   const [attesting, setAttesting] = useState<EmployerResponseType | null>(null);
 
   async function attest(responseType: EmployerResponseType) {
@@ -822,6 +816,8 @@ async function fetchDetail(requestId: string): Promise<HRGetResp> {
     if (!selected) return Alert.alert("No request selected.");
     if (!API_BASE_URL) return Alert.alert("Config error", "Missing API base URL.");
     if (!accessToken) return Alert.alert("Auth error", "Missing access token.");
+    if (!selected) return Alert.alert("No request selected.");
+    if (queue.length === 0) return Alert.alert("No requests waiting for review.");
 
     setAttesting(responseType);
 
@@ -840,7 +836,6 @@ async function fetchDetail(requestId: string): Promise<HRGetResp> {
           employer_id: employerId,
           response_type: responseType,
           response_body: {},                 // keep empty for demo
-          attestation_jws: "demo-jws-placeholder",
         }),
       }
     );
@@ -965,6 +960,11 @@ useEffect(() => {
         const t = await dRes.text();
         throw new Error(`Detail failed (${dRes.status}): ${t}`);
       }
+      const dText = await dRes.text();
+      const dJson = (dText ? JSON.parse(dText) : null) as HRGetResp;
+      if (cancelled) return;
+      setSelected(dJson);
+
 
     } catch (e: any) {
       Alert.alert("HR load failed", String(e?.message ?? e));
@@ -1034,9 +1034,10 @@ function handleReject() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           flexGrow: 1,
-          paddingBottom: 16 + 64 + insets.bottom,
+          paddingBottom: 16 + 88 + insets.bottom,
         }}
       >
+        
         <View className="px-4 pt-4 flex-1">
           {/* QUEUE */}
           <SectionHeader title="Queue" />
@@ -1077,7 +1078,18 @@ function handleReject() {
               ) : null}
             </SettingsRow>
           </SettingsSection>
-
+          {isEmpty ? (
+            <View className="mt-4 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-4 py-4">
+              <Text className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                No requests waiting for review
+              </Text>
+              <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-1">
+                New submissions will appear here automatically.
+              </Text>
+            </View>
+          ) : null}
+          {!isEmpty ? (
+          <>
           {/* CASE */}
           <SectionHeader title="Case" />
           <SettingsSection>
@@ -1117,7 +1129,7 @@ function handleReject() {
             <Separator />
 
             <SettingsRow>
-              <StatusRow status={status} />
+              <StatusRow status={status} rejectLabel={rejectLabel} />
             </SettingsRow>
           </SettingsSection>
 
@@ -1179,7 +1191,6 @@ function handleReject() {
                 <Text className="text-sm text-zinc-600 dark:text-zinc-300">
                   Upload file or photo (max 5MB)
                 </Text>
-
                 <View className="mt-3">
                   <Pressable
                     disabled={!canUpload}
@@ -1252,25 +1263,23 @@ function handleReject() {
           {/* FOOTNOTE */}
           <Footnote
             text="I consent to Cvera processing uploaded evidence solely for the purpose of verifying employment claims. 
-          Cvera processes uploaded evidence solely to verify employment claims. 
-          Raw evidence is retained only as long as necessary to complete verification and is then deleted. 
-          Cvera issues cryptographic verification tokens that do not expose underlying documents."
+          Cvera processes uploaded evidence solely to verify employment claims."
           />
-
-          <View style={{ paddingBottom: insets.bottom }} />
+          </> 
+        ) : null}
+          <View style={{ height: 24 + 88 + insets.bottom }} />
           <DecisionBar
             bottomInset={insets.bottom}
             onApprove={() => void attest("FULL_MATCH")}
             onReject={handleReject}
-            disabled={!!attesting}
+            disabled={!!attesting || loading || !selected || isEmpty}
             attesting={attesting}
           />
-        </View>
+          </View>
       </ScrollView>
     </View>
   );
-}
-
+};
 /* ===================== Section Header ===================== */
 
 function SectionHeader({ title }: { title: string }) {
@@ -1301,18 +1310,32 @@ function Separator() {
 
 /* ===================== Status Row ===================== */
 
-function StatusRow({ status }: { status: CaseStatus }) {
+function StatusRow({
+  status,
+  rejectLabel,
+}: {
+  status: CaseStatus;
+  rejectLabel?: string | null;
+}) {
   const color =
     status === "ATTESTED"
       ? "text-emerald-600"
-      : status === "REJECTED_NO_RECORD" || status === "REJECTED_POLICY"
+      : status === "REJECTED"
       ? "text-rose-600"
       : "text-amber-600";
 
   return (
-    <View className="flex-row items-center justify-between">
-      <Text className="text-base text-zinc-900 dark:text-zinc-100">Status</Text>
-      <Text className={`text-base font-medium ${color}`}>{status}</Text>
+    <View>
+      <View className="flex-row items-center justify-between">
+        <Text className="text-base text-zinc-900 dark:text-zinc-100">Status</Text>
+        <Text className={`text-base font-medium ${color}`}>{status}</Text>
+      </View>
+
+      {status === "REJECTED" && rejectLabel ? (
+        <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-1">
+          {rejectLabel}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -1375,7 +1398,6 @@ function Footnote({ text }: { text: string }) {
 }
 
 /* ===================== Sticky Decision Bar ===================== */
-
 function DecisionBar({
   bottomInset,
   onApprove,
@@ -1433,4 +1455,4 @@ function DecisionBar({
       </View>
     </View>
   );
-}
+};
