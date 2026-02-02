@@ -57,4 +57,7 @@ jobs:
         run: |
           doctl compute cdn flush "$CDN_ENDPOINT_ID" \
             --files "/trust/jwks.json" \
-            --files "/status/statuslist.json"
+            --files "/trust/statuslist.json" \
+            --files "/trust/policy.json" \
+            --files "/attestation-engine/latest.json"
+
