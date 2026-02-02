@@ -53,6 +53,7 @@ type HRGetResp struct {
 	CreatedAt     string          `json:"created_at"`
 	UpdatedAt     string          `json:"updated_at"`
 	Version       int             `json:"version"`
+	EmployerResponseType  *string `json:"employer_response_type,omitempty"`
 }
 
 
@@ -215,6 +216,7 @@ func (h *EmployerHandlers) Get(c *gin.Context) {
 			CreatedAt:     row.CreatedAt,
 			UpdatedAt:     row.UpdatedAt,
 			Version:       row.Version,
+			EmployerResponseType:  row.EmployerResponseType,
 		}
 		return nil
 	})
