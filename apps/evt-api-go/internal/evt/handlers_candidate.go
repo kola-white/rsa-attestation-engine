@@ -217,17 +217,10 @@ func (h *CandidateHandlers) Get(c *gin.Context) {
 	err := h.DB.WithTx(c.Request.Context(), func(tx pgx.Tx) error {
 		row, err := h.Repo.CandidateGet(c.Request.Context(), tx, requestID, personID)
 		if err != nil {
-			return err
+		return err
 		}
 
-		out = RequestorGetResp{
-			RequestID:     row.RequestID,
-			Status:        row.Status,
-			ClaimSnapshot: row.ClaimSnapshot,
-			CreatedAt:     row.CreatedAt,
-			UpdatedAt:     row.UpdatedAt,
-			Version:       row.Version,
-		}
+		out = row // ✅ direct assign (row is already RequestorGetResp)
 		return nil
 	})
 

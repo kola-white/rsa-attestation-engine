@@ -507,9 +507,10 @@ LIMIT 1
 		createdAt time.Time
 		updatedAt time.Time
 		version   int
+		ert 	*string
 	)
 
-	if err := tx.QueryRow(ctx, q, requestID, employerID).Scan(&id, &status, &snap, &createdAt, &updatedAt, &version); err != nil {
+	if err := tx.QueryRow(ctx, q, requestID, employerID).Scan(&id, &status, &snap, &createdAt, &updatedAt, &version, &ert); err != nil {
 		if err == pgx.ErrNoRows {
 			return EmployerGetRow{}, db.ErrNotFound
 		}
@@ -523,6 +524,7 @@ LIMIT 1
 		CreatedAt:     createdAt.UTC().Format(time.RFC3339Nano),
 		UpdatedAt:     updatedAt.UTC().Format(time.RFC3339Nano),
 		Version:       version,
+		EmployerResponseType: ert,
 	}, nil
 }
 
