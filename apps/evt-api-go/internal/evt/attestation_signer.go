@@ -3,12 +3,16 @@ package evt
 import (
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type AttestationSigner struct {
@@ -71,12 +75,39 @@ type AttestationClaims struct {
 
 // SignAttestationJWS returns (compactJWS, kid, error)
 func (s *AttestationSigner) SignAttestationJWS(cl AttestationClaims) (string, string, error) {
-	// TODO: implement using the JWS/JWT library you standardize on in this repo.
+	if s == nil || s.privateKey == nil || s.kid == "" {
+		return "", "", errSignerNotConfigured()
+	}
+
+	// No auto-fields (iat/exp/etc). We sign exactly what the repo constructs in AttestationClaims.
+	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{})
+
 	// MUST set protected header kid = s.kid
-	// MUST use RS256
+	// MUST use RS256 (SigningMethodRS256 does this)
+	tok.Header["kid"] = s.kid
+	tok.Header["typ"] = "JWT"
+
+	// Convert the claims struct into a JSON object map to become the JWT payload.
+	// This keeps your attestation schema fields as-is (no extra jwt.* fields).
+	b, err := json.Marshal(cl)
+	if err != nil {
+		return "", s.kid, fmt.Errorf("marshal attestation claims: %w", err)
+	}
+
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		return "", s.kid, fmt.Errorf("unmarshal attestation claims: %w", err)
+	}
+	tok.Claims = jwt.MapClaims(m)
+
+	// Preserve your TODO’s “_ = time.Now()” intent without injecting anything.
 	_ = time.Now()
 
-	return "", s.kid, errors.New("not_implemented")
+	out, err := tok.SignedString(s.privateKey)
+	if err != nil {
+		return "", s.kid, fmt.Errorf("sign attestation jws: %w", err)
+	}
+	return out, s.kid, nil
 }
 
 func errSignerNotConfigured() error {
