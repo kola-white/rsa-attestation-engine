@@ -1,6 +1,10 @@
 package evt
 
 import (
+	"fmt"
+	"os"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/auth"
@@ -14,15 +18,26 @@ type Module struct {
 	Internal  *InternalHandlers
 }
 
-func NewModule(d *db.DB) *Module {
+func NewModule(d *db.DB) (*Module, error) {
 	repo := &Repo{DB: d}
+
+	pemPath := strings.TrimSpace(os.Getenv("EVT_ATTESTATION_SIGNER_PEM_PATH"))
+	if pemPath == "" {
+		return nil, fmt.Errorf("EVT_ATTESTATION_SIGNER_PEM_PATH is required (attestation signer not configured)")
+	}
+
+	signer, err := NewAttestationSignerFromPEMPath(pemPath)
+	if err != nil {
+		return nil, fmt.Errorf("attestation signer init failed (path=%s): %w", pemPath, err)
+	}
+	repo.Signer = signer
 
 	return &Module{
 		Candidate: &CandidateHandlers{DB: d, Repo: repo},
 		Employer:  &EmployerHandlers{DB: d, Repo: repo},
 		Recruiter: &RecruiterHandlers{DB: d, Repo: repo},
 		Internal:  &InternalHandlers{DB: d, Repo: repo},
-	}
+	}, nil
 }
 
 // Register mounts Phase-2 EVT routes under the provided RouterGroup.
@@ -75,4 +90,7 @@ func (m *Module) Register(v1 *gin.RouterGroup) {
 	{
 		tok.POST("/:request_id/consume", m.Recruiter.Consume)
 	}
+
+
 }
+

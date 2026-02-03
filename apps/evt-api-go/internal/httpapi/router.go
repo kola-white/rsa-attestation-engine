@@ -81,9 +81,6 @@ func NewRouter(cfg *config.Config) http.Handler {
 		s.HandleAuthLogout(w, r)
 	})
 
-	// Verification outcome (server-authoritative)
-	mux.HandleFunc("POST /v1/verification/outcome", s.HandleVerificationOutcome)
-
 	// Evidence contract paths:
 	mux.HandleFunc("POST /v1/cases/{caseId}/checks/{checkId}/evidence:init", s.HandleEvidenceInit)
 	mux.HandleFunc("POST /v1/cases/{caseId}/checks/{checkId}/evidence:complete", s.HandleEvidenceComplete)
@@ -102,20 +99,27 @@ func NewRouter(cfg *config.Config) http.Handler {
 		log.Fatalf("pgxpool init failed: %v", err)
 	}
 	evtDB := &evtdb.DB{Pool: pool}
-	evtModule := evtmod.NewModule(evtDB)
+	evtModule, err := evtmod.NewModule(evtDB)
+	if err != nil {
+		log.Fatalf("evt module init failed: %v", err)
+	}
 
 	evtEngine := gin.New()
 	evtEngine.Use(gin.Recovery())
 
 	// ✅ global for ALL gin-served /v1/*
 	evtEngine.Use(auth.GinRequireAuth(
-	cfg.Auth.JWTSecret,
-	cfg.Auth.Issuer,
-	cfg.Auth.Audience,
+		cfg.Auth.JWTSecret,
+		cfg.Auth.Issuer,
+		cfg.Auth.Audience,
 	))
 
 	v1 := evtEngine.Group("/v1")
 	evtModule.Register(v1)
+	// Server-authoritative outcome (must be behind Gin auth middleware)
+	v1.POST("/verification/outcome", func(c *gin.Context) {
+		s.HandleVerificationOutcome(c.Writer, c.Request)
+	})
 
 	mux.Handle("/v1/", evtEngine)
 	
@@ -133,3 +137,5 @@ func withReqLog(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+
