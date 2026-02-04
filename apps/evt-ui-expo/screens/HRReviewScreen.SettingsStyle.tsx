@@ -1,7 +1,7 @@
-import { useColorScheme } from "react-native";
+import { RefreshControl, useColorScheme } from "react-native";
 import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/auth/AuthContext";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { AppStackParamList } from "@/src/navigation/MainAppNavigator";
 import {
@@ -714,6 +714,11 @@ export const HRReviewScreenSettingsStyle = () => {
   const [loading, setLoading] = useState(true);
   const [queue, setQueue] = useState<HRQueueRow[]>([]);
   const [selected, setSelected] = useState<HRGetResp | null>(null);
+  const inflightRef = React.useRef(false);
+  const seqRef = React.useRef(0);
+  const selectedIdRef = React.useRef<string | null>(null);
+  const [refreshing, setRefreshing] = React.useState(false);
+
   const employerId = "emp_demo_001"; // demo constant for now
 
   const displayClaim = useMemo(() => {
@@ -754,6 +759,7 @@ const handleChooseRequest = () => {
           try {
             const d = await fetchDetail(chosen.request_id);
             setSelected(d);
+            selectedIdRef.current = d.request_id;
           } finally {
             setLoading(false);
           }
@@ -783,29 +789,100 @@ const handleChooseRequest = () => {
   }
 };
 
-async function fetchDetail(requestId: string): Promise<HRGetResp> {
+const fetchDetail = React.useCallback(
+  async (requestId: string): Promise<HRGetResp> => {
+    if (!API_BASE_URL) throw new Error("Missing EXPO_PUBLIC_EVT_API_BASE_URL");
+    if (!accessToken) throw new Error("Missing access token (sign in again)");
+
+    const res = await fetch(
+      `${API_BASE_URL}/v1/employer/requests/${encodeURIComponent(
+        requestId
+      )}?employer_id=${encodeURIComponent(employerId)}`,
+      {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    const text = await res.text();
+    if (!res.ok) throw new Error(`Detail failed (${res.status}): ${text}`);
+    return (text ? JSON.parse(text) : null) as HRGetResp;
+  },
+  [API_BASE_URL, accessToken, employerId]
+);
+
+const refreshQueueAndSelection = React.useCallback(async () => {
   if (!API_BASE_URL) throw new Error("Missing EXPO_PUBLIC_EVT_API_BASE_URL");
   if (!accessToken) throw new Error("Missing access token (sign in again)");
+  if (inflightRef.current) return;
 
-  const dRes = await fetch(
-    `${API_BASE_URL}/v1/employer/requests/${encodeURIComponent(
-      requestId
-    )}?employer_id=${encodeURIComponent(employerId)}`,
-    {
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
+  inflightRef.current = true;
+  const mySeq = ++seqRef.current;
+
+  setLoading(true);
+  try {
+    const qRes = await fetch(
+      `${API_BASE_URL}/v1/employer/requests?employer_id=${encodeURIComponent(
+        employerId
+      )}`,
+      {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    const qText = await qRes.text();
+    if (!qRes.ok) throw new Error(`Queue failed (${qRes.status}): ${qText}`);
+
+    const qJson = (qText ? JSON.parse(qText) : null) as HRQueueResp;
+    if (mySeq !== seqRef.current) return;
+
+    const items = qJson?.items ?? [];
+    setQueue(items);
+
+    // Prefer: explicit ref selection -> else first item
+    const preferredId = selectedIdRef.current ?? items[0]?.request_id ?? null;
+
+    if (!preferredId) {
+      setSelected(null);
+      selectedIdRef.current = null;
+      return;
     }
-  );
 
-  const text = await dRes.text();
-  if (!dRes.ok) {
-    throw new Error(`Detail failed (${dRes.status}): ${text}`);
+    // If selected item no longer exists, fall back to first
+    const nextId = items.some((x) => x.request_id === preferredId)
+      ? preferredId
+      : (items[0]?.request_id ?? null);
+
+    if (!nextId) {
+      setSelected(null);
+      selectedIdRef.current = null;
+      return;
+    }
+
+    const detail = await fetchDetail(nextId);
+    if (mySeq !== seqRef.current) return;
+
+    setSelected(detail);
+    selectedIdRef.current = detail.request_id;
+  } finally {
+    inflightRef.current = false;
+    setLoading(false);
   }
+}, [API_BASE_URL, accessToken, employerId, fetchDetail]);
 
-  return (text ? JSON.parse(text) : null) as HRGetResp;
-}
+const onPullRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refreshQueueAndSelection();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshQueueAndSelection]);
 
   const [attesting, setAttesting] = useState<EmployerResponseType | null>(null);
 
@@ -855,9 +932,8 @@ async function fetchDetail(requestId: string): Promise<HRGetResp> {
     const j = text ? JSON.parse(text) : null;
     Alert.alert("Attested", `Status: ${j?.status ?? "ATTESTED"}`);
 
-    // ✅ Optional refresh detail after attest (CONCRETE)
-    const refreshed = await fetchDetail(requestId);
-    setSelected(refreshed);
+    selectedIdRef.current = requestId;
+    await refreshQueueAndSelection();
 
     // (Optional) also refresh queue so status changes reflect in list if you render it
     // await refreshQueue();  // only if you have/need it
@@ -910,74 +986,17 @@ async function fetchDetail(requestId: string): Promise<HRGetResp> {
   });
 }, [navigation, logout]);
 
-useEffect(() => {
-  let cancelled = false;
+useFocusEffect(
+  React.useCallback(() => {
+    // On focus: refresh once
+    void refreshQueueAndSelection();
 
-  async function run() {
-    try {
-      if (!API_BASE_URL) throw new Error("Missing EXPO_PUBLIC_EVT_API_BASE_URL");
-      if (!accessToken) throw new Error("Missing access token (sign in again)");
-
-      setLoading(true);
-
-      const qRes = await fetch(
-        `${API_BASE_URL}/v1/employer/requests?employer_id=${encodeURIComponent(employerId)}`,
-        {
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (!qRes.ok) {
-        const t = await qRes.text();
-        throw new Error(`Queue failed (${qRes.status}): ${t}`);
-      }
-
-      const qJson = (await qRes.json()) as HRQueueResp;
-      if (cancelled) return;
-
-      setQueue(qJson.items ?? []);
-
-      const first = qJson.items?.[0];
-      if (!first) {
-        setSelected(null);
-        return;
-      }
-
-      const dRes = await fetch(
-        `${API_BASE_URL}/v1/employer/requests/${encodeURIComponent(first.request_id)}?employer_id=${encodeURIComponent(employerId)}`,
-        {
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (!dRes.ok) {
-        const t = await dRes.text();
-        throw new Error(`Detail failed (${dRes.status}): ${t}`);
-      }
-      const dText = await dRes.text();
-      const dJson = (dText ? JSON.parse(dText) : null) as HRGetResp;
-      if (cancelled) return;
-      setSelected(dJson);
-
-
-    } catch (e: any) {
-      Alert.alert("HR load failed", String(e?.message ?? e));
-    } finally {
-      if (!cancelled) setLoading(false);
-    }
-  }
-
-  void run();
-  return () => {
-    cancelled = true;
-  };
-}, [API_BASE_URL, accessToken, employerId]);
+    // On blur/unmount: invalidate late responses
+    return () => {
+      seqRef.current++;
+    };
+  }, [refreshQueueAndSelection])
+);
 
 function handleReject() {
   if (!selected) {
@@ -1020,7 +1039,6 @@ function handleReject() {
   }
 }
 
-
   return (
     <View
       className="flex-1 bg-white dark:bg-zinc-900"
@@ -1030,6 +1048,9 @@ function handleReject() {
       }}
     >
       <ScrollView
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onPullRefresh} />
+        }
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
