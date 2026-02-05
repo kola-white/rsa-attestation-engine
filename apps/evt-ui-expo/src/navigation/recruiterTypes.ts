@@ -59,9 +59,12 @@ export type RecruiterFiltersParams = {
   on_apply_id?: string;
 };
 
-export type RecruiterStackParamList = {
-  RecruiterCandidates: undefined;
+export type RecruiterCandidatesParams = {
+  query?: RecruiterQueryState;
+};
 
+export type RecruiterStackParamList = {
+  RecruiterCandidates: { query?: RecruiterQueryState } | undefined;
   CandidateDetail: {
     candidate_id: string;
     subject_ref: CandidateRowSnapshot["subject"];
@@ -69,7 +72,7 @@ export type RecruiterStackParamList = {
     prefetch_snapshot?: CandidateRowSnapshot;
   };
 
-RecruiterFilters: {
+  RecruiterFilters: {
     initial: RecruiterFiltersInitial;
   };
 };

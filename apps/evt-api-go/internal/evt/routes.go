@@ -15,6 +15,7 @@ type Module struct {
 	Candidate *CandidateHandlers
 	Employer  *EmployerHandlers
 	Recruiter *RecruiterHandlers
+	RecruiterList  *RecruiterListHandlers 
 	Internal  *InternalHandlers
 }
 
@@ -36,6 +37,7 @@ func NewModule(d *db.DB) (*Module, error) {
 		Candidate: &CandidateHandlers{DB: d, Repo: repo},
 		Employer:  &EmployerHandlers{DB: d, Repo: repo},
 		Recruiter: &RecruiterHandlers{DB: d, Repo: repo},
+		RecruiterList: &RecruiterListHandlers{DB: d, Repo: repo}, 
 		Internal:  &InternalHandlers{DB: d, Repo: repo},
 	}, nil
 }
@@ -91,6 +93,14 @@ func (m *Module) Register(v1 *gin.RouterGroup) {
 		tok.POST("/:request_id/consume", m.Recruiter.Consume)
 	}
 
+	// -----------------------------
+	// /v1/recruiter — Recruiter list + filter options (NEW)
+	// -----------------------------
+	rec := v1.Group("/recruiter", auth.GinRequireRole(auth.RoleRecruiter))
+	{
+		rec.GET("/candidates", m.RecruiterList.ListCandidates)
+		rec.GET("/filters/options", m.RecruiterList.FilterOptions)
+	}
 
 }
 

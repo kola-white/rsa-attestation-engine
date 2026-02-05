@@ -23,19 +23,35 @@ export function RecruiterFiltersScreen() {
   const insets = useSafeAreaInsets();
 
   const initial = route.params.initial;
-  const [draft, setDraft] = useState<RecruiterQueryState>(initial);
-  const initialRef = useRef(initial);
+  const initialRef = useRef(cloneQuery(initial));
+
+  const [draft, setDraft] = useState<RecruiterQueryState>(() => cloneQuery(initial));
 
   function reset() {
-    setDraft(initialRef.current);
+    setDraft(cloneQuery(initialRef.current));
   }
 
+  function cloneQuery(q: RecruiterQueryState): RecruiterQueryState {
+  return {
+    ...q,
+    signature_status: [...(q.signature_status ?? [])],
+    company_ids: [...(q.company_ids ?? [])],
+    page: q.page ? { ...q.page } : undefined,
+    dates: q.dates ? { ...q.dates } : undefined,
+  };
+}
+
   function done() {
-    // Phase 1 contract: swipe-down behaves exactly like Done.
-    // We treat dismissal as apply, so Done just dismisses.
-    navigation.goBack();
-    // Applying the draft into list state is intentionally outside this screen in Phase 1.
-  }
+  // Apply the draft into the RecruiterCandidates route params (merge into existing params)
+  navigation.navigate({
+    name: "RecruiterCandidates",
+    params: { query: draft },
+    merge: true,
+  });
+
+  // Close the modal (keeps your “Done dismisses” UX)
+  navigation.goBack();
+}
 
   useLayoutEffect(() => {
     navigation.setOptions({
