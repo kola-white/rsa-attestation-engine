@@ -3,6 +3,8 @@ package evt
 import (
 	"context"
 	"encoding/json"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -15,6 +17,12 @@ type AttestResult struct {
 	KID               string
 	JWSBytes          int
 }
+
+type RecruiterCompanyOption struct {
+	CompanyID string
+	Name      string
+}
+
 
 type Repo struct {
 	DB *db.DB
@@ -640,3 +648,306 @@ func (r *Repo) RecruiterConsume(ctx context.Context, tx pgx.Tx, requestID, recru
 
 	return nil
 }
+
+func (r *Repo) RecruiterCompanyOptions(
+	ctx context.Context,
+	tx pgx.Tx,
+	recruiterPersonID string,
+) ([]RecruiterCompanyOption, error) {
+
+	// MVP: companies = employer_id values that have requests in states
+	// a recruiter may reasonably see. Adjust later if you add a true company table.
+	const q = `
+SELECT DISTINCT
+  employer_id
+FROM evt_requests
+WHERE employer_id IS NOT NULL
+  AND employer_id <> ''
+  AND status IN ('VERIFIED','UNVERIFIED','CONSUMED','CLOSED','ATTESTED','REJECTED')
+ORDER BY employer_id ASC
+`
+
+	rows, err := tx.Query(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]RecruiterCompanyOption, 0, 16)
+	for rows.Next() {
+		var companyID string
+		if err := rows.Scan(&companyID); err != nil {
+			return nil, err
+		}
+		out = append(out, RecruiterCompanyOption{
+			CompanyID: companyID,
+			Name:      companyID, // MVP placeholder
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	_ = recruiterPersonID // reserved for future scoping by recruiter/org
+	return out, nil
+}
+
+func (r *Repo) RecruiterCandidateList(
+	ctx context.Context,
+	tx pgx.Tx,
+	recruiterPersonID string,
+	search string,
+	trustMode RecruiterTrustMode,
+	signatures []SignatureBadge,
+	companyIDs []string,
+	limit int,
+	cursor *recruiterCursor,
+) ([]CandidateRowSnapshot, *string, error) {
+
+	if limit <= 0 || limit > 100 {
+		limit = 25
+	}
+
+	// Normalize signature filter to []string for SQL ANY()
+	sigVals := make([]string, 0, len(signatures))
+	for _, s := range signatures {
+		sigVals = append(sigVals, string(s))
+	}
+
+	// Build SQL dynamically (only add clauses that apply)
+	// NOTE: We use issuer_id = employer_id for MVP.
+	var sb strings.Builder
+	args := make([]any, 0, 10)
+	arg := func(v any) string {
+		args = append(args, v)
+		return "$" + strconv.Itoa(len(args))
+	}
+
+	sb.WriteString(`
+WITH base AS (
+  SELECT
+    er.request_id,
+    er.candidate_personid,
+    er.employer_id,
+    COALESCE(er.claim_snapshot, '{}'::jsonb) AS claim_snapshot,
+    er.attestation_jws,
+    er.updated_at,
+
+    -- MVP signature status:
+    CASE
+      WHEN er.attestation_jws IS NOT NULL AND er.attestation_jws <> '' THEN 'verified'
+      ELSE 'unknown'
+    END AS signature_status,
+
+    -- issuer_id (MVP) = employer_id
+    er.employer_id AS issuer_id,
+
+    rti.trust_level AS trust_level
+  FROM evt_requests er
+  LEFT JOIN recruiter_trusted_issuers rti
+    ON rti.recruiter_personid = ` + arg(recruiterPersonID) + `
+   AND rti.issuer_id = er.employer_id
+  WHERE er.status IN ('VERIFIED','UNVERIFIED','CONSUMED','CLOSED','ATTESTED','REJECTED')
+)
+SELECT
+  request_id,
+  candidate_personid,
+  employer_id,
+  claim_snapshot,
+  signature_status,
+  trust_level,
+  updated_at
+FROM base
+WHERE 1=1
+`)
+
+	// Cursor pagination: (updated_at, request_id) < (cursor.updated_at, cursor.request_id)
+	if cursor != nil {
+		sb.WriteString(`
+  AND (updated_at, request_id) < (` + arg(cursor.UpdatedAt) + `::timestamptz, ` + arg(cursor.RequestID) + `)
+`)
+	}
+
+	// signature_status filter
+	sb.WriteString(`
+  AND signature_status = ANY(` + arg(sigVals) + `::text[])
+`)
+
+	// company_ids filter (maps to employer_id)
+	if len(companyIDs) > 0 {
+		sb.WriteString(`
+  AND employer_id = ANY(` + arg(companyIDs) + `::text[])
+`)
+	}
+
+	// trust_mode filter
+	switch trustMode {
+	case TrustTrustedOnly:
+		sb.WriteString(`
+  AND trust_level = 'trusted'
+`)
+	case TrustIncludeUntrust:
+		// include both trusted + untrusted, exclude unknown
+		sb.WriteString(`
+  AND trust_level IS NOT NULL
+`)
+	case TrustAny:
+		// no clause
+	default:
+		// safety: behave like "any"
+	}
+
+	// search filter over claim_snapshot
+	// We keep this schema-light: look for common JSON paths but tolerate missing.
+	search = strings.TrimSpace(search)
+	if search != "" {
+		like := "%" + search + "%"
+		sb.WriteString(`
+  AND (
+    COALESCE(claim_snapshot #>> '{subject,full_name}', '') ILIKE ` + arg(like) + `
+    OR COALESCE(claim_snapshot #>> '{subject,employee_id}', '') ILIKE ` + arg(like) + `
+    OR COALESCE(claim_snapshot #>> '{primary_employment,issuer_name}', '') ILIKE ` + arg(like) + `
+    OR COALESCE(claim_snapshot #>> '{primary_employment,title}', '') ILIKE ` + arg(like) + `
+    OR COALESCE(employer_id, '') ILIKE ` + arg(like) + `
+  )
+`)
+	}
+
+	// Stable sort
+	sb.WriteString(`
+ORDER BY updated_at DESC, request_id DESC
+LIMIT ` + arg(limit+1) + `
+`)
+
+	rows, err := tx.Query(ctx, sb.String(), args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	type dbRow struct {
+		RequestID       string
+		CandidatePerson string
+		EmployerID      string
+		ClaimSnapshot   []byte
+		SignatureStatus string
+		TrustLevel      *string
+		UpdatedAt       time.Time
+	}
+
+	dbRows := make([]dbRow, 0, limit+1)
+
+	for rows.Next() {
+		var r0 dbRow
+		if err := rows.Scan(
+			&r0.RequestID,
+			&r0.CandidatePerson,
+			&r0.EmployerID,
+			&r0.ClaimSnapshot,
+			&r0.SignatureStatus,
+			&r0.TrustLevel,
+			&r0.UpdatedAt,
+		); err != nil {
+			return nil, nil, err
+		}
+		dbRows = append(dbRows, r0)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	// Next cursor if we fetched limit+1
+	var nextCursor *string
+	if len(dbRows) > limit {
+		last := dbRows[limit-1] // last item returned
+		cur := recruiterCursor{UpdatedAt: last.UpdatedAt.UTC(), RequestID: last.RequestID}
+		enc, err := encodeCursor(cur)
+		if err != nil {
+			return nil, nil, err
+		}
+		nextCursor = &enc
+
+		dbRows = dbRows[:limit]
+	}
+
+	// Convert to CandidateRowSnapshot (your UI contract shape)
+	items := make([]CandidateRowSnapshot, 0, len(dbRows))
+	for _, r0 := range dbRows {
+		var snap map[string]any
+		_ = json.Unmarshal(r0.ClaimSnapshot, &snap) // tolerant
+
+		// Extract known fields safely from JSONB (no panics)
+		// We'll also use the SQL JSON paths in filters, but for response we parse once.
+		fullName := ""
+		var employeeID *string
+
+		issuerName := r0.EmployerID
+		title := ""
+		startDate := ""
+		var endDate *string
+
+		// best-effort decode paths:
+		// subject.full_name, subject.employee_id, primary_employment.*
+		if subj, ok := snap["subject"].(map[string]any); ok {
+			if v, ok := subj["full_name"].(string); ok {
+				fullName = v
+			}
+			if v, ok := subj["employee_id"].(string); ok && strings.TrimSpace(v) != "" {
+				tmp := v
+				employeeID = &tmp
+			}
+		}
+		if pe, ok := snap["primary_employment"].(map[string]any); ok {
+			if v, ok := pe["issuer_name"].(string); ok && strings.TrimSpace(v) != "" {
+				issuerName = v
+			}
+			if v, ok := pe["title"].(string); ok {
+				title = v
+			}
+			if v, ok := pe["start_date"].(string); ok {
+				startDate = v
+			}
+			if v, ok := pe["end_date"].(string); ok && strings.TrimSpace(v) != "" {
+				tmp := v
+				endDate = &tmp
+			}
+		}
+
+		// badges
+		sig := SignatureBadge(r0.SignatureStatus)
+		if sig != SigVerified && sig != SigInvalid && sig != SigUnknown {
+			sig = SigUnknown
+		}
+
+		trust := TrustUnknown
+		if r0.TrustLevel != nil {
+			switch strings.ToLower(strings.TrimSpace(*r0.TrustLevel)) {
+			case "trusted":
+				trust = TrustTrusted
+			case "untrusted":
+				trust = TrustUntrusted
+			default:
+				trust = TrustUnknown
+			}
+		}
+
+		var out CandidateRowSnapshot
+		out.CandidateID = r0.CandidatePerson
+		out.Subject.FullName = fullName
+		out.Subject.EmployeeID = employeeID
+		out.PrimaryEmployment.IssuerName = issuerName
+		out.PrimaryEmployment.Title = title
+		out.PrimaryEmployment.StartDate = startDate
+		out.PrimaryEmployment.EndDate = endDate
+		out.PrimaryEVT.EVTID = r0.RequestID
+		out.Badges.Signature = sig
+		out.Badges.Trust = trust
+		out.UpdatedAt = r0.UpdatedAt.UTC().Format(time.RFC3339Nano)
+
+		items = append(items, out)
+	}
+
+	return items, nextCursor, nil
+}
+
