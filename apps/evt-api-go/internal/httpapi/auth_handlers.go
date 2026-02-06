@@ -32,7 +32,7 @@ type AuthExchangeResponse struct {
 }
 
 type ExchangeUser struct {
-	ID    string `json:"request_id"`
+	ID    string `json:"id"`
 	Email string `json:"email,omitempty"`
 	Name  string `json:"name,omitempty"`
 	Role  string `json:"role"`
@@ -99,18 +99,22 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 
 	// 3) Upsert domain user mapped to Kratos identity id
 	//    IMPORTANT: role is SOURCE OF TRUTH in DB. Do NOT overwrite role on login.
-	var (
+	defaultRole := auth.RoleRequestor
+	defaultStatus := "active"
+	
+var (
 	userID     uuid.UUID
 	dbRoleStr  string
 	)
 
 	err = tx.QueryRowContext(r.Context(), `
 	INSERT INTO domain_users (kratos_identity_id, email, name, role, status)
-	VALUES ($1,$2,$3,'requestor','active')
+	VALUES ($1,$2,$3,$4,$5)
 	ON CONFLICT (kratos_identity_id)
 	DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, updated_at = now()
 	RETURNING id, role
-	`, who.Identity.ID, email, name).Scan(&userID, &dbRoleStr)
+	`, who.Identity.ID, email, name, defaultRole.String(), defaultStatus).
+    Scan(&userID, &dbRoleStr)
 
 	if err != nil {
 	log.Printf("[auth:exchange] upsert domain_user: %v", err)
