@@ -1,36 +1,51 @@
-// /apps/evt-ui-expo/AppShell.tsx
-import React, { useEffect, useState } from "react";
-import { View, ActivityIndicator } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { View, ActivityIndicator, Text, Pressable } from "react-native";
 import { useAuth } from "@/src/auth/AuthContext";
 import { runBiometricCheck } from "@/src/auth/biometrics";
 import { AuthNavigator } from "@/src/navigation/AuthNavigator";
 import { MainAppNavigator } from "@/src/navigation/MainAppNavigator";
 import { SessionExpiredScreen } from "screens/SessionExpiredScreen";
-import { RequestorNavigator } from "@/src/navigation/RequestorNavigator";
-import { RecruiterNavigator } from "@/src/navigation/RecruiterNavigator";
+
+function routeForRole(role: string | undefined): "Recruiter" | "HRReview" | "ReqHome" | "Home" {
+  switch (role) {
+    case "recruiter":
+      return "Recruiter";
+    case "hr_reviewer":
+      return "HRReview";
+    case "requestor":
+      return "ReqHome";
+    case "cvera":
+      return "Recruiter";
+    default:
+      return "Home";
+  }
+}
 
 export const AppShell: React.FC = () => {
-  console.log("[AppShell] render");
-  const { status } = useAuth();
-  const [biometricGateDone, setBiometricGateDone] = useState(false);
-  const { user } = useAuth();
+  const { status, user, logout } = useAuth();
 
+  const [biometricGateDone, setBiometricGateDone] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
-      // TODO: read biometrics_enabled flag from SecureStore
       const biometricsEnabled = true;
 
-      if (!biometricsEnabled || status !== "authenticated") {
+      if (status !== "authenticated" || !biometricsEnabled) {
         if (!cancelled) setBiometricGateDone(true);
         return;
       }
 
-      const ok = await runBiometricCheck();
-      // Phase 1: proceed even if biometric fails (you can enforce later)
-      if (!cancelled) setBiometricGateDone(true);
+      try {
+        console.log("[AppShell] biometrics: starting gate check");
+        await runBiometricCheck();
+        console.log("[AppShell] biometrics: completed");
+      } catch (e) {
+        console.warn("[AppShell] biometrics: failed (proceeding)", e);
+      } finally {
+        if (!cancelled) setBiometricGateDone(true);
+      }
     })();
 
     return () => {
@@ -41,42 +56,41 @@ export const AppShell: React.FC = () => {
   const shouldBlockForBiometrics = status === "authenticated" && !biometricGateDone;
 
   if (status === "checking" || shouldBlockForBiometrics) {
-    console.log("[AppShell] LOADING/GATE", { status, biometricGateDone });
-
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View className="flex-1 items-center justify-center bg-white dark:bg-black">
         <ActivityIndicator />
       </View>
     );
   }
 
-  console.log("[AppShell] AUTH STATUS", status);
+  if (status === "session-expired") return <SessionExpiredScreen />;
 
-  if (status === "session-expired") {
-    console.log("[AppShell] AUTH STATUS session-expired (SessionExpiredScreen)");
-    return <SessionExpiredScreen />;
-  }
+  if (status === "unauthenticated") return <AuthNavigator />;
 
-  if (status === "unauthenticated") {
-    console.log("[AppShell] AUTH STATUS unauthenticated (AuthNavigator)");
-    return <AuthNavigator />;
-  }
-    console.log("[AppShell] user snapshot", JSON.stringify(user));
+  // ✅ authenticated
   if (!user?.role) {
-    return <MainAppNavigator />; // fallback for now
+    return (
+      <View className="flex-1 items-center justify-center bg-white dark:bg-black px-6">
+        <Text className="text-[16px] font-semibold text-zinc-800 dark:text-zinc-100 text-center">
+          We couldn’t finish signing you in.
+        </Text>
+        <Text className="mt-2 text-[14px] text-zinc-500 dark:text-zinc-400 text-center">
+          Your account role couldn’t be loaded. Please sign out and sign in again.
+        </Text>
+
+        {typeof logout === "function" && (
+          <Pressable
+            onPress={logout}
+            className="mt-4 px-4 py-2 rounded-lg bg-zinc-900 dark:bg-zinc-100"
+          >
+            <Text className="text-white dark:text-black font-semibold">Sign out</Text>
+          </Pressable>
+        )}
+      </View>
+    );
   }
 
-  if (user.role === "requestor") {
-    return <RequestorNavigator />;
-  }
+  const initialRoute = routeForRole(user.role);
 
-  if (user.role === "recruiter") {
-    return <RecruiterNavigator />;
-  }
-
-  if (user.role === "hr" || user.role === "hr_reviewer") {
-  return <MainAppNavigator />; // HRReview lives here
-  }
-
-  return <MainAppNavigator />;
+return <MainAppNavigator key={`main:${initialRoute}`} initialRouteName={initialRoute} />;
 };

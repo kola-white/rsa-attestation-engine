@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, Text } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { useNavigation } from "@react-navigation/native";
+import { CommonActions, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { RecruiterStackParamList } from "@/src/navigation/recruiterTypes";
@@ -11,15 +11,30 @@ import { RecruiterCandidatesScreen } from "@/screens/RecruiterCandidates";
 import { CandidateDetailScreen } from "@/screens/CandidateDetail";
 import { RecruiterFiltersScreen } from "@/screens/RecruiterFilters";
 
+console.log("[RecruiterNavigator] module loaded");
+
 const Stack = createNativeStackNavigator<RecruiterStackParamList>();
 
 function BackToAppButton() {
-  const parentNav =
-    useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  console.log("[RecruiterNavigator] render");
+  const nav = useNavigation<NativeStackNavigationProp<RecruiterStackParamList>>();
+
 
   return (
     <Pressable
-      onPress={() => parentNav.navigate("HRReview")}
+      onPress={() => {
+        // Parent is the App stack (once MainAppNavigator wraps RecruiterNavigator)
+        const parent = nav.getParent<NativeStackNavigationProp<AppStackParamList>>();
+
+        if (!parent) {
+          console.warn("[BackToAppButton] No parent navigator found");
+          if (nav.canGoBack()) nav.goBack();
+          return;
+        }
+
+        parent.navigate("HRReview"); 
+
+      }}
       accessibilityRole="button"
       accessibilityLabel="Back"
       hitSlop={10}
@@ -43,7 +58,7 @@ export const RecruiterNavigator: React.FC = () => {
         headerShadowVisible: false,
 
         // Native-stack: hide label by using empty string (NOT headerBackTitleVisible)
-        headerBackTitle: "Back to Home",
+        headerBackTitle: "Back",
         headerBackButtonMenuEnabled: false,
       }}
     >
