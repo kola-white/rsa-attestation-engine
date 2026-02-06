@@ -19,7 +19,7 @@ function BackToAppButton() {
 
   return (
     <Pressable
-      onPress={() => parentNav.goBack()}
+      onPress={() => parentNav.navigate("HRReview")}
       accessibilityRole="button"
       accessibilityLabel="Back"
       hitSlop={10}

@@ -93,14 +93,20 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 	roleStr := "requestor"
 	emailLower := strings.ToLower(strings.TrimSpace(email))
 
+	defaultRole, err := auth.ParseRole(roleStr)
 	if strings.HasSuffix(emailLower, "@cvera.app") {
-		roleStr = "requestor"
+	roleStr = "requestor"
 	} else if strings.HasSuffix(emailLower, "@protonmail.com") {
 		roleStr = "hr_reviewer"
+	} else if strings.HasSuffix(emailLower, "@gmail.com") {
+		roleStr = "recruiter"
+	} else {
+		roleStr = "requestor"
 	}
 
 	// 3b) Parse into canonical typed role
 	userRole, err := auth.ParseRole(roleStr)
+	
 	if err != nil {
 		log.Printf("[auth:exchange] invalid role computed role=%q: %v", roleStr, err)
 		writeErr(w, http.StatusInternalServerError, "server_error")
@@ -117,15 +123,24 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 
 	// 4) Upsert domain user mapped to Kratos identity id
 	var userID uuid.UUID
+	var roleFromDB string
 	err = tx.QueryRowContext(r.Context(), `
 	INSERT INTO domain_users (kratos_identity_id, email, name, role, status)
 	VALUES ($1,$2,$3,$4,'active')
 	ON CONFLICT (kratos_identity_id)
 	DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, role = EXCLUDED.role, updated_at = now()
 	RETURNING id
-	`, who.Identity.ID, email, name, userRole.String()).Scan(&userID)
+	`, who.Identity.ID, email, name, defaultRole.String()).Scan(&userID)
 	if err != nil {
 		log.Printf("[auth:exchange] upsert domain_user: %v", err)
+		writeErr(w, http.StatusInternalServerError, "server_error")
+		return
+	}
+	
+	userRole, err = auth.ParseRole(roleFromDB)
+
+	if err != nil {
+		log.Printf("[auth:exchange] invalid role computed role=%q: %v", roleStr, err)
 		writeErr(w, http.StatusInternalServerError, "server_error")
 		return
 	}
@@ -210,7 +225,6 @@ func (s *Server) kratosWhoami(ctx context.Context, sessionToken string) (*kratos
 		return nil, errors.New("kratos public base url empty")
 	}
 	url := base + "/sessions/whoami"
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err

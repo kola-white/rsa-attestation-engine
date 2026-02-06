@@ -1,5 +1,5 @@
 // src/screens/RecruiterCandidates.tsx
-
+import { useAuth } from "@/src/auth/AuthContext";
 import React, {
   useCallback,
   useEffect,
@@ -21,7 +21,7 @@ import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/nativ
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type {
   RecruiterStackParamList,
   RecruiterQueryState,
@@ -34,6 +34,8 @@ type Rte = RouteProp<RecruiterStackParamList, "RecruiterCandidates">;
 type ListResp = { items: CandidateRowSnapshot[]; next_cursor?: string | null };
 
 const STORAGE_KEY_RECRUITER_QUERY = "recruiterCandidates:lastQuery:v1";
+
+const API_BASE_URL = process.env.EXPO_PUBLIC_EVT_API_BASE_URL;
 
 function defaultRecruiterQuery(): RecruiterQueryState {
   return {
@@ -84,12 +86,21 @@ function stripCursor(q: RecruiterQueryState): RecruiterQueryState {
 
 async function apiGetRecruiterCandidates(
   q: RecruiterQueryState,
+  accessToken: string,
   signal: AbortSignal
 ): Promise<ListResp> {
+  if (!API_BASE_URL) {
+    throw new Error("Missing EXPO_PUBLIC_EVT_API_BASE_URL");
+  }
+
   const qs = encodeQueryParams(q);
-  const res = await fetch(`/v1/recruiter/candidates?${qs}`, {
+
+  const res = await fetch(`${API_BASE_URL}/v1/recruiter/candidates?${qs}`, {
     method: "GET",
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
     signal,
   });
 
@@ -108,6 +119,7 @@ async function apiGetRecruiterCandidates(
 export function RecruiterCandidatesScreen() {
   const nav = useNavigation<Nav>();
   const route = useRoute<Rte>();
+  const { accessToken } = useAuth();
 
   const [query, setQuery] = useState<RecruiterQueryState>(() => defaultRecruiterQuery());
 
@@ -118,6 +130,8 @@ export function RecruiterCandidatesScreen() {
   const [refreshing, setRefreshing] = useState(false); // pull-to-refresh
   const [loadingMore, setLoadingMore] = useState(false); // pagination
   const [err, setErr] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
+
 
   // --- Subtle “Apple-ish” count animation -----------------------------------
   const countAnim = useRef(new Animated.Value(1)).current;
@@ -224,6 +238,39 @@ export function RecruiterCandidatesScreen() {
 
   const baseQuery = useMemo<RecruiterQueryState>(() => stripCursor(query), [query]);
 
+  const fetchFirstPage = useCallback(
+  async (signal: AbortSignal, mode: "focus" | "refresh") => {
+    if (mode === "focus") setLoading(true);
+    if (mode === "refresh") setRefreshing(true);
+
+    setErr(null);
+
+    try {
+      if (!accessToken) {
+        // don’t throw — ensure we unwind refreshing/loading correctly
+        setItems([]);
+        setNextCursor(null);
+        setErr("Missing access token (sign in again)");
+        return;
+      }
+
+      const resp = await apiGetRecruiterCandidates(baseQuery, accessToken, signal);
+      setItems(resp.items ?? []);
+      setNextCursor(resp.next_cursor ?? null);
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setErr(e?.message ? String(e.message) : "candidates_fetch_failed");
+      setItems([]);
+      setNextCursor(null);
+    } finally {
+      if (signal.aborted) return;
+      if (mode === "focus") setLoading(false);
+      if (mode === "refresh") setRefreshing(false);
+    }
+  },
+  [baseQuery, accessToken]
+);
+
   const onPressRow = useCallback(
     (row: CandidateRowSnapshot) => {
       nav.navigate("CandidateDetail", {
@@ -236,30 +283,7 @@ export function RecruiterCandidatesScreen() {
     [nav]
   );
 
-  const fetchFirstPage = useCallback(
-    async (signal: AbortSignal, mode: "focus" | "refresh") => {
-      if (mode === "focus") setLoading(true);
-      if (mode === "refresh") setRefreshing(true);
-
-      setErr(null);
-
-      try {
-        const resp = await apiGetRecruiterCandidates(baseQuery, signal);
-        setItems(resp.items ?? []);
-        setNextCursor(resp.next_cursor ?? null);
-      } catch (e: any) {
-        if (e?.name === "AbortError") return;
-        setErr(e?.message ? String(e.message) : "candidates_fetch_failed");
-        setItems([]);
-        setNextCursor(null);
-      } finally {
-        if (signal.aborted) return;
-        if (mode === "focus") setLoading(false);
-        if (mode === "refresh") setRefreshing(false);
-      }
-    },
-    [baseQuery]
-  );
+  
 
   // Fetch first page on focus. Abort safely on blur/unmount.
   useFocusEffect(
@@ -270,12 +294,6 @@ export function RecruiterCandidatesScreen() {
     }, [fetchFirstPage])
   );
 
-  useEffect(() => {
-  const ctrl = new AbortController();
-  void fetchFirstPage(ctrl.signal, "focus");
-  return () => ctrl.abort();
-}, [fetchFirstPage]);
-
   // Pull-to-refresh (iOS-native)
   const onRefresh = useCallback(() => {
   if (loadingMore) return;
@@ -284,7 +302,8 @@ export function RecruiterCandidatesScreen() {
 }, [fetchFirstPage, loadingMore]);
 
   const loadMore = useCallback(() => {
-    if (!nextCursor || loadingMore || loading || refreshing) return;
+    if (!nextCursor || loadingMore || loading || refreshing ) return;
+    if (!accessToken) return;
 
     const ctrl = new AbortController();
     setLoadingMore(true);
@@ -297,7 +316,7 @@ export function RecruiterCandidatesScreen() {
 
     void (async () => {
       try {
-        const resp = await apiGetRecruiterCandidates(q2, ctrl.signal);
+        const resp = await apiGetRecruiterCandidates(q2, accessToken, ctrl.signal);
         setItems((prev) => prev.concat(resp.items ?? []));
         setNextCursor(resp.next_cursor ?? null);
       } catch (e: any) {
@@ -307,46 +326,47 @@ export function RecruiterCandidatesScreen() {
         if (!ctrl.signal.aborted) setLoadingMore(false);
       }
     })();
-  }, [nextCursor, loadingMore, loading, refreshing, query]);
+  }, [nextCursor, loadingMore, loading, refreshing, query, accessToken]);
 
   return (
     <View className="flex-1 bg-white dark:bg-black">
-      {/* Subtle count label (Apple-ish) */}
-      <View className="px-4 pt-2 pb-2">
-        <Animated.View style={{ transform: [{ scale: countAnim }] }}>
-          <Text className="text-[13px] text-zinc-500 dark:text-zinc-400">
-            {items.length} candidates
-          </Text>
-        </Animated.View>
-      </View>
-
-      {loading && items.length === 0 ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator />
-        </View>
-      ) : err ? (
-        <View className="px-4 py-3">
-          <Text className="text-red-500">{err}</Text>
-        </View>
-      ) : items.length === 0 ? (
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-[15px] text-zinc-600 dark:text-zinc-300 text-center">
-            No candidates match these filters.
-          </Text>
-        </View>
-      ) : null}
-
       <FlatList
         data={items}
         keyExtractor={(it) => it.candidate_id}
+        contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ paddingBottom: 24 }}
-        onEndReachedThreshold={0.7}
-        onEndReached={loadMore}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        onEndReachedThreshold={0.7}
+        onEndReached={loadMore}
+        ListHeaderComponent={
+          <View style={{ paddingTop: 8 }} className="px-4 pb-2">
+            <Animated.View style={{ transform: [{ scale: countAnim }] }}>
+              <Text className="text-[13px] text-zinc-500 dark:text-zinc-400">
+                {items.length} candidates
+              </Text>
+            </Animated.View>
+          </View>
+        }
+        ListEmptyComponent={
+          loading ? (
+            <View className="flex-1 items-center justify-center" style={{ paddingTop: 24 }}>
+              <ActivityIndicator />
+            </View>
+          ) : err ? (
+            <View className="px-4 py-3">
+              <Text className="text-red-500">{err}</Text>
+            </View>
+          ) : (
+            <View className="flex-1 items-center justify-center px-6" style={{ paddingTop: 24 }}>
+              <Text className="text-[15px] text-zinc-600 dark:text-zinc-300 text-center">
+                No candidates match these filters.
+              </Text>
+            </View>
+          )
+        }
         renderItem={({ item }) => {
-          // Resilient renderer (partial snapshots won't break UI)
           const fullName = item?.subject?.full_name || "Unknown name";
           const title = item?.primary_employment?.title || "Unknown title";
           const issuer = item?.primary_employment?.issuer_name || "Unknown issuer";
@@ -368,7 +388,7 @@ export function RecruiterCandidatesScreen() {
               <Text className="text-[12px] text-zinc-500 dark:text-zinc-500">
                 Signature: {sig} · Trust: {trust}
               </Text>
-            </Pressable>
+                </Pressable>
           );
         }}
         ListFooterComponent={
@@ -380,5 +400,5 @@ export function RecruiterCandidatesScreen() {
         }
       />
     </View>
-  );
-}
+  );      
+};
