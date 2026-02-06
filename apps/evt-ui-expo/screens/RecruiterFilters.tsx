@@ -43,11 +43,9 @@ export function RecruiterFiltersScreen() {
 
   function done() {
   // Apply the draft into the RecruiterCandidates route params (merge into existing params)
-  navigation.navigate({
-    name: "RecruiterCandidates",
-    params: { query: draft },
-    merge: true,
-  });
+  navigation.navigate(
+    "RecruiterCandidates",
+    { query: draft }),
 
   // Close the modal (keeps your “Done dismisses” UX)
   navigation.goBack();

@@ -89,63 +89,45 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 	email := pickStringTrait(who.Identity.Traits, "email")
 	name := pickStringTrait(who.Identity.Traits, "name")
 
-	// 3) Determine role (Phase 1A)
-	roleStr := "requestor"
-	emailLower := strings.ToLower(strings.TrimSpace(email))
-
-	defaultRole, err := auth.ParseRole(roleStr)
-	if strings.HasSuffix(emailLower, "@cvera.app") {
-	roleStr = "requestor"
-	} else if strings.HasSuffix(emailLower, "@protonmail.com") {
-		roleStr = "hr_reviewer"
-	} else if strings.HasSuffix(emailLower, "@gmail.com") {
-		roleStr = "recruiter"
-	} else {
-		roleStr = "requestor"
-	}
-
-	// 3b) Parse into canonical typed role
-	userRole, err := auth.ParseRole(roleStr)
-	
-	if err != nil {
-		log.Printf("[auth:exchange] invalid role computed role=%q: %v", roleStr, err)
-		writeErr(w, http.StatusInternalServerError, "server_error")
-		return
-	}
-
 	tx, err := s.db.BeginTx(r.Context(), &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
-		log.Printf("[auth:exchange] tx begin: %v", err)
-		writeErr(w, http.StatusInternalServerError, "server_error")
-		return
+	log.Printf("[auth:exchange] tx begin: %v", err)
+	writeErr(w, http.StatusInternalServerError, "server_error")
+	return
 	}
 	defer tx.Rollback()
 
-	// 4) Upsert domain user mapped to Kratos identity id
-	var userID uuid.UUID
-	var roleFromDB string
+	// 3) Upsert domain user mapped to Kratos identity id
+	//    IMPORTANT: role is SOURCE OF TRUTH in DB. Do NOT overwrite role on login.
+	var (
+	userID     uuid.UUID
+	dbRoleStr  string
+	)
+
 	err = tx.QueryRowContext(r.Context(), `
 	INSERT INTO domain_users (kratos_identity_id, email, name, role, status)
-	VALUES ($1,$2,$3,$4,'active')
+	VALUES ($1,$2,$3,'requestor','active')
 	ON CONFLICT (kratos_identity_id)
-	DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, role = EXCLUDED.role, updated_at = now()
-	RETURNING id
-	`, who.Identity.ID, email, name, defaultRole.String()).Scan(&userID)
-	if err != nil {
-		log.Printf("[auth:exchange] upsert domain_user: %v", err)
-		writeErr(w, http.StatusInternalServerError, "server_error")
-		return
-	}
-	
-	userRole, err = auth.ParseRole(roleFromDB)
+	DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, updated_at = now()
+	RETURNING id, role
+	`, who.Identity.ID, email, name).Scan(&userID, &dbRoleStr)
 
 	if err != nil {
-		log.Printf("[auth:exchange] invalid role computed role=%q: %v", roleStr, err)
-		writeErr(w, http.StatusInternalServerError, "server_error")
-		return
+	log.Printf("[auth:exchange] upsert domain_user: %v", err)
+	writeErr(w, http.StatusInternalServerError, "server_error")
+	return
 	}
 
-	// 5) Create auth session
+	// 3b) Validate role from DB
+	userRole, err := auth.ParseRole(dbRoleStr)
+	if err != nil {
+	log.Printf("[auth:exchange] invalid role in domain_users role=%q user_id=%s: %v", dbRoleStr, userID.String(), err)
+	writeErr(w, http.StatusInternalServerError, "server_error")
+	return
+	}
+
+
+	// 4) Create auth session
 	sessionID := uuid.New()
 	_, err = tx.ExecContext(r.Context(), `
 	INSERT INTO auth_sessions (session_id, user_id, device_id, created_at, last_used_at)
@@ -157,7 +139,7 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Mint + store refresh token (raw returned to client, hash stored)
+	// 5) Mint + store refresh token (raw returned to client, hash stored)
 	rawRefresh, err := randomHex(32)
 	if err != nil {
 		log.Printf("[auth:exchange] mint refresh: %v", err)
@@ -191,7 +173,7 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 7) Mint access token (sub must be domain user UUID)
+	// 6) Mint access token (sub must be domain user UUID)
 	access, err := auth.MintAccessTokenHS256(
 		s.cfg.Auth.JWTSecret,
 		s.cfg.Auth.Issuer,
