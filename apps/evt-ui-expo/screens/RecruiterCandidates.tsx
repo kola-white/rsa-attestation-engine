@@ -352,13 +352,20 @@ export function RecruiterCandidatesScreen() {
     })();
   }, [nextCursor, loadingMore, loading, refreshing, query, accessToken]);
 
+  const dedupedItems = React.useMemo(() => {
+  const m = new Map<string, typeof items[number]>();
+  for (const it of items) m.set(it.candidate_id, it);
+  return Array.from(m.values());
+}, [items]);
+
+
   return (
     <View className="flex-1 bg-white dark:bg-black">
       <FlatList
-        data={items}
-        keyExtractor={(it) => it.candidate_id}
+        data={dedupedItems}
+        keyExtractor={(it, idx) => it.candidate_id}
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: 24, paddingHorizontal: 16, paddingTop: 8 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
