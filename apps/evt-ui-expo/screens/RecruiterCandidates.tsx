@@ -17,7 +17,7 @@ import {
   RefreshControl,
   Animated,
 } from "react-native";
-import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -26,15 +26,6 @@ import type {
   RecruiterQueryState,
   CandidateRowSnapshot,
 } from "../src/navigation/recruiterTypes";
-
-const DEFAULT_QUERY: RecruiterQueryState = {
-  search: "",
-  trust_mode: "any",
-  signature_status: [],
-  company_ids: [],
-  sort: "most_recent",
-  // page intentionally omitted here; your list screen can own pagination state
-};
 
 function normalizeQuery(q: RecruiterQueryState): RecruiterQueryState {
   return {
