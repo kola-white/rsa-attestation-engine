@@ -21,12 +21,50 @@ import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/nativ
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type {
   RecruiterStackParamList,
   RecruiterQueryState,
   CandidateRowSnapshot,
 } from "../src/navigation/recruiterTypes";
+
+const DEFAULT_QUERY: RecruiterQueryState = {
+  search: "",
+  trust_mode: "any",
+  signature_status: [],
+  company_ids: [],
+  sort: "most_recent",
+  // page intentionally omitted here; your list screen can own pagination state
+};
+
+function normalizeQuery(q: RecruiterQueryState): RecruiterQueryState {
+  return {
+    search: (q.search ?? "").trim(),
+    trust_mode: q.trust_mode ?? "any",
+    signature_status: [...(q.signature_status ?? [])].sort(), // deterministic
+    company_ids: [...(q.company_ids ?? [])].sort(), // deterministic
+    title_query: q.title_query?.trim() || undefined,
+    dates: q.dates
+      ? {
+          start_after: q.dates.start_after || undefined,
+          end_before: q.dates.end_before || undefined,
+          include_current: !!q.dates.include_current,
+        }
+      : undefined,
+    sort: q.sort ?? "most_recent",
+
+    // IMPORTANT: do NOT include cursor in the key; cursor changes should be internal pagination, not “new query”
+    page: q.page?.limit ? { limit: q.page.limit } : undefined,
+  };
+}
+
+/**
+ * Deterministic key for refetch.
+ * This is stable because we sort arrays + normalize defaults above.
+ */
+function queryKey(q: RecruiterQueryState): string {
+  return JSON.stringify(normalizeQuery(q));
+}
+
 
 type Nav = NativeStackNavigationProp<RecruiterStackParamList, "RecruiterCandidates">;
 type Rte = RouteProp<RecruiterStackParamList, "RecruiterCandidates">;
@@ -130,7 +168,6 @@ export function RecruiterCandidatesScreen() {
   const [refreshing, setRefreshing] = useState(false); // pull-to-refresh
   const [loadingMore, setLoadingMore] = useState(false); // pagination
   const [err, setErr] = useState<string | null>(null);
-  const insets = useSafeAreaInsets();
 
 
   // --- Subtle “Apple-ish” count animation -----------------------------------
@@ -237,6 +274,7 @@ export function RecruiterCandidatesScreen() {
   }, [route.params?.query, nav]);
 
   const baseQuery = useMemo<RecruiterQueryState>(() => stripCursor(query), [query]);
+  const baseQueryKey = useMemo(() => queryKey(baseQuery), [baseQuery]);
 
   const fetchFirstPage = useCallback(
   async (signal: AbortSignal, mode: "focus" | "refresh") => {
@@ -283,16 +321,11 @@ export function RecruiterCandidatesScreen() {
     [nav]
   );
 
-  
-
-  // Fetch first page on focus. Abort safely on blur/unmount.
-  useFocusEffect(
-    useCallback(() => {
-      const ctrl = new AbortController();
-      void fetchFirstPage(ctrl.signal, "focus");
-      return () => ctrl.abort();
-    }, [fetchFirstPage])
-  );
+  useEffect(() => {
+    const ctrl = new AbortController();
+    void fetchFirstPage(ctrl.signal, "focus");
+    return () => ctrl.abort();
+  }, [fetchFirstPage, baseQueryKey]);
 
   // Pull-to-refresh (iOS-native)
   const onRefresh = useCallback(() => {
@@ -310,10 +343,10 @@ export function RecruiterCandidatesScreen() {
     setErr(null);
 
     const q2: RecruiterQueryState = {
-      ...query,
-      page: { ...(query.page ?? {}), cursor: nextCursor, limit: query.page?.limit ?? 25 },
-    };
-
+    ...baseQuery,
+    page: { ...(baseQuery.page ?? {}), cursor: nextCursor, limit: baseQuery.page?.limit ?? 25 },
+  };
+  
     void (async () => {
       try {
         const resp = await apiGetRecruiterCandidates(q2, accessToken, ctrl.signal);
