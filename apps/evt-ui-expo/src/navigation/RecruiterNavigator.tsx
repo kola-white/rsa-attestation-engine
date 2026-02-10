@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, Text } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { CommonActions, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import type { RecruiterStackParamList } from "@/src/navigation/recruiterTypes";

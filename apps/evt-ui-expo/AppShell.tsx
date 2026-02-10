@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, ActivityIndicator, Text, Pressable } from "react-native";
 import { useAuth } from "@/src/auth/AuthContext";
 import { runBiometricCheck } from "@/src/auth/biometrics";

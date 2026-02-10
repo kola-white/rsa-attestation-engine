@@ -724,85 +724,104 @@ func (r *Repo) RecruiterCandidateList(
 	}
 
 	sb.WriteString(`
-WITH base AS (
-  SELECT
-    er.request_id,
-    er.candidate_personid,
-    er.employer_id,
-    COALESCE(er.claim_snapshot, '{}'::jsonb) AS claim_snapshot,
-    er.attestation_jws,
-    er.updated_at,
+	WITH base AS (
+	SELECT
+		er.request_id,
+		er.candidate_personid,
+		er.employer_id,
+		COALESCE(er.claim_snapshot, '{}'::jsonb) AS claim_snapshot,
+		er.attestation_jws,
+		er.updated_at,
 
-    -- MVP signature status:
-    CASE
-      WHEN er.attestation_jws IS NOT NULL AND er.attestation_jws <> '' THEN 'verified'
-      ELSE 'unknown'
-    END AS signature_status,
+		CASE
+		WHEN er.attestation_jws IS NOT NULL AND er.attestation_jws <> '' THEN 'verified'
+		ELSE 'unknown'
+		END AS signature_status,
 
-    -- issuer_id (MVP) = employer_id
-    er.employer_id AS issuer_id,
+		er.employer_id AS issuer_id,
 
-    rti.trust_level AS trust_level
-  FROM evt_requests er
-  LEFT JOIN recruiter_trusted_issuers rti
-    ON rti.recruiter_personid = ` + arg(recruiterPersonID) + `
-   AND rti.issuer_id = er.employer_id
-  WHERE er.status IN ('VERIFIED','UNVERIFIED','CONSUMED','CLOSED','ATTESTED','REJECTED')
-)
-SELECT
-  request_id,
-  candidate_personid,
-  employer_id,
-  claim_snapshot,
-  signature_status,
-  trust_level,
-  updated_at
-FROM base
-WHERE 1=1
-`)
+		rti.trust_level AS trust_level
+	FROM evt_requests er
+	LEFT JOIN recruiter_trusted_issuers rti
+		ON rti.recruiter_personid = ` + arg(recruiterPersonID) + `
+	AND rti.issuer_id = er.employer_id
+	WHERE er.status IN ('VERIFIED','UNVERIFIED','CONSUMED','CLOSED','ATTESTED','REJECTED')
+	),
+	ranked AS (
+	SELECT
+		*,
+		ROW_NUMBER() OVER (
+		PARTITION BY candidate_personid
+		ORDER BY updated_at DESC, request_id DESC
+		) AS rn
+	FROM base
+	),
+	picked AS (
+	SELECT
+		request_id,
+		candidate_personid,
+		employer_id,
+		claim_snapshot,
+		signature_status,
+		trust_level,
+		updated_at
+	FROM ranked
+	WHERE rn = 1
+	)
+	SELECT
+	request_id,
+	candidate_personid,
+	employer_id,
+	claim_snapshot,
+	signature_status,
+	trust_level,
+	updated_at
+	FROM picked
+	WHERE 1=1
+	`)
 
 	// Cursor pagination: (updated_at, request_id) < (cursor.updated_at, cursor.request_id)
-	if cursor != nil {
-		sb.WriteString(`
-  AND (updated_at, request_id) < (` + arg(cursor.UpdatedAt) + `::timestamptz, ` + arg(cursor.RequestID) + `)
-`)
+		if cursor != nil {
+			sb.WriteString(`
+		AND (updated_at, request_id) < (` + arg(cursor.UpdatedAt) + `::timestamptz, ` + arg(cursor.RequestID) + `)
+		`)
 	}
 
 	// signature_status filter
 	sb.WriteString(`
-  AND signature_status = ANY(` + arg(sigVals) + `::text[])
-`)
+	AND signature_status = ANY(` + arg(sigVals) + `::text[])
+	`)
 
 	// company_ids filter (maps to employer_id)
 	if len(companyIDs) > 0 {
 		sb.WriteString(`
-  AND employer_id = ANY(` + arg(companyIDs) + `::text[])
-`)
+	AND employer_id = ANY(` + arg(companyIDs) + `::text[])
+	`)
 	}
 
 	// trust_mode filter
 	switch trustMode {
 	case TrustTrustedOnly:
 		sb.WriteString(`
-  AND trust_level = 'trusted'
-`)
+	AND trust_level = 'trusted'
+	`)
 	case TrustIncludeUntrust:
 		// include both trusted + untrusted, exclude unknown
 		sb.WriteString(`
-  AND trust_level IS NOT NULL
-`)
+	AND trust_level IS NOT NULL
+	`)
 	case TrustAny:
 		// no clause
 	default:
 		// safety: behave like "any"
 	}
 
-	// search filter over claim_snapshot
-	// We keep this schema-light: look for common JSON paths but tolerate missing.
-	search = strings.TrimSpace(search)
-	if search != "" {
-		like := "%" + search + "%"
-		sb.WriteString(`
+// search filter over claim_snapshot
+// We keep this schema-light: look for common JSON paths but tolerate missing.
+search = strings.TrimSpace(search)
+if search != "" {
+	like := "%" + search + "%"
+	sb.WriteString(`
   AND (
     COALESCE(claim_snapshot #>> '{subject,full_name}', '') ILIKE ` + arg(like) + `
     OR COALESCE(claim_snapshot #>> '{subject,employee_id}', '') ILIKE ` + arg(like) + `
@@ -813,8 +832,8 @@ WHERE 1=1
 `)
 	}
 
-	// Stable sort
-	sb.WriteString(`
+// Stable sort
+sb.WriteString(`
 ORDER BY updated_at DESC, request_id DESC
 LIMIT ` + arg(limit+1) + `
 `)
@@ -860,7 +879,7 @@ LIMIT ` + arg(limit+1) + `
 	// Next cursor if we fetched limit+1
 	var nextCursor *string
 	if len(dbRows) > limit {
-		last := dbRows[limit-1] // last item returned
+		last := dbRows[limit-1] 
 		cur := recruiterCursor{UpdatedAt: last.UpdatedAt.UTC(), RequestID: last.RequestID}
 		enc, err := encodeCursor(cur)
 		if err != nil {

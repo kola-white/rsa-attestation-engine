@@ -123,8 +123,12 @@ async function apiGetRecruiterCandidates(
   }
 
   const qs = encodeQueryParams(q);
+  const url = `${API_BASE_URL}/v1/recruiter/candidates?${qs}`;
 
-  const res = await fetch(`${API_BASE_URL}/v1/recruiter/candidates?${qs}`, {
+  console.log("[CandidatesAPI] GET", url);
+  console.log("[CandidatesAPI] q =", q);
+
+  const res = await fetch(url, {
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -133,16 +137,33 @@ async function apiGetRecruiterCandidates(
     signal,
   });
 
+  console.log("[CandidatesAPI] status =", res.status, "ok =", res.ok);
+
+  const text = await res.text(); // read body ONCE
+  console.log("[CandidatesAPI] raw(0..500) =", text.slice(0, 500));
+
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (e) {
+    // If server returns HTML (proxy error) or invalid JSON, you’ll see it in raw()
+    throw new Error("invalid_json_from_server");
+  }
+
   if (!res.ok) {
-    let msg = "candidates_fetch_failed";
-    try {
-      const j = await res.json();
-      if (j?.error) msg = String(j.error);
-    } catch {}
+    const msg = data?.error ? String(data.error) : "candidates_fetch_failed";
     throw new Error(msg);
   }
 
-  return (await res.json()) as ListResp;
+  const out = data as ListResp;
+  console.log(
+    "[CandidatesAPI] items =",
+    out.items?.length ?? 0,
+    "next_cursor =",
+    out.next_cursor ?? null
+  );
+
+  return out;
 }
 
 export function RecruiterCandidatesScreen() {
@@ -160,10 +181,31 @@ export function RecruiterCandidatesScreen() {
   const [loadingMore, setLoadingMore] = useState(false); // pagination
   const [err, setErr] = useState<string | null>(null);
 
+  useEffect(() => {
+  const incoming = route.params?.query;
+  if (!incoming) return;
+
+  console.log("[RecruiterCandidates] applying incoming query =", incoming);
+
+  setQuery(stripCursor(incoming));
+
+  // Clear so it doesn't re-apply on every re-render
+  nav.setParams({ query: undefined });
+}, [route.params?.query, nav]);
+
+
 
   // --- Subtle “Apple-ish” count animation -----------------------------------
   const countAnim = useRef(new Animated.Value(1)).current;
   const lastCountRef = useRef<number>(0);
+
+  useEffect(() => {
+  console.log(
+    "[RecruiterCandidates] route.params changed =",
+    route.params
+  );
+}, [route.params]);
+
 
   useEffect(() => {
     const n = items.length;
@@ -180,8 +222,9 @@ export function RecruiterCandidatesScreen() {
   }, [items.length, countAnim]);
 
   const openFilters = useCallback(() => {
-    nav.navigate("RecruiterFilters", { initial: query });
-  }, [nav, query]);
+  nav.navigate("RecruiterFilters", { initial: query });
+}, [nav, query]);
+
 
   // Keep native iOS header styling + headerRight Filter button
   useLayoutEffect(() => {
@@ -253,22 +296,13 @@ export function RecruiterCandidatesScreen() {
     })();
   }, [query]);
 
-  // --- Option A: receive applied filters from Filters via route params --------
-  useEffect(() => {
-    const incoming = route.params?.query;
-    if (!incoming) return;
-
-    setQuery(stripCursor(incoming));
-
-    // Clear the param so it doesn't re-apply repeatedly
-    nav.setParams({ query: undefined });
-  }, [route.params?.query, nav]);
-
   const baseQuery = useMemo<RecruiterQueryState>(() => stripCursor(query), [query]);
   const baseQueryKey = useMemo(() => queryKey(baseQuery), [baseQuery]);
 
   const fetchFirstPage = useCallback(
   async (signal: AbortSignal, mode: "focus" | "refresh") => {
+  const stamp = `[fetchFirstPage ${mode}] key=${baseQueryKey} trust=${baseQuery.trust_mode}`;
+  console.log(stamp, "START", "accessToken?", !!accessToken);
     if (mode === "focus") setLoading(true);
     if (mode === "refresh") setRefreshing(true);
 
@@ -282,11 +316,12 @@ export function RecruiterCandidatesScreen() {
         setErr("Missing access token (sign in again)");
         return;
       }
-
       const resp = await apiGetRecruiterCandidates(baseQuery, accessToken, signal);
+      console.log(stamp, "OK items=", resp.items?.length ?? 0); 
       setItems(resp.items ?? []);
       setNextCursor(resp.next_cursor ?? null);
     } catch (e: any) {
+      console.log(stamp, "ERR", e?.message ?? e);
       if (e?.name === "AbortError") return;
       setErr(e?.message ? String(e.message) : "candidates_fetch_failed");
       setItems([]);
@@ -350,7 +385,7 @@ export function RecruiterCandidatesScreen() {
         if (!ctrl.signal.aborted) setLoadingMore(false);
       }
     })();
-  }, [nextCursor, loadingMore, loading, refreshing, query, accessToken]);
+  }, [nextCursor, loadingMore, loading, refreshing, baseQuery, accessToken]);
 
   const dedupedItems = React.useMemo(() => {
   const m = new Map<string, typeof items[number]>();
@@ -358,12 +393,17 @@ export function RecruiterCandidatesScreen() {
   return Array.from(m.values());
 }, [items]);
 
+  useEffect(() => {
+    const ids = items.map(x => x.candidate_id);
+    const uniq = new Set(ids);
+    console.log("[RecruiterCandidates] items=", items.length, "uniqueIds=", uniq.size);
+}, [items]);
 
   return (
     <View className="flex-1 bg-white dark:bg-black">
       <FlatList
-        data={dedupedItems}
-        keyExtractor={(it, idx) => it.candidate_id}
+        data={dedupedItems} // show deduped if we have any, otherwise show original (to avoid empty state flash on first load)  
+        keyExtractor={(it) => it.candidate_id}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ paddingBottom: 24, paddingHorizontal: 16, paddingTop: 8 }}
         refreshControl={
