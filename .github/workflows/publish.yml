@@ -49,11 +49,13 @@ jobs:
       - name: Install doctl
         if: ${{ env.HAS_DO_PAT == 'true' && env.CDN_ENDPOINT_ID != '' }}
         uses: digitalocean/action-doctl@v2
+        continue-on-error: true
         with:
           token: ${{ secrets.DO_PAT }}
 
       - name: Purge CDN cache
         if: ${{ env.HAS_DO_PAT == 'true' && env.CDN_ENDPOINT_ID != '' }}
+        continue-on-error: true
         run: |
           doctl compute cdn flush "$CDN_ENDPOINT_ID" \
             --files "/trust/jwks.json" \
