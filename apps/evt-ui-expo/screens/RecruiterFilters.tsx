@@ -1,8 +1,8 @@
 // src/screens/RecruiterFilters.tsx
 
-import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, ScrollView, Platform } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { CommonActions, useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -27,7 +27,13 @@ export function RecruiterFiltersScreen() {
 
   const [draft, setDraft] = useState<RecruiterQueryState>(() => cloneQuery(initial));
 
+  useEffect(() => {
+    initialRef.current = cloneQuery(initial);
+    setDraft(cloneQuery(initial));
+  }, [initial]);
+
   function reset() {
+    console.log("[RecruiterFilters] RESET pressed");
     setDraft(cloneQuery(initialRef.current));
   }
 
@@ -42,12 +48,26 @@ export function RecruiterFiltersScreen() {
 }
 
   function done() {
-  // Apply the draft into the RecruiterCandidates route params (merge into existing params)
-  navigation.navigate(
-    "RecruiterCandidates",
-    { query: draft }),
+  const applied = { ...draft, page: undefined };
+  console.log("[RecruiterFilters] DONE pressed. applied =", applied);
 
-  // Close the modal (keeps your “Done dismisses” UX)
+  // Find the route below this modal (should be RecruiterCandidates)
+  const state = navigation.getState();
+  console.log("[RecruiterFilters] nav state index =", state.index);
+  const prev = state.routes[state.index - 1];
+  console.log("[RecruiterFilters] prev route =", { name: prev?.name, key: prev?.key });
+
+  if (prev?.name === "RecruiterCandidates") {
+    // Set params on the *previous* route explicitly
+    navigation.dispatch({
+      ...CommonActions.setParams({ query: applied }),
+      source: prev.key,
+    });
+  } else {
+    // Fallback (shouldn’t normally happen)
+    navigation.navigate("RecruiterCandidates", { query: applied });
+  }
+
   navigation.goBack();
 }
 

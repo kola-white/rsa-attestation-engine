@@ -74,5 +74,6 @@ export type RecruiterStackParamList = {
 
   RecruiterFilters: {
     initial: RecruiterFiltersInitial;
+    onApply?: (q: RecruiterQueryState) => void;
   };
 };
