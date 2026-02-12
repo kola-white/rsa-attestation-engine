@@ -26,6 +26,7 @@ import type {
   RecruiterQueryState,
   CandidateRowSnapshot,
 } from "../src/navigation/recruiterTypes";
+import { CandidateRow } from "@/components/CandidateRow";
 
 function normalizeQuery(q: RecruiterQueryState): RecruiterQueryState {
   return {
@@ -415,7 +416,7 @@ export function RecruiterCandidatesScreen() {
           <View style={{ paddingTop: 8 }} className="px-4 pb-2">
             <Animated.View style={{ transform: [{ scale: countAnim }] }}>
               <Text className="text-[13px] text-zinc-500 dark:text-zinc-400">
-                {items.length} candidates
+                {dedupedItems.length} candidates
               </Text>
             </Animated.View>
           </View>
@@ -438,29 +439,9 @@ export function RecruiterCandidatesScreen() {
           )
         }
         renderItem={({ item }) => {
-          const fullName = item?.subject?.full_name || "Unknown name";
-          const title = item?.primary_employment?.title || "Unknown title";
-          const issuer = item?.primary_employment?.issuer_name || "Unknown issuer";
-          const sig = item?.badges?.signature ?? "unknown";
-          const trust = item?.badges?.trust ?? "unknown";
 
-          return (
-            <Pressable
-              onPress={() => onPressRow(item)}
-              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-              className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800"
-            >
-              <Text className="text-[16px] text-zinc-900 dark:text-zinc-100">
-                {fullName}
-              </Text>
-              <Text className="text-[13px] text-zinc-600 dark:text-zinc-400">
-                {title} · {issuer}
-              </Text>
-              <Text className="text-[12px] text-zinc-500 dark:text-zinc-500">
-                Signature: {sig} · Trust: {trust}
-              </Text>
-                </Pressable>
-          );
+          return <CandidateRow item={item} onPress={onPressRow} />;
+
         }}
         ListFooterComponent={
           loadingMore ? (
