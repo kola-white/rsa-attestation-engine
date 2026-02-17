@@ -140,7 +140,7 @@ func (h *RecruiterListHandlers) ListCandidates(c *gin.Context) {
 		return
 	}
 	if !auth.HasRole(claims, auth.RoleRecruiter) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 		return
 	}
 
@@ -148,13 +148,13 @@ func (h *RecruiterListHandlers) ListCandidates(c *gin.Context) {
 
 	trustMode := RecruiterTrustMode(strings.TrimSpace(c.DefaultQuery("trust_mode", string(TrustAny))))
 	if trustMode != TrustAny && trustMode != TrustTrustedOnly && trustMode != TrustIncludeUntrust {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_trust_mode"})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid_trust_mode"})
 		return
 	}
 
 	sort := RecruiterSort(strings.TrimSpace(c.DefaultQuery("sort", string(SortMostRecent))))
 	if sort != SortMostRecent {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_sort"})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid_sort"})
 		return
 	}
 
@@ -179,7 +179,7 @@ func (h *RecruiterListHandlers) ListCandidates(c *gin.Context) {
 	if ls := strings.TrimSpace(c.Query("limit")); ls != "" {
 		n, err := strconv.Atoi(ls)
 		if err != nil || n < 1 || n > 100 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_limit"})
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid_limit"})
 			return
 		}
 		limit = n
@@ -223,7 +223,7 @@ func (h *RecruiterListHandlers) ListCandidates(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "list_failed"})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "list_failed"})
 		return
 	}
 
@@ -268,7 +268,7 @@ func (h *RecruiterListHandlers) FilterOptions(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "options_failed"})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "options_failed"})
 		return
 	}
 
