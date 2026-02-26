@@ -17,23 +17,33 @@ import {
   RefreshControl,
   Animated,
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import type { RouteProp } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type {
   RecruiterStackParamList,
   RecruiterQueryState,
   CandidateRowSnapshot,
-} from "../src/navigation/recruiterTypes";
+} from "@/src/navigation/recruiterTypes";
 import { CandidateRow } from "@/components/CandidateRow";
+import {
+  useRecruiterFiltersStore,
+  DEFAULT_RECRUITER_QUERY,
+} from "@/src/state/recruiterFiltersStore";
+
+type Nav = NativeStackNavigationProp<RecruiterStackParamList, "RecruiterCandidates">;
+
+type ListResp = { items: CandidateRowSnapshot[]; next_cursor?: string | null };
+
+const STORAGE_KEY_RECRUITER_QUERY = "recruiterCandidates:lastQuery:v1";
+const API_BASE_URL = process.env.EXPO_PUBLIC_EVT_API_BASE_URL;
 
 function normalizeQuery(q: RecruiterQueryState): RecruiterQueryState {
   return {
     search: (q.search ?? "").trim(),
     trust_mode: q.trust_mode ?? "any",
-    signature_status: [...(q.signature_status ?? [])].sort(), // deterministic
-    company_ids: [...(q.company_ids ?? [])].sort(), // deterministic
+    signature_status: [...(q.signature_status ?? [])].sort(),
+    company_ids: [...(q.company_ids ?? [])].sort(),
     title_query: q.title_query?.trim() || undefined,
     dates: q.dates
       ? {
@@ -43,39 +53,13 @@ function normalizeQuery(q: RecruiterQueryState): RecruiterQueryState {
         }
       : undefined,
     sort: q.sort ?? "most_recent",
-
-    // IMPORTANT: do NOT include cursor in the key; cursor changes should be internal pagination, not “new query”
+    // IMPORTANT: cursor must not be part of the “new query” identity
     page: q.page?.limit ? { limit: q.page.limit } : undefined,
   };
 }
 
-/**
- * Deterministic key for refetch.
- * This is stable because we sort arrays + normalize defaults above.
- */
 function queryKey(q: RecruiterQueryState): string {
   return JSON.stringify(normalizeQuery(q));
-}
-
-
-type Nav = NativeStackNavigationProp<RecruiterStackParamList, "RecruiterCandidates">;
-type Rte = RouteProp<RecruiterStackParamList, "RecruiterCandidates">;
-
-type ListResp = { items: CandidateRowSnapshot[]; next_cursor?: string | null };
-
-const STORAGE_KEY_RECRUITER_QUERY = "recruiterCandidates:lastQuery:v1";
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_EVT_API_BASE_URL;
-
-function defaultRecruiterQuery(): RecruiterQueryState {
-  return {
-    search: "",
-    trust_mode: "any",
-    signature_status: ["verified", "invalid", "unknown"],
-    company_ids: [],
-    sort: "most_recent",
-    page: { limit: 25 },
-  };
 }
 
 function uniq<T>(arr: T[]): T[] {
@@ -88,7 +72,7 @@ function encodeQueryParams(q: RecruiterQueryState): string {
   const search = (q.search ?? "").trim();
   if (search) params.set("search", search);
 
-  params.set("trust_mode", q.trust_mode);
+  params.set("trust_mode", q.trust_mode ?? "any");
 
   const sig = uniq(q.signature_status ?? []);
   for (const s of sig) params.append("signature_status", s);
@@ -140,14 +124,13 @@ async function apiGetRecruiterCandidates(
 
   console.log("[CandidatesAPI] status =", res.status, "ok =", res.ok);
 
-  const text = await res.text(); // read body ONCE
+  const text = await res.text();
   console.log("[CandidatesAPI] raw(0..500) =", text.slice(0, 500));
 
   let data: any = null;
   try {
     data = text ? JSON.parse(text) : null;
-  } catch (e) {
-    // If server returns HTML (proxy error) or invalid JSON, you’ll see it in raw()
+  } catch {
     throw new Error("invalid_json_from_server");
   }
 
@@ -169,44 +152,24 @@ async function apiGetRecruiterCandidates(
 
 export function RecruiterCandidatesScreen() {
   const nav = useNavigation<Nav>();
-  const route = useRoute<Rte>();
   const { accessToken } = useAuth();
 
-  const [query, setQuery] = useState<RecruiterQueryState>(() => defaultRecruiterQuery());
+  // ✅ Single source of truth: store.applied
+  const applied = useRecruiterFiltersStore((s) => s.applied);
+  const setApplied = useRecruiterFiltersStore((s) => s.setApplied);
+  const openDraftWithInitial = useRecruiterFiltersStore((s) => s.openDraftWithInitial);
 
   const [items, setItems] = useState<CandidateRowSnapshot[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-  const [loading, setLoading] = useState(false); // first page (focus load)
-  const [refreshing, setRefreshing] = useState(false); // pull-to-refresh
-  const [loadingMore, setLoadingMore] = useState(false); // pagination
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
-  const incoming = route.params?.query;
-  if (!incoming) return;
-
-  console.log("[RecruiterCandidates] applying incoming query =", incoming);
-
-  setQuery(stripCursor(incoming));
-
-  // Clear so it doesn't re-apply on every re-render
-  nav.setParams({ query: undefined });
-}, [route.params?.query, nav]);
-
-
-
-  // --- Subtle “Apple-ish” count animation -----------------------------------
+  // --- “Apple-ish” count animation ------------------------------------------
   const countAnim = useRef(new Animated.Value(1)).current;
   const lastCountRef = useRef<number>(0);
-
-  useEffect(() => {
-  console.log(
-    "[RecruiterCandidates] route.params changed =",
-    route.params
-  );
-}, [route.params]);
-
 
   useEffect(() => {
     const n = items.length;
@@ -222,17 +185,174 @@ export function RecruiterCandidatesScreen() {
     }).start();
   }, [items.length, countAnim]);
 
+  // --- Persistence: hydrate store.applied on launch --------------------------
+  const didHydrateRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(STORAGE_KEY_RECRUITER_QUERY);
+        if (!raw) {
+          if (!cancelled) setApplied(stripCursor(DEFAULT_RECRUITER_QUERY));
+          return;
+        }
+
+        const parsed = JSON.parse(raw) as RecruiterQueryState;
+        const persisted = stripCursor(parsed);
+
+        if (!cancelled) setApplied(persisted);
+      } catch {
+        if (!cancelled) setApplied(stripCursor(DEFAULT_RECRUITER_QUERY));
+      } finally {
+        if (!cancelled) didHydrateRef.current = true;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setApplied]);
+
+  // Persist whenever applied changes (after hydration)
+  useEffect(() => {
+    if (!didHydrateRef.current) return;
+
+    const toStore = stripCursor(applied);
+    void (async () => {
+      try {
+        await AsyncStorage.setItem(
+          STORAGE_KEY_RECRUITER_QUERY,
+          JSON.stringify(toStore)
+        );
+      } catch {
+        // ignore
+      }
+    })();
+  }, [applied]);
+
+  const baseQuery = useMemo<RecruiterQueryState>(() => stripCursor(applied), [applied]);
+  const baseQueryKey = useMemo(() => queryKey(baseQuery), [baseQuery]);
+
+  const fetchFirstPage = useCallback(
+    async (signal: AbortSignal, mode: "focus" | "refresh") => {
+      const stamp = `[fetchFirstPage ${mode}] key=${baseQueryKey} trust=${baseQuery.trust_mode}`;
+      console.log(stamp, "START", "accessToken?", !!accessToken);
+
+      if (mode === "focus") setLoading(true);
+      if (mode === "refresh") setRefreshing(true);
+
+      setErr(null);
+
+      try {
+        if (!accessToken) {
+          setItems([]);
+          setNextCursor(null);
+          setErr("Missing access token (sign in again)");
+          return;
+        }
+
+        const resp = await apiGetRecruiterCandidates(baseQuery, accessToken, signal);
+        console.log(stamp, "OK items=", resp.items?.length ?? 0);
+
+        setItems(resp.items ?? []);
+        setNextCursor(resp.next_cursor ?? null);
+      } catch (e: any) {
+        console.log(stamp, "ERR", e?.message ?? e);
+        if (e?.name === "AbortError") return;
+
+        setErr(e?.message ? String(e.message) : "candidates_fetch_failed");
+        setItems([]);
+        setNextCursor(null);
+      } finally {
+        if (signal.aborted) return;
+        if (mode === "focus") setLoading(false);
+        if (mode === "refresh") setRefreshing(false);
+      }
+    },
+    [baseQuery, baseQueryKey, accessToken]
+  );
+
+  // Refetch whenever applied query identity changes
+  useEffect(() => {
+    const ctrl = new AbortController();
+    void fetchFirstPage(ctrl.signal, "focus");
+    return () => ctrl.abort();
+  }, [fetchFirstPage, baseQueryKey]);
+
+  const onRefresh = useCallback(() => {
+    if (loadingMore) return;
+    const ctrl = new AbortController();
+    void fetchFirstPage(ctrl.signal, "refresh");
+  }, [fetchFirstPage, loadingMore]);
+
+  const loadMore = useCallback(() => {
+    if (!nextCursor || loadingMore || loading || refreshing) return;
+    if (!accessToken) return;
+
+    const ctrl = new AbortController();
+    setLoadingMore(true);
+    setErr(null);
+
+    const q2: RecruiterQueryState = {
+      ...baseQuery,
+      page: {
+        ...(baseQuery.page ?? {}),
+        cursor: nextCursor,
+        limit: baseQuery.page?.limit ?? 25,
+      },
+    };
+
+    void (async () => {
+      try {
+        const resp = await apiGetRecruiterCandidates(q2, accessToken, ctrl.signal);
+        setItems((prev) => prev.concat(resp.items ?? []));
+        setNextCursor(resp.next_cursor ?? null);
+      } catch (e: any) {
+        if (e?.name === "AbortError") return;
+        setErr(e?.message ? String(e.message) : "candidates_fetch_failed");
+      } finally {
+        if (!ctrl.signal.aborted) setLoadingMore(false);
+      }
+    })();
+  }, [nextCursor, loadingMore, loading, refreshing, baseQuery, accessToken]);
+
+  const dedupedItems = useMemo(() => {
+    const m = new Map<string, (typeof items)[number]>();
+    for (const it of items) m.set(it.candidate_id, it);
+    return Array.from(m.values());
+  }, [items]);
+
+  useEffect(() => {
+    const ids = items.map((x) => x.candidate_id);
+    const uniqIds = new Set(ids);
+    console.log("[RecruiterCandidates] items=", items.length, "uniqueIds=", uniqIds.size);
+  }, [items]);
+
+  const onPressRow = useCallback(
+    (row: CandidateRowSnapshot) => {
+      nav.navigate("CandidateDetail", {
+        candidate_id: row.candidate_id,
+        subject_ref: row.subject,
+        primary_evt_ref: row.primary_evt,
+        prefetch_snapshot: row,
+      });
+    },
+    [nav]
+  );
+
   const openFilters = useCallback(() => {
-  nav.navigate("RecruiterFilters", { initial: query });
-}, [nav, query]);
+    // ✅ open modal with current applied query as the draft baseline
+    openDraftWithInitial(stripCursor(applied));
+    nav.navigate("RecruiterFilters");
+  }, [nav, openDraftWithInitial, applied]);
 
-
-  // Keep native iOS header styling + headerRight Filter button
   useLayoutEffect(() => {
     nav.setOptions({
       title: "Candidates",
       headerTitleStyle: {
-        color: "#e5e7eb", // zinc-200
+        color: "#e5e7eb",
         fontWeight: "600",
       },
       headerLargeTitleStyle: {
@@ -253,163 +373,18 @@ export function RecruiterCandidatesScreen() {
     });
   }, [nav, openFilters]);
 
-  // --- Persistence: load last-used filters on app launch ---------------------
-  const didHydrateRef = useRef(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY_RECRUITER_QUERY);
-        if (!raw) return;
-        const parsed = JSON.parse(raw) as RecruiterQueryState;
-
-        // Defensive: keep cursor out of persisted query
-        const persisted = stripCursor(parsed);
-
-        if (!cancelled) {
-          setQuery(persisted);
-        }
-      } catch {
-        // ignore persistence errors
-      } finally {
-        if (!cancelled) didHydrateRef.current = true;
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Persist whenever query changes (after initial hydration)
-  useEffect(() => {
-    if (!didHydrateRef.current) return;
-
-    const toStore = stripCursor(query);
-    void (async () => {
-      try {
-        await AsyncStorage.setItem(STORAGE_KEY_RECRUITER_QUERY, JSON.stringify(toStore));
-      } catch {
-        // ignore persistence errors
-      }
-    })();
-  }, [query]);
-
-  const baseQuery = useMemo<RecruiterQueryState>(() => stripCursor(query), [query]);
-  const baseQueryKey = useMemo(() => queryKey(baseQuery), [baseQuery]);
-
-  const fetchFirstPage = useCallback(
-  async (signal: AbortSignal, mode: "focus" | "refresh") => {
-  const stamp = `[fetchFirstPage ${mode}] key=${baseQueryKey} trust=${baseQuery.trust_mode}`;
-  console.log(stamp, "START", "accessToken?", !!accessToken);
-    if (mode === "focus") setLoading(true);
-    if (mode === "refresh") setRefreshing(true);
-
-    setErr(null);
-
-    try {
-      if (!accessToken) {
-        // don’t throw — ensure we unwind refreshing/loading correctly
-        setItems([]);
-        setNextCursor(null);
-        setErr("Missing access token (sign in again)");
-        return;
-      }
-      const resp = await apiGetRecruiterCandidates(baseQuery, accessToken, signal);
-      console.log(stamp, "OK items=", resp.items?.length ?? 0); 
-      setItems(resp.items ?? []);
-      setNextCursor(resp.next_cursor ?? null);
-    } catch (e: any) {
-      console.log(stamp, "ERR", e?.message ?? e);
-      if (e?.name === "AbortError") return;
-      setErr(e?.message ? String(e.message) : "candidates_fetch_failed");
-      setItems([]);
-      setNextCursor(null);
-    } finally {
-      if (signal.aborted) return;
-      if (mode === "focus") setLoading(false);
-      if (mode === "refresh") setRefreshing(false);
-    }
-  },
-  [baseQuery, accessToken]
-);
-
-  const onPressRow = useCallback(
-    (row: CandidateRowSnapshot) => {
-      nav.navigate("CandidateDetail", {
-        candidate_id: row.candidate_id,
-        subject_ref: row.subject,
-        primary_evt_ref: row.primary_evt,
-        prefetch_snapshot: row,
-      });
-    },
-    [nav]
-  );
-
-  useEffect(() => {
-    const ctrl = new AbortController();
-    void fetchFirstPage(ctrl.signal, "focus");
-    return () => ctrl.abort();
-  }, [fetchFirstPage, baseQueryKey]);
-
-  // Pull-to-refresh (iOS-native)
-  const onRefresh = useCallback(() => {
-  if (loadingMore) return;
-  const ctrl = new AbortController();
-  void fetchFirstPage(ctrl.signal, "refresh");
-}, [fetchFirstPage, loadingMore]);
-
-  const loadMore = useCallback(() => {
-    if (!nextCursor || loadingMore || loading || refreshing ) return;
-    if (!accessToken) return;
-
-    const ctrl = new AbortController();
-    setLoadingMore(true);
-    setErr(null);
-
-    const q2: RecruiterQueryState = {
-    ...baseQuery,
-    page: { ...(baseQuery.page ?? {}), cursor: nextCursor, limit: baseQuery.page?.limit ?? 25 },
-  };
-  
-    void (async () => {
-      try {
-        const resp = await apiGetRecruiterCandidates(q2, accessToken, ctrl.signal);
-        setItems((prev) => prev.concat(resp.items ?? []));
-        setNextCursor(resp.next_cursor ?? null);
-      } catch (e: any) {
-        if (e?.name === "AbortError") return;
-        setErr(e?.message ? String(e.message) : "candidates_fetch_failed");
-      } finally {
-        if (!ctrl.signal.aborted) setLoadingMore(false);
-      }
-    })();
-  }, [nextCursor, loadingMore, loading, refreshing, baseQuery, accessToken]);
-
-  const dedupedItems = React.useMemo(() => {
-  const m = new Map<string, typeof items[number]>();
-  for (const it of items) m.set(it.candidate_id, it);
-  return Array.from(m.values());
-}, [items]);
-
-  useEffect(() => {
-    const ids = items.map(x => x.candidate_id);
-    const uniq = new Set(ids);
-    console.log("[RecruiterCandidates] items=", items.length, "uniqueIds=", uniq.size);
-}, [items]);
-
   return (
     <View className="flex-1 bg-white dark:bg-black">
       <FlatList
-        data={dedupedItems} // show deduped if we have any, otherwise show original (to avoid empty state flash on first load)  
+        data={dedupedItems}
         keyExtractor={(it) => it.candidate_id}
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ paddingBottom: 24, paddingHorizontal: 16, paddingTop: 8 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        contentContainerStyle={{
+          paddingBottom: 24,
+          paddingHorizontal: 16,
+          paddingTop: 8,
+        }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         onEndReachedThreshold={0.7}
         onEndReached={loadMore}
         ListHeaderComponent={
@@ -438,11 +413,7 @@ export function RecruiterCandidatesScreen() {
             </View>
           )
         }
-        renderItem={({ item }) => {
-
-          return <CandidateRow item={item} onPress={onPressRow} />;
-
-        }}
+        renderItem={({ item }) => <CandidateRow item={item} onPress={onPressRow} />}
         ListFooterComponent={
           loadingMore ? (
             <View className="py-4">
@@ -452,5 +423,5 @@ export function RecruiterCandidatesScreen() {
         }
       />
     </View>
-  );      
-};
+  );
+}

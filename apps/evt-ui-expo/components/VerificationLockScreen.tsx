@@ -1,39 +1,32 @@
-// src/components/VerificationLockScreen.tsx
-
 import React from "react";
 import { View, Text, Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RecruiterStackParamList } from "@/src/navigation/recruiterTypes";
-import { VERIFICATION_GATE_MACHINE, type GateState } from "../src/navigation/verificationGateMachine";
+import {
+  VERIFICATION_GATE_MACHINE,
+  type GateState,
+} from "../src/navigation/verificationGateMachine";
+import { useRecruiterFiltersStore, DEFAULT_RECRUITER_QUERY } from "@/src/state/recruiterFiltersStore";
 
-type Nav = NativeStackNavigationProp<RecruiterStackParamList, "CandidateDetail">;
+type Nav = NativeStackNavigationProp<RecruiterStackParamList>;
 
-export function VerificationLockScreen(props: {
-  gate: GateState;
-  whyCode?: string;
-}) {
+export function VerificationLockScreen(props: { gate: GateState; whyCode?: string }) {
   const navigation = useNavigation<Nav>();
   const state = VERIFICATION_GATE_MACHINE.states[props.gate];
   const ux = state.ux;
 
   function runAction(action: "GO_BACK" | "OPEN_FILTERS" | "NONE") {
     if (action === "NONE") return;
+
     if (action === "GO_BACK") {
       navigation.goBack();
       return;
     }
+
     if (action === "OPEN_FILTERS") {
-      // Deterministic: we always open filters from detail by presenting modal.
-      // CandidateDetail is in the same stack as the modal route.
-      navigation.navigate("RecruiterFilters", {
-        initial: {
-          search: "",
-          trust_mode: "any",
-          signature_status: ["verified", "invalid", "unknown"],
-          company_ids: [],
-        },
-      });
+      useRecruiterFiltersStore.getState().openDraftWithInitial(DEFAULT_RECRUITER_QUERY);
+      navigation.navigate("RecruiterFilters");
       return;
     }
   }
