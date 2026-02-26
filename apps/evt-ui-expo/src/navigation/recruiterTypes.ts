@@ -1,3 +1,5 @@
+// src/navigation/recruiterTypes.ts
+
 export type SignatureBadge = "verified" | "invalid" | "unknown";
 export type TrustBadge = "trusted" | "untrusted" | "unknown";
 
@@ -12,8 +14,8 @@ export type CandidateRowSnapshot = {
   };
   primary_evt: { evt_id: string };
   badges: {
-    signature: "verified" | "invalid" | "unknown";
-    trust: "trusted" | "untrusted" | "unknown";
+    signature: SignatureBadge;
+    trust: TrustBadge;
   };
   updated_at: string;
 };
@@ -38,13 +40,10 @@ export type RecruiterQueryState = {
   page?: { cursor?: string; limit?: number };
 };
 
-// UI “initial” state is exactly the same shape as query state
-export type RecruiterFiltersInitial = RecruiterQueryState;
-
 export type CandidateDetailParams = {
   candidate_id: string;
-  subject_ref: { full_name: string; employee_id?: string };
-  primary_evt_ref: { evt_id: string };
+  subject_ref: CandidateRowSnapshot["subject"];
+  primary_evt_ref: CandidateRowSnapshot["primary_evt"];
   list_context?: {
     search?: string;
     filters_hash?: string;
@@ -54,26 +53,8 @@ export type CandidateDetailParams = {
   prefetch_snapshot?: CandidateRowSnapshot;
 };
 
-export type RecruiterFiltersParams = {
-  initial: RecruiterQueryState;
-  on_apply_id?: string;
-};
-
-export type RecruiterCandidatesParams = {
-  query?: RecruiterQueryState;
-};
-
 export type RecruiterStackParamList = {
-  RecruiterCandidates: { query?: RecruiterQueryState } | undefined;
-  CandidateDetail: {
-    candidate_id: string;
-    subject_ref: CandidateRowSnapshot["subject"];
-    primary_evt_ref: CandidateRowSnapshot["primary_evt"];
-    prefetch_snapshot?: CandidateRowSnapshot;
-  };
-
-  RecruiterFilters: {
-    initial: RecruiterFiltersInitial;
-    onApply?: (q: RecruiterQueryState) => void;
-  };
+  RecruiterCandidates: undefined;
+  RecruiterFilters: undefined; // modal; Zustand owns draft/applied, no params
+  CandidateDetail: CandidateDetailParams;
 };
