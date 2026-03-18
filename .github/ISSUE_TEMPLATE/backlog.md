@@ -2,7 +2,7 @@
 name: Backlog
 about: Structured backlog item for Cvera
 title: "[BACKLOG] "
-labels: ""
+labels: ["system/backend"]
 assignees: ""
 ---
 
