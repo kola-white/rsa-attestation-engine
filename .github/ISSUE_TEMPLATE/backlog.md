@@ -1,3 +1,11 @@
+---
+name: Backlog
+about: Structured backlog item for Cvera
+title: "[BACKLOG] "
+labels: ""
+assignees: ""
+---
+
 ## Problem
 (What is broken or missing?)
 
