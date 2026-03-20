@@ -3,6 +3,7 @@ package evt
 import (
 	"encoding/base64"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -235,6 +236,17 @@ func (h *RecruiterListHandlers) ListCandidates(c *gin.Context) {
 
 	recruiterPersonID := claims.Sub
 
+	log.Printf(
+		"[recruiter:list] recruiter=%s search=%q trust_mode=%s signatures=%v company_ids=%v limit=%d cursor=%t",
+		recruiterPersonID,
+		search,
+		trustMode,
+		signatures,
+		companyIDs,
+		limit,
+		cur != nil,
+	)
+
 	var (
 		items []CandidateRowSnapshot
 		next  *string
@@ -261,7 +273,11 @@ func (h *RecruiterListHandlers) ListCandidates(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "list_failed"})
+		log.Printf("[recruiter:list] ERROR: %v", err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error":   "list_failed",
+			"message": err.Error(),
+		})
 		return
 	}
 
