@@ -6,7 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	"fmt"
+	"log"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db"
@@ -867,10 +868,11 @@ sb.WriteString(`
 ORDER BY updated_at DESC, request_id DESC
 LIMIT ` + arg(limit+1) + `
 `)
-
+log.Printf("[recruiter:list] SQL:\n%s", sb.String())
+log.Printf("[recruiter:list] args: %#v", args)
 	rows, err := tx.Query(ctx, sb.String(), args...)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("recruiter candidate list query failed: %w", err)
 	}
 	defer rows.Close()
 
@@ -903,14 +905,16 @@ LIMIT ` + arg(limit+1) + `
 		&r0.Status,
 		&r0.UpdatedAt,
 	); err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("recruiter candidate list scan failed: %w", err)
 	}
 		dbRows = append(dbRows, r0)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, nil, err
+		if err := rows.Err(); err != nil {
+		return nil, nil, fmt.Errorf("recruiter candidate list rows iteration failed: %w", err)
 	}
+
+	log.Printf("[recruiter:list] scanned_rows=%d", len(dbRows))
 
 	// Next cursor if we fetched limit+1
 	var nextCursor *string
