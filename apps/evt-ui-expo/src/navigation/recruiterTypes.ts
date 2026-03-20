@@ -1,3 +1,5 @@
+// src/navigation/recruiterTypes.ts
+
 export type SignatureBadge = "verified" | "invalid" | "unknown";
 export type TrustBadge = "trusted" | "untrusted" | "unknown";
 export type VerificationState = "verified" | "unverified" | "pending" | "unknown";
@@ -74,6 +76,10 @@ export type CandidateDetailParams = {
 
 export type RecruiterStackParamList = {
   RecruiterCandidates: undefined;
+<<<<<<< HEAD
   RecruiterFilters: undefined;
+=======
+  RecruiterFilters: undefined; // modal; Zustand owns draft/applied, no params
+>>>>>>> origin/main
   CandidateDetail: CandidateDetailParams;
 };
