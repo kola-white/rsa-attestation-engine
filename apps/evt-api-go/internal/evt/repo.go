@@ -732,20 +732,44 @@ func (r *Repo) RecruiterCandidateList(
 		COALESCE(er.claim_snapshot, '{}'::jsonb) AS claim_snapshot,
 		er.attestation_jws,
 		er.updated_at,
+		er.status,
+		er.trust_result,
 
 		CASE
-		WHEN er.attestation_jws IS NOT NULL AND er.attestation_jws <> '' THEN 'verified'
+		WHEN er.attestation_jws IS NOT NULL AND btrim(er.attestation_jws) <> '' THEN 'verified'
 		ELSE 'unknown'
 		END AS signature_status,
 
-		er.employer_id AS issuer_id,
+		CASE
+		WHEN rti.trust_level = 'trusted' THEN 'trusted'
+		WHEN rti.trust_level = 'untrusted' THEN 'untrusted'
+		ELSE 'unknown'
+		END AS trust_status,
 
-		rti.trust_level AS trust_level
+		CASE
+		WHEN er.status = 'VERIFIED' THEN 'verified'
+		WHEN er.status IN ('UNVERIFIED', 'REJECTED') THEN 'unverified'
+		WHEN er.status IN ('DRAFT', 'SUBMITTED', 'ATTESTATION_PENDING', 'ATTESTED') THEN 'pending'
+		WHEN er.status IN ('CONSUMED', 'CLOSED') AND er.trust_result IN ('VERIFIED', 'VERIFIED_WITH_FLAGS') THEN 'verified'
+		WHEN er.status IN ('CONSUMED', 'CLOSED') AND er.trust_result = 'UNVERIFIED' THEN 'unverified'
+		ELSE 'unknown'
+		END AS verification_state
+
 	FROM evt_requests er
 	LEFT JOIN recruiter_trusted_issuers rti
-		ON rti.recruiter_personid = ` + arg(recruiterPersonID) + `
+		ON rti.recruiter_personid = $1
 	AND rti.issuer_id = er.employer_id
-	WHERE er.status IN ('VERIFIED','UNVERIFIED','CONSUMED','CLOSED','ATTESTED','REJECTED')
+	WHERE er.status IN (
+		'DRAFT',
+		'SUBMITTED',
+		'ATTESTATION_PENDING',
+		'ATTESTED',
+		'VERIFIED',
+		'UNVERIFIED',
+		'REJECTED',
+		'CONSUMED',
+		'CLOSED'
+	)
 	),
 	ranked AS (
 	SELECT
@@ -763,7 +787,10 @@ func (r *Repo) RecruiterCandidateList(
 		employer_id,
 		claim_snapshot,
 		signature_status,
-		trust_level,
+		trust_status,
+		verification_state,
+		trust_result,
+		status,
 		updated_at
 	FROM ranked
 	WHERE rn = 1
@@ -774,7 +801,10 @@ func (r *Repo) RecruiterCandidateList(
 	employer_id,
 	claim_snapshot,
 	signature_status,
-	trust_level,
+	trust_status,
+	verification_state,
+	trust_result,
+	status,
 	updated_at
 	FROM picked
 	WHERE 1=1
@@ -845,13 +875,16 @@ LIMIT ` + arg(limit+1) + `
 	defer rows.Close()
 
 	type dbRow struct {
-		RequestID       string
-		CandidatePerson string
-		EmployerID      string
-		ClaimSnapshot   []byte
-		SignatureStatus string
-		TrustLevel      *string
-		UpdatedAt       time.Time
+		RequestID         string
+		CandidatePerson   string
+		EmployerID        string
+		ClaimSnapshot     []byte
+		SignatureStatus   string
+		TrustStatus       string
+		VerificationState string
+		TrustResult       *string
+		Status            string
+		UpdatedAt         time.Time
 	}
 
 	dbRows := make([]dbRow, 0, limit+1)
@@ -859,16 +892,19 @@ LIMIT ` + arg(limit+1) + `
 	for rows.Next() {
 		var r0 dbRow
 		if err := rows.Scan(
-			&r0.RequestID,
-			&r0.CandidatePerson,
-			&r0.EmployerID,
-			&r0.ClaimSnapshot,
-			&r0.SignatureStatus,
-			&r0.TrustLevel,
-			&r0.UpdatedAt,
-		); err != nil {
-			return nil, nil, err
-		}
+		&r0.RequestID,
+		&r0.CandidatePerson,
+		&r0.EmployerID,
+		&r0.ClaimSnapshot,
+		&r0.SignatureStatus,
+		&r0.TrustStatus,
+		&r0.VerificationState,
+		&r0.TrustResult,
+		&r0.Status,
+		&r0.UpdatedAt,
+	); err != nil {
+		return nil, nil, err
+	}
 		dbRows = append(dbRows, r0)
 	}
 
@@ -940,14 +976,48 @@ LIMIT ` + arg(limit+1) + `
 		}
 
 		trust := TrustUnknown
-		if r0.TrustLevel != nil {
-			switch strings.ToLower(strings.TrimSpace(*r0.TrustLevel)) {
-			case "trusted":
-				trust = TrustTrusted
-			case "untrusted":
-				trust = TrustUntrusted
-			default:
-				trust = TrustUnknown
+		switch strings.ToLower(strings.TrimSpace(r0.TrustStatus)) {
+		case "trusted":
+			trust = TrustTrusted
+		case "untrusted":
+			trust = TrustUntrusted
+		default:
+			trust = TrustUnknown
+		}
+
+		verification := &VerificationSummary{}
+		switch r0.VerificationState {
+		case "verified":
+			verification.State = VerificationVerified
+		case "unverified":
+			verification.State = VerificationUnverified
+		case "pending":
+			verification.State = VerificationPending
+		default:
+			verification.State = VerificationUnknown
+		}
+
+		if r0.TrustResult != nil && strings.TrimSpace(*r0.TrustResult) != "" {
+			tr := TrustResult(strings.TrimSpace(*r0.TrustResult))
+			switch tr {
+			case TrustResultVerified, TrustResultVerifiedWithFlags, TrustResultUnverified:
+				verification.TrustResult = &tr
+			}
+		}
+
+		if strings.TrimSpace(r0.Status) != "" {
+			rs := RequestStatus(strings.TrimSpace(r0.Status))
+			switch rs {
+			case RequestStatusDraft,
+				RequestStatusSubmitted,
+				RequestStatusAttestationPending,
+				RequestStatusAttested,
+				RequestStatusVerified,
+				RequestStatusUnverified,
+				RequestStatusRejected,
+				RequestStatusConsumed,
+				RequestStatusClosed:
+				verification.RequestStatus = &rs
 			}
 		}
 
@@ -962,6 +1032,7 @@ LIMIT ` + arg(limit+1) + `
 		out.PrimaryEVT.EVTID = r0.RequestID
 		out.Badges.Signature = sig
 		out.Badges.Trust = trust
+		out.Verification = verification
 		out.UpdatedAt = r0.UpdatedAt.UTC().Format(time.RFC3339Nano)
 
 		items = append(items, out)

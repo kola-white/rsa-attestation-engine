@@ -1,10 +1,10 @@
-// components/CandidateRow.tsx
 import React, { memo, useMemo } from "react";
 import { Pressable, Text, View } from "react-native";
 import type { CandidateRowSnapshot } from "@/src/navigation/recruiterTypes";
 
 type SignatureBadge = "verified" | "invalid" | "unknown";
 type TrustBadge = "trusted" | "untrusted" | "unknown";
+type VerificationState = "verified" | "unverified" | "pending" | "unknown";
 
 function shortId(id?: string, keep = 8) {
   if (!id) return "";
@@ -57,7 +57,11 @@ function SignatureChip({ value }: { value: SignatureBadge }) {
 
 function TrustLine({ trust }: { trust: TrustBadge }) {
   const label =
-    trust === "trusted" ? "Trusted issuer" : trust === "untrusted" ? "Untrusted issuer" : "Trust not evaluated";
+    trust === "trusted"
+      ? "Trusted issuer"
+      : trust === "untrusted"
+        ? "Untrusted issuer"
+        : "Issuer trust unknown";
 
   const cls =
     trust === "trusted"
@@ -67,6 +71,25 @@ function TrustLine({ trust }: { trust: TrustBadge }) {
         : "text-zinc-500 dark:text-zinc-400";
 
   return <Text className={`text-[12px] ${cls}`}>{label}</Text>;
+}
+
+function VerificationLine({ state }: { state?: VerificationState }) {
+  const resolved = state ?? "unknown";
+
+  const label =
+    resolved === "verified"
+      ? "Verified"
+      : resolved === "unverified"
+        ? "Unverified"
+        : resolved === "pending"
+          ? "Pending verification"
+          : "Verification unavailable";
+
+  return (
+    <Text className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">
+      {label}
+    </Text>
+  );
 }
 
 export const CandidateRow = memo(function CandidateRow({
@@ -83,12 +106,16 @@ export const CandidateRow = memo(function CandidateRow({
 
   const signature = (item.badges?.signature ?? "unknown") as SignatureBadge;
   const trust = (item.badges?.trust ?? "unknown") as TrustBadge;
+  const verificationState = item.verification?.state;
 
   const updated = useMemo(() => timeAgo(item.updated_at), [item.updated_at]);
   const evtShort = useMemo(() => shortId(item.primary_evt?.evt_id, 8), [item.primary_evt?.evt_id]);
 
-  const displayName = fullName || (employeeId ? `Employee ${employeeId}` : `Candidate ${shortId(item.candidate_id, 8)}`);
-  const subLeft = title || issuer ? [title, issuer].filter(Boolean).join(" · ") : "No employment details provided";
+  const displayName =
+    fullName || (employeeId ? `Employee ${employeeId}` : `Candidate ${shortId(item.candidate_id, 8)}`);
+
+  const subLeft =
+    title || issuer ? [title, issuer].filter(Boolean).join(" · ") : "No employment details provided";
 
   return (
     <Pressable
@@ -112,6 +139,7 @@ export const CandidateRow = memo(function CandidateRow({
 
         <View className="mt-2">
           <TrustLine trust={trust} />
+          <VerificationLine state={verificationState} />
         </View>
 
         <View className="mt-3 flex-row items-center justify-between">
