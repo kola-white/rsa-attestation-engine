@@ -758,7 +758,7 @@ func (r *Repo) RecruiterCandidateList(
 
 	FROM evt_requests er
 	LEFT JOIN recruiter_trusted_issuers rti
-		ON rti.recruiter_personid = $1
+		ON rti.recruiter_personid = ` + arg(recruiterPersonID) + `
 	AND rti.issuer_id = er.employer_id
 	WHERE er.status IN (
 		'DRAFT',
@@ -834,13 +834,12 @@ func (r *Repo) RecruiterCandidateList(
 	switch trustMode {
 	case TrustTrustedOnly:
 		sb.WriteString(`
-	AND trust_level = 'trusted'
-	`)
+	AND trust_status = 'trusted'
+		`)
 	case TrustIncludeUntrust:
-		// include both trusted + untrusted, exclude unknown
 		sb.WriteString(`
-	AND trust_level IS NOT NULL
-	`)
+	AND trust_status IN ('trusted', 'untrusted')
+		`)
 	case TrustAny:
 		// no clause
 	default:
