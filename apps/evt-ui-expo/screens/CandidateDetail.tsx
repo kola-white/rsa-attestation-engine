@@ -1,5 +1,3 @@
-// src/screens/CandidateDetail.tsx
-
 import React, { useLayoutEffect } from "react";
 import { View, Text, ScrollView, ActivityIndicator } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -19,7 +17,7 @@ export function CandidateDetailScreen() {
   const route = useRoute<R>();
   const navigation = useNavigation<N>();
 
-  const { candidate_id, subject_ref, primary_evt_ref } = route.params;
+  const { candidate_id, subject_ref, primary_evt_ref, prefetch_snapshot } = route.params;
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -31,6 +29,7 @@ export function CandidateDetailScreen() {
     apiBaseUrl: API_BASE_URL,
     candidateId: candidate_id,
     primaryEvtId: primary_evt_ref.evt_id,
+    prefetchSnapshot: prefetch_snapshot,
   });
 
   if (gateResult.status === "checking") {
@@ -38,23 +37,18 @@ export function CandidateDetailScreen() {
       <View className="flex-1 bg-white dark:bg-zinc-900 items-center justify-center">
         <ActivityIndicator />
         <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-3">
-          Verifying…
+          Checking verification state…
         </Text>
       </View>
     );
   }
 
-  // Enforce lock: protected content is only rendered when gate === ALLOW.
   if (gateResult.gate !== "ALLOW") {
-    return (
-      <VerificationLockScreen
-        gate={gateResult.gate}
-        whyCode={gateResult.outcome?.why?.code}
-      />
-    );
+    return <VerificationLockScreen gate={gateResult.gate} />;
   }
 
-  // Allowed: render protected detail content (minimal, no redesign).
+  const snap = gateResult.snapshot;
+
   return (
     <View className="flex-1 bg-white dark:bg-zinc-900">
       <ScrollView contentInsetAdjustmentBehavior="automatic" className="px-5">
@@ -72,8 +66,38 @@ export function CandidateDetailScreen() {
           </Text>
         ) : null}
 
+        {snap?.verification?.state ? (
+          <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-4">
+            Verification state: {snap.verification.state}
+          </Text>
+        ) : null}
+
+        {snap?.verification?.request_status ? (
+          <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-2">
+            Request status: {snap.verification.request_status}
+          </Text>
+        ) : null}
+
+        {snap?.verification?.trust_result ? (
+          <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-2">
+            Trust result: {snap.verification.trust_result}
+          </Text>
+        ) : null}
+
+        {snap?.badges?.trust === "untrusted" ? (
+          <Text className="text-sm text-amber-700 dark:text-amber-300 mt-3">
+            Warning: this issuer is not trusted by current recruiter policy.
+          </Text>
+        ) : null}
+
+        {snap?.badges?.trust === "unknown" ? (
+          <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-3">
+            Issuer trust is unknown under current recruiter policy.
+          </Text>
+        ) : null}
+
         <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-6 leading-6">
-          Detail content is allowed to render because verification is trusted and valid.
+          Detail content is available because this request reached a usable verification outcome for recruiter review.
         </Text>
       </ScrollView>
     </View>

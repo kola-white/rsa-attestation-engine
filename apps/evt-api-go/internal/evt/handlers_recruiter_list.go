@@ -50,6 +50,43 @@ const (
 	TrustUnknown   TrustBadge = "unknown"
 )
 
+type VerificationState string
+
+const (
+	VerificationVerified   VerificationState = "verified"
+	VerificationUnverified VerificationState = "unverified"
+	VerificationPending    VerificationState = "pending"
+	VerificationUnknown    VerificationState = "unknown"
+)
+
+type RequestStatus string
+
+const (
+	RequestStatusDraft              RequestStatus = "DRAFT"
+	RequestStatusSubmitted          RequestStatus = "SUBMITTED"
+	RequestStatusAttestationPending RequestStatus = "ATTESTATION_PENDING"
+	RequestStatusAttested           RequestStatus = "ATTESTED"
+	RequestStatusVerified           RequestStatus = "VERIFIED"
+	RequestStatusUnverified         RequestStatus = "UNVERIFIED"
+	RequestStatusRejected           RequestStatus = "REJECTED"
+	RequestStatusConsumed           RequestStatus = "CONSUMED"
+	RequestStatusClosed             RequestStatus = "CLOSED"
+)
+
+type TrustResult string
+
+const (
+	TrustResultVerified          TrustResult = "VERIFIED"
+	TrustResultVerifiedWithFlags TrustResult = "VERIFIED_WITH_FLAGS"
+	TrustResultUnverified        TrustResult = "UNVERIFIED"
+)
+
+type VerificationSummary struct {
+	State         VerificationState `json:"state"`
+	TrustResult   *TrustResult      `json:"trust_result,omitempty"`
+	RequestStatus *RequestStatus    `json:"request_status,omitempty"`
+}
+
 type CandidateRowSnapshot struct {
 	CandidateID string `json:"candidate_id"`
 	Subject     struct {
@@ -69,7 +106,8 @@ type CandidateRowSnapshot struct {
 		Signature SignatureBadge `json:"signature"`
 		Trust     TrustBadge     `json:"trust"`
 	} `json:"badges"`
-	UpdatedAt string `json:"updated_at"`
+	Verification *VerificationSummary `json:"verification,omitempty"`
+	UpdatedAt    string               `json:"updated_at"`
 }
 
 type RecruiterListResp struct {

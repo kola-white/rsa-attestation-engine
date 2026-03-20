@@ -2,6 +2,26 @@
 
 export type SignatureBadge = "verified" | "invalid" | "unknown";
 export type TrustBadge = "trusted" | "untrusted" | "unknown";
+export type VerificationState = "verified" | "unverified" | "pending" | "unknown";
+
+export type RequestStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "ATTESTATION_PENDING"
+  | "ATTESTED"
+  | "VERIFIED"
+  | "UNVERIFIED"
+  | "REJECTED"
+  | "CONSUMED"
+  | "CLOSED";
+
+export type TrustResult = "VERIFIED" | "VERIFIED_WITH_FLAGS" | "UNVERIFIED";
+
+export type VerificationSummary = {
+  state: VerificationState;
+  trust_result?: TrustResult;
+  request_status?: RequestStatus;
+};
 
 export type CandidateRowSnapshot = {
   candidate_id: string;
@@ -17,6 +37,7 @@ export type CandidateRowSnapshot = {
     signature: SignatureBadge;
     trust: TrustBadge;
   };
+  verification?: VerificationSummary;
   updated_at: string;
 };
 
@@ -55,6 +76,10 @@ export type CandidateDetailParams = {
 
 export type RecruiterStackParamList = {
   RecruiterCandidates: undefined;
+<<<<<<< HEAD
+  RecruiterFilters: undefined;
+=======
   RecruiterFilters: undefined; // modal; Zustand owns draft/applied, no params
+>>>>>>> origin/main
   CandidateDetail: CandidateDetailParams;
 };
