@@ -76,10 +76,6 @@ export type CandidateDetailParams = {
 
 export type RecruiterStackParamList = {
   RecruiterCandidates: undefined;
-<<<<<<< HEAD
-  RecruiterFilters: undefined;
-=======
   RecruiterFilters: undefined; // modal; Zustand owns draft/applied, no params
->>>>>>> origin/main
   CandidateDetail: CandidateDetailParams;
 };
