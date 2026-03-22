@@ -2,7 +2,6 @@ import React, { memo, useMemo } from "react";
 import { Pressable, Text, View } from "react-native";
 import type { CandidateRowSnapshot } from "@/src/navigation/recruiterTypes";
 
-type SignatureBadge = "verified" | "invalid" | "unknown";
 type TrustBadge = "trusted" | "untrusted" | "unknown";
 type VerificationState = "verified" | "unverified" | "pending" | "unknown";
 
@@ -31,22 +30,33 @@ function timeAgo(iso?: string) {
   return `${diffDay}d ago`;
 }
 
-function SignatureChip({ value }: { value: SignatureBadge }) {
+function VerificationChip({ value }: { value: VerificationState }) {
   const cls =
     value === "verified"
       ? "bg-emerald-100 dark:bg-emerald-900/40 border-emerald-200 dark:border-emerald-800"
-      : value === "invalid"
+      : value === "unverified"
         ? "bg-red-100 dark:bg-red-900/40 border-red-200 dark:border-red-800"
-        : "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700";
+        : value === "pending"
+          ? "bg-amber-100 dark:bg-amber-500 border-amber-200 dark:border-amber-800"
+          : "bg-amber-100 dark:bg-amber-500 border-amber-200 dark:border-amber-800";
 
   const textCls =
     value === "verified"
       ? "text-emerald-700 dark:text-emerald-200"
-      : value === "invalid"
+      : value === "unverified"
         ? "text-red-700 dark:text-red-200"
-        : "text-zinc-700 dark:text-zinc-200";
+        : value === "pending"
+          ? "text-amber-500 dark:text-amber-100"
+          : "text-amber-500 dark:text-amber-100";
 
-  const label = value === "verified" ? "Verified" : value === "invalid" ? "Invalid" : "Unknown";
+  const label =
+    value === "verified"
+      ? "Verified"
+      : value === "unverified"
+        ? "Unverified"
+        : value === "pending"
+          ? "Pending"
+          : "Unknown";
 
   return (
     <View className={`px-2 py-1 rounded-full border ${cls}`}>
@@ -104,9 +114,8 @@ export const CandidateRow = memo(function CandidateRow({
   const title = safeText(item.primary_employment?.title);
   const issuer = safeText(item.primary_employment?.issuer_name);
 
-  const signature = (item.badges?.signature ?? "unknown") as SignatureBadge;
   const trust = (item.badges?.trust ?? "unknown") as TrustBadge;
-  const verificationState = item.verification?.state;
+  const verificationState = (item.verification?.state ?? "unknown") as VerificationState;
 
   const updated = useMemo(() => timeAgo(item.updated_at), [item.updated_at]);
   const evtShort = useMemo(() => shortId(item.primary_evt?.evt_id, 8), [item.primary_evt?.evt_id]);
@@ -125,7 +134,7 @@ export const CandidateRow = memo(function CandidateRow({
     >
       <View className="p-4">
         <View className="flex-row items-center justify-between">
-          <SignatureChip value={signature} />
+          <VerificationChip value={verificationState} />
           {!!updated && <Text className="text-[12px] text-zinc-500 dark:text-zinc-400">{updated}</Text>}
         </View>
 
