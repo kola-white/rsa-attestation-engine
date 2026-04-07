@@ -42,7 +42,7 @@ This shifts systems from **trusting claims** to **verifying proof**.
 A world where individuals hold their own verifiable records, and institutions rely on **independent verification rather than intermediaries** to establish truth.
 
 ## Architecture Overview
-High-level system architecture showing identity, issuance, and verification flows across client, API, and trust infrastructure.
+High-level system architecture illustrating identity, authentication, and backend API flows supporting claim issuance and verification.
 
 ```mermaid
 flowchart LR
