@@ -41,6 +41,59 @@ This shifts systems from **trusting claims** to **verifying proof**.
 
 A world where individuals hold their own verifiable records, and institutions rely on **independent verification rather than intermediaries** to establish truth.
 
+## Architecture Overview
+High-level system architecture showing identity, issuance, and verification flows across client, API, and trust infrastructure.
+
+```mermaid
+flowchart LR
+    subgraph Client["Expo iOS Client"]
+        A[Expo App<br/>React Native / SDK 54]
+    end
+
+    subgraph Edge["Ingress / TLS"]
+        NAuth[Nginx<br/>auth.cvera.app]
+        NApi[Nginx<br/>api.cvera.app]
+    end
+
+    subgraph KratosCluster["Identity Provider (Kratos)"]
+        KPub[Kratos Public<br/>serve public :4434]
+        KAdm[Kratos Admin<br/>serve admin :4435]
+        subgraph DBK["Postgres DB\n`evt_kratos`"]
+            PK[(identities, credentials,<br/>Kratos sessions)]
+        end
+    end
+
+    subgraph EvtAPI["EVT Domain API"]
+        API[EVT Go API<br/>api.cvera.app]
+        subgraph DBA["Postgres DB\n`evt`"]
+            PE[(domain users, cases,<br/>refresh_tokens SHA-256)]
+        end
+    end
+
+    A -->|"HTTPS\nemail/password,\nself-service login flows"| NAuth
+    NAuth -->|"HTTP :4434"| KPub
+    KPub -->|"identities / sessions"| PK
+
+    A -->|"HTTPS\naccess_token (JWT),\nrefresh_token (opaque hex)"| NApi
+    NApi -->|"HTTP :8080"| API
+    API -->|"SQL\n(domain data,\nrefresh token hashes)"| PE
+
+    API -->|"HTTP :4435\nKratos admin API\n(session / identity lookup)"| KAdm
+    KAdm -->|"SQL\n(identity state)"| PK
+
+    classDef client fill:#e3f2fd,stroke:#1e88e5,color:#0d47a1;
+    classDef ingress fill:#ede7f6,stroke:#5e35b1,color:#311b92;
+    classDef kratos fill:#fff3e0,stroke:#fb8c00,color:#e65100;
+    classDef api fill:#e8f5e9,stroke:#43a047,color:#1b5e20;
+    classDef db fill:#f5f5f5,stroke:#757575,color:#424242,font-size:11px;
+
+    class A client;
+    class NAuth,NApi ingress;
+    class KPub,KAdm kratos;
+    class API api;
+    class PK,PE db;
+```
+
 ### Note
 This is an early prototype and active development project.
 
