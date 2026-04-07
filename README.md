@@ -41,6 +41,8 @@ This shifts systems from **trusting claims** to **verifying proof**.
 
 A world where individuals hold their own verifiable records, and institutions rely on **independent verification rather than intermediaries** to establish truth.
 
+### Note
+This is an early prototype and active development project.
 
 # Attested Identity – PH-1 EVT (v0.1.0-evt)
 
