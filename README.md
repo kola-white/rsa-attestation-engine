@@ -1,6 +1,6 @@
 # Cvera | Verifiable Claim Tokens
 
-**Claims. Proven.**
+**Claims. Verified.**
 
 A prototype system for **user-held, cryptographically verifiable claims** that enables trusted issuers to create signed records about individuals, which can be independently verified without relying on direct access to the issuing authority.
 
