@@ -20,23 +20,11 @@ export const RequestorHomeScreen: React.FC = () => {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: "Logout",
-      headerLargeTitle: true,
-      headerRight: () => (
-        <Pressable
-          onPress={logout}
-          accessibilityRole="button"
-          hitSlop={10}
-          className="px-3 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-700"
-          style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
-        >
-          <Text className="text-sm font-semibold text-zinc-900 dark:text-white">
-            Sign out
-          </Text>
-        </Pressable>
-      ),
+      title: "",
+      headerLargeTitle: false,
+      headerRight: undefined,
     });
-  }, [navigation, logout]);
+  }, [navigation]);
 
   const load = useCallback(async () => {
     if (!API_BASE_URL) {

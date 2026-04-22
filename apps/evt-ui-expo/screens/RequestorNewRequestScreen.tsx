@@ -36,8 +36,13 @@ export const RequestorNewRequestScreen: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
 
   useLayoutEffect(() => {
-    navigation.setOptions({ title: "New Request" });
-  }, [navigation]);
+  navigation.setOptions({
+    title: "",
+    headerLargeTitle: false,
+    headerBackTitle: "Back",
+    headerTintColor: "#0A84FF", // iOS blue
+  });
+}, [navigation]);
 
   const claimSnapshot: EmploymentClaimDraft = useMemo(
     () => ({
