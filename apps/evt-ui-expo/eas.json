@@ -1,0 +1,7 @@
+{
+    "build": {
+        "mvpClient": {
+            "developmentClient": true
+        }
+    }
+}
