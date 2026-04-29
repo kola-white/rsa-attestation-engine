@@ -1,6 +1,9 @@
 package httpapi
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+)
 
 func withCORS(next http.Handler) http.Handler {
 	allowed := map[string]bool{
@@ -16,7 +19,7 @@ func withCORS(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-
+		fmt.Printf("testing 123 %s \n\n", origin)
 		// Only set CORS when a browser sends an Origin header and it’s allowed.
 		if origin != "" && allowed[origin] {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
