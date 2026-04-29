@@ -9,8 +9,23 @@ log:
 serve:
   public:
     base_url: https://auth.cvera.app
-    allowed_origins:
-      - https://cvera-iiw-mvp-expo-app--mvp.expo.app
+    cors:
+      enabled: true
+      allowed_origins:
+        - https://cvera-iiw-mvp-expo-app--mvp.expo.app
+      allowed_methods:
+        - POST
+        - GET
+        - PUT
+        - PATCH
+        - DELETE
+      allowed_headers:
+        - Authorization
+        - Cookie
+        - Content-Type
+      exposed_headers:
+        - Content-Type
+        - Set-Cookie
     port: 4434
   admin:
     base_url: http://kratos-admin:4435
