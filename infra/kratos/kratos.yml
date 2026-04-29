@@ -9,6 +9,8 @@ log:
 serve:
   public:
     base_url: https://auth.cvera.app
+    allowed_origins:
+      - https://cvera-iiw-mvp-expo-app--mvp.expo.app
     port: 4434
   admin:
     base_url: http://kratos-admin:4435
