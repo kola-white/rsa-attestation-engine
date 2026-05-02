@@ -13,12 +13,14 @@ serve:
       enabled: true
       allowed_origins:
         - https://cvera-iiw-mvp-expo-app--mvp.expo.app
+        - https://mvp.cvera.app
       allowed_methods:
         - POST
         - GET
         - PUT
         - PATCH
         - DELETE
+        - OPTIONS
       allowed_headers:
         - Authorization
         - Cookie
