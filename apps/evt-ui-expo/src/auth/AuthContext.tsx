@@ -420,6 +420,42 @@ const refresh = useCallback(async (): Promise<RefreshResult> => {
         );
       }
 
+      if (Platform.OS === "web") {
+        const browserResult = submitJson as {
+          session?: {
+            id: string;
+            identity?: {
+              id: string;
+              traits?: {
+                email?: string;
+                [key: string]: unknown;
+              };
+            };
+          };
+        };
+
+        const kratosIdentityId = browserResult.session?.identity?.id;
+        const emailFromKratos = browserResult.session?.identity?.traits?.email;
+
+        if (!browserResult.session || !kratosIdentityId) {
+          setStatus("unauthenticated");
+          throw new AuthError(
+            "missing_browser_session",
+            "Kratos did not return a valid browser session."
+          );
+        }
+
+        setAccessToken(null);
+        setUser({
+          id: kratosIdentityId,
+          email: emailFromKratos ?? identifier,
+        } as User);
+        setSessionExpiredReason(null);
+        setStatus("authenticated");
+
+        return;
+      }
+
       const loginResult = submitJson as KratosSuccessfulNativeLogin;
 
       if (!loginResult.session_token) {
