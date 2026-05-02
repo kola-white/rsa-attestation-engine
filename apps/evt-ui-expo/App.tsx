@@ -1,4 +1,4 @@
-import "./global.css";
+import "./global.css"; // Must be first import to load env variables
 import { DefaultTheme, DarkTheme } from "@react-navigation/native";
 import React, { useEffect } from "react";
 import { View, useColorScheme } from "react-native";
@@ -11,6 +11,8 @@ import { AppShell } from "@/AppShell";
 
 
 export default function App() {
+  console.log("EVT API BASE URL:", process.env.EXPO_PUBLIC_EVT_API_BASE_URL);
+  console.log("KRATOS BASE URL:", process.env.EXPO_PUBLIC_KRATOS_BASE_URL);
   const colorScheme = useColorScheme() ?? "dark";
 
   useEffect(() => {

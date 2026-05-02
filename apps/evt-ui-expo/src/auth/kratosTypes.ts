@@ -5,9 +5,31 @@ export interface KratosUiText {
   context?: Record<string, unknown>;
 }
 
+export type KratosUiMessage = KratosUiText;
+
+export interface KratosUiNodeAttributes {
+  name?: string;
+  type?: string;
+  value?: string;
+  required?: boolean;
+  disabled?: boolean;
+  autocomplete?: string;
+  node_type?: string;
+  [key: string]: unknown;
+}
+
+export interface KratosUiNode {
+  type: string;
+  group: string;
+  attributes?: KratosUiNodeAttributes;
+  messages?: KratosUiText[];
+  meta?: unknown;
+}
+
 export interface KratosUi {
   action: string;
-  method: 'POST' | 'GET';
+  method: 'POST' | 'GET' | string;
+  nodes: KratosUiNode[];
   messages?: KratosUiText[];
 }
 
@@ -29,28 +51,16 @@ export interface KratosSuccessfulNativeLogin {
       };
     };
   };
-  // we ignore other fields for now
 }
 
-export interface KratosUiMessage {
-  id: number;
-  text: string;
-  type: 'error' | 'success' | 'info';
-  context?: unknown;
-}
-
-export interface KratosUiContainer {
-  action: string; // URL to POST the registration submission to
-  method: string; // usually "POST"
-  messages?: KratosUiMessage[];
-}
+export type KratosUiContainer = KratosUi;
 
 export interface KratosRegistrationFlow {
   id: string;
+  type?: 'api' | 'browser';
   ui: KratosUiContainer;
 }
 
-// Response when registration succeeds and session is created
 export interface KratosSuccessfulNativeRegistration {
   session_token: string;
   session?: {
@@ -58,7 +68,6 @@ export interface KratosSuccessfulNativeRegistration {
   };
 }
 
-// Shape of a 400 "form error" response
 export interface KratosErrorResponse {
   id?: string;
   type?: string;
@@ -68,7 +77,6 @@ export interface KratosErrorResponse {
   };
 }
 
-// This is what the screen catches when a 400 "form error" happens.
 export class KratosFormError extends Error {
   constructor(message: string) {
     super(message);
@@ -78,6 +86,6 @@ export class KratosFormError extends Error {
 
 export interface KratosRecoveryFlow {
   id: string;
-  type: "api" | "browser";
-  ui: KratosUiContainer; // re-use existing container shape (messages live here)
+  type: 'api' | 'browser';
+  ui: KratosUiContainer;
 }

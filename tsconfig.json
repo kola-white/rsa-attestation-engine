@@ -4,6 +4,6 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
   },
-  "include": ["pkg/**/*.ts", "types/**/*.ts", "scripts/**/*.ts"],
+  "include": ["pkg/**/*.ts", "types/**/*.ts", "scripts/**/*.ts", "global.d.ts", "**/*.ts", "**/*.tsx", "nativewind-env.d.ts"],
   "exclude": ["node_modules", "dist", "build", "out"]
 }

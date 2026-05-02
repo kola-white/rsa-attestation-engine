@@ -8,6 +8,7 @@ import React, {
   useState,
   ReactNode,
 } from "react";
+import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import {
   AuthContextValue,
@@ -15,9 +16,7 @@ import {
   User,
   TokenPair,
   AuthError,
-  RegisterInput,
-  RefreshResult
-} from "./types";
+  RegisterInput} from "./types";
 import {
   KratosLoginFlow,
   KratosSuccessfulNativeLogin,
@@ -330,10 +329,17 @@ const refresh = useCallback(async (): Promise<RefreshResult> => {
     async (email: string, password: string) => {
       setStatus("checking");
 
-      // 1) Create flow
-      const flowRes = await fetch(`${KRATOS_BASE_URL}/self-service/login/api`, {
+      const loginFlowPath =
+      Platform.OS === "web"
+        ? "/self-service/login/browser"
+        : "/self-service/login/api";
+
+      const flowRes = await fetch(`${KRATOS_BASE_URL}${loginFlowPath}`, {
         method: "GET",
-        headers: { Accept: "application/json" },
+        headers: {
+          Accept: "application/json",
+        },
+        credentials: Platform.OS === "web" ? "include" : "omit",
       });
 
       if (!flowRes.ok) {
@@ -343,33 +349,60 @@ const refresh = useCallback(async (): Promise<RefreshResult> => {
       }
 
       const flow = (await flowRes.json()) as KratosLoginFlow;
-      console.log("[Auth][register] flow.ui.action", flow.ui?.action);
-
+      console.log("[Auth][login] flow.type", flow.type);
+      console.log("[Auth][login] flow.ui.action", flow.ui?.action);
+      console.log("[Auth][login] flow.ui.method", flow.ui?.method);
 
       // 2) Submit credentials
       const identifier = (email ?? "").trim().toLowerCase();
-      const submitUrl = `${KRATOS_BASE_URL}/self-service/login?flow=${flow.id}`;
 
-      const submitRes = await fetch(submitUrl, {
-        method: "POST",
+      const csrfToken =
+        Platform.OS === "web"
+          ? flow.ui.nodes?.find(
+              (node) => node.attributes?.name === "csrf_token"
+            )?.attributes?.value
+          : undefined;
+
+      console.log("[Auth][login] csrfToken present?", !!csrfToken);
+      console.log("[Auth][login] csrfToken prefix", csrfToken?.slice(0, 12) ?? null);
+
+      if (Platform.OS === "web" && !csrfToken) {
+        console.log("[Auth][login] Missing csrfToken", JSON.stringify(flow.ui.nodes ?? []));
+        setStatus("unauthenticated");
+        throw new AuthError(
+          "missing_csrf_token",
+          "Unable to complete browser sign-in because the CSRF token was missing."
+        );
+      }
+
+      const submitBody = {
+        method: "password",
+        identifier,
+        password,
+        ...(Platform.OS === "web" ? { csrf_token: csrfToken } : {}),
+      };
+
+      console.log("[Auth][login] submitBody keys", Object.keys(submitBody));
+
+      const submitRes = await fetch(flow.ui.action, {
+        method: flow.ui.method ?? "POST",
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json; charset=utf-8",
+          ...(Platform.OS === "web" && csrfToken
+            ? { "X-CSRF-Token": csrfToken }
+            : {}),
         },
-        body: JSON.stringify({
-          method: "password",
-          identifier,
-          password,
-        }),
+        credentials: Platform.OS === "web" ? "include" : "omit",
+        body: JSON.stringify(submitBody),
       });
 
-      // ✅ log response status immediately (no JSON needed yet)
+      // ✅ log response status immediately
       console.log("[Auth][login] submitRes.status", submitRes.status);
       console.log("[Auth][login] submitRes.ok", submitRes.ok);
 
       const submitJson = await submitRes.json();
 
-      // ✅ now you can log the JSON
       console.log("[Auth][login] submitJson", JSON.stringify(submitJson));
 
       if (submitRes.status === 400) {
@@ -430,12 +463,20 @@ const refresh = useCallback(async (): Promise<RefreshResult> => {
       setStatus("checking");
 
       try {
-        // 1) Create a native registration flow in Kratos
-        const flowRes = await fetch(`${KRATOS_BASE_URL}/self-service/registration/api`, {
-          method: "GET",
-          headers: { Accept: "application/json" },
-        });
+        // 1) Create the correct Kratos registration flow for web vs native
+        const registrationFlowPath =
+          Platform.OS === "web"
+            ? "/self-service/registration/browser"
+            : "/self-service/registration/api";
 
+        const flowRes = await fetch(`${KRATOS_BASE_URL}${registrationFlowPath}`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+          credentials: Platform.OS === "web" ? "include" : "omit",
+        });
+        
         console.log("[Auth][register] create flow.status", flowRes.status);
         console.log("[Auth][register] create flow.ok", flowRes.ok);
 
@@ -460,25 +501,61 @@ const refresh = useCallback(async (): Promise<RefreshResult> => {
         const uiAny = flow.ui as unknown as { nodes?: unknown };
         console.log("[Auth][register] flow.ui.nodes", JSON.stringify(uiAny.nodes ?? []));
 
-        // 2) Submit registration data to the flow's action
+        // 2) Submit credentials
+        const identifier = (email ?? "").trim().toLowerCase();
+
+        const csrfToken =
+          Platform.OS === "web"
+            ? flow.ui.nodes?.find(
+                (node) => node.attributes?.name === "csrf_token"
+              )?.attributes?.value
+            : undefined;
+
+          console.log("[Auth][login] flow.type", flow.type);
+          console.log("[Auth][login] flow.ui.action", flow.ui.action);
+          console.log("[Auth][login] csrfToken present?", !!csrfToken);
+          console.log("[Auth][login] csrfToken prefix", csrfToken?.slice(0, 12) ?? null);
+
+        if (Platform.OS === "web" && !csrfToken) {
+          console.log("[Auth][login] Missing csrfToken", JSON.stringify(flow.ui.nodes ?? []));
+          setStatus("unauthenticated");
+          throw new AuthError(
+            "missing_csrf_token",
+            "Unable to complete browser sign-in because the CSRF token was missing."
+          );
+        }
+
+        const submitBody = {
+          method: "password",
+          identifier,
+          password,
+          ...(Platform.OS === "web" ? { csrf_token: csrfToken } : {}),
+        };
+
+        console.log("[Auth][login] csrfToken present?", !!csrfToken);
+        console.log("[Auth][login] submitBody keys", Object.keys(submitBody));
+
         const submitRes = await fetch(flow.ui.action, {
-          method: flow.ui.method,
+          method: flow.ui.method ?? "POST",
           headers: {
-            "Content-Type": "application/json",
             Accept: "application/json",
+            "Content-Type": "application/json; charset=utf-8",
+            ...(Platform.OS === "web" && csrfToken
+              ? { "X-CSRF-Token": csrfToken }
+              : {}),
           },
-          body: JSON.stringify({
-            method: "password",
-            identifier: email,
-            password,
-            traits: {
-              email,
-            },
-          }),
+          credentials: Platform.OS === "web" ? "include" : "omit",
+          body: JSON.stringify(submitBody),
         });
 
-        console.log("[Auth][register] submitRes.status", submitRes.status);
-        console.log("[Auth][register] submitRes.ok", submitRes.ok);
+        // ✅ log response status immediately
+        console.log("[Auth][login] submitRes.status", submitRes.status);
+        console.log("[Auth][login] submitRes.ok", submitRes.ok);
+
+        // ✅ read response body once
+        const submitJson = await submitRes.json();
+
+        console.log("[Auth][login] submitJson", JSON.stringify(submitJson));
 
         // ✅ Read the response body ONCE
         const submitText = await submitRes.text();

@@ -23,9 +23,12 @@ serve:
         - Authorization
         - Cookie
         - Content-Type
+        - X-CSRF-Token
+        - X-Session-Token
       exposed_headers:
         - Content-Type
         - Set-Cookie
+      allow_credentials: true
     port: 4434
   admin:
     base_url: http://kratos-admin:4435
