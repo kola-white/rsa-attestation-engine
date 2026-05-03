@@ -15,6 +15,7 @@ func withCORS(next http.Handler) http.Handler {
 		"https://cvera.app":     true,
 		"https://www.cvera.app": true,
 		"https://cvera-iiw-mvp-expo-app--mvp.expo.app": true,
+		"https://mvp.cvera.app": true,
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
