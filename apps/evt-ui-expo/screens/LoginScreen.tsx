@@ -33,6 +33,11 @@ export const LoginScreen: React.FC = () => {
       return;
     }
 
+    if (status === "authenticated") {
+      console.log("[LoginScreen] blocked login — already authenticated");
+      return;
+    }
+
     setSubmitting(true);
     try {
       await login(trimmedEmail.toLowerCase(), password);

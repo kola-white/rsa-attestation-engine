@@ -811,6 +811,8 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
   // --- Bootstrap on app startup --------------------------------------------
 
   useEffect(() => {
+    if (Platform.OS === "web") return;
+
     (async () => {
       try {
         await refresh();
