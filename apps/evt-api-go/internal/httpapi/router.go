@@ -68,6 +68,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 
 	// Auth (EXCHANGE, REFRESH, LOGOUT)
 	mux.HandleFunc("POST /auth/exchange", s.HandleAuthExchange)
+	mux.HandleFunc("POST /auth/web/exchange", s.HandleAuthWebExchange)
 	mux.HandleFunc("POST /auth/refresh", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[auth:refresh] called method=%s path=%s remote=%s", r.Method, r.URL.Path, r.RemoteAddr)
 		s.HandleAuthRefresh(w, r)

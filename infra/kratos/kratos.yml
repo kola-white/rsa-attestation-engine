@@ -66,3 +66,7 @@ secrets:
     - ${KRATOS_SECRET_DEFAULT}
   cookie:
     - ${KRATOS_SECRET_COOKIE}
+
+session:
+  cookie:
+    domain: .cvera.app

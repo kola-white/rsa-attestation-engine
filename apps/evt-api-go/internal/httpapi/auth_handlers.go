@@ -59,6 +59,7 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid_json")
 		return
 	}
+
 	req.KratosSessionToken = strings.TrimSpace(req.KratosSessionToken)
 	if req.KratosSessionToken == "" {
 		writeErr(w, http.StatusBadRequest, "missing_kratos_session_token")
@@ -69,115 +70,169 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("[auth:exchange] kratos whoami error: %v", err)
 
-		// Non-200 from Kratos whoami => invalid session token
 		if errors.Is(err, errKratosWhoamiNon200) {
 			writeErr(w, http.StatusUnauthorized, "invalid_kratos_session")
 			return
 		}
 
-		// Network / DNS / TLS / timeout => kratos unreachable
 		writeErr(w, http.StatusBadGateway, "kratos_unreachable")
 		return
 	}
+
 	if who == nil || strings.TrimSpace(who.Identity.ID) == "" {
 		writeErr(w, http.StatusUnauthorized, "invalid_kratos_session")
 		return
 	}
 
-
-	// 2) Extract traits (best-effort)
-	email := pickStringTrait(who.Identity.Traits, "email")
-	name := pickStringTrait(who.Identity.Traits, "name")
-
-	tx, err := s.db.BeginTx(r.Context(), &sql.TxOptions{Isolation: sql.LevelReadCommitted})
-	if err != nil {
-	log.Printf("[auth:exchange] tx begin: %v", err)
-	writeErr(w, http.StatusInternalServerError, "server_error")
-	return
-	}
-	defer tx.Rollback()
-
-	// 3) Upsert domain user mapped to Kratos identity id
-	//    IMPORTANT: role is SOURCE OF TRUTH in DB. Do NOT overwrite role on login.
-	defaultRole := auth.RoleRequestor
-	defaultStatus := "active"
-	
-var (
-	userID     uuid.UUID
-	dbRoleStr  string
+	resp, err := s.issueAuthExchangeResponseForKratosIdentity(
+		r.Context(),
+		who.Identity.ID,
+		pickStringTrait(who.Identity.Traits, "email"),
+		pickStringTrait(who.Identity.Traits, "name"),
+		req.DeviceID,
 	)
 
-	err = tx.QueryRowContext(r.Context(), `
-	INSERT INTO domain_users (kratos_identity_id, email, name, role, status)
-	VALUES ($1,$2,$3,$4,$5)
-	ON CONFLICT (kratos_identity_id)
-	DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, updated_at = now()
-	RETURNING id, role
-	`, who.Identity.ID, email, name, defaultRole.String(), defaultStatus).
-    Scan(&userID, &dbRoleStr)
-
 	if err != nil {
-	log.Printf("[auth:exchange] upsert domain_user: %v", err)
-	writeErr(w, http.StatusInternalServerError, "server_error")
-	return
-	}
-
-	// 3b) Validate role from DB
-	userRole, err := auth.ParseRole(dbRoleStr)
-	if err != nil {
-	log.Printf("[auth:exchange] invalid role in domain_users role=%q user_id=%s: %v", dbRoleStr, userID.String(), err)
-	writeErr(w, http.StatusInternalServerError, "server_error")
-	return
-	}
-
-
-	// 4) Create auth session
-	sessionID := uuid.New()
-	_, err = tx.ExecContext(r.Context(), `
-	INSERT INTO auth_sessions (session_id, user_id, device_id, created_at, last_used_at)
-	VALUES ($1,$2,$3,now(),now())
-	`, sessionID, userID, req.DeviceID)
-	if err != nil {
-		log.Printf("[auth:exchange] insert auth_session: %v", err)
+		log.Printf("[auth:exchange] issue token pair failed: %v", err)
 		writeErr(w, http.StatusInternalServerError, "server_error")
 		return
 	}
 
-	// 5) Mint + store refresh token (raw returned to client, hash stored)
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (s *Server) HandleAuthWebExchange(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		log.Printf("[auth:web-exchange] called method=%s path=%s remote=%s", r.Method, r.URL.Path, r.RemoteAddr)
+		writeErr(w, http.StatusMethodNotAllowed, "method_not_allowed")
+		return
+	}
+
+	cookieHeader := strings.TrimSpace(r.Header.Get("Cookie"))
+	if cookieHeader == "" {
+		writeErr(w, http.StatusUnauthorized, "missing_kratos_cookie")
+		return
+	}
+
+	who, err := s.kratosWhoamiWithCookie(r.Context(), cookieHeader)
+	if err != nil {
+		log.Printf("[auth:web-exchange] kratos whoami error: %v", err)
+
+		if errors.Is(err, errKratosWhoamiNon200) {
+			writeErr(w, http.StatusUnauthorized, "invalid_kratos_session")
+			return
+		}
+
+		writeErr(w, http.StatusBadGateway, "kratos_unreachable")
+		return
+	}
+
+	if who == nil || strings.TrimSpace(who.Identity.ID) == "" {
+		writeErr(w, http.StatusUnauthorized, "invalid_kratos_session")
+		return
+	}
+
+	resp, err := s.issueAuthExchangeResponseForKratosIdentity(
+		r.Context(),
+		who.Identity.ID,
+		pickStringTrait(who.Identity.Traits, "email"),
+		pickStringTrait(who.Identity.Traits, "name"),
+		"web",
+	)
+
+	if err != nil {
+		log.Printf("[auth:web-exchange] issue token pair failed: %v", err)
+		writeErr(w, http.StatusInternalServerError, "server_error")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (s *Server) issueAuthExchangeResponseForKratosIdentity(
+	ctx context.Context,
+	kratosIdentityID string,
+	email string,
+	name string,
+	deviceID string,
+) (*AuthExchangeResponse, error) {
+	kratosIdentityID = strings.TrimSpace(kratosIdentityID)
+	email = strings.TrimSpace(strings.ToLower(email))
+	name = strings.TrimSpace(name)
+	deviceID = strings.TrimSpace(deviceID)
+
+	if kratosIdentityID == "" {
+		return nil, errors.New("missing kratos identity id")
+	}
+
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	defaultRole := auth.RoleRequestor
+	defaultStatus := "active"
+
+	var (
+		userID    uuid.UUID
+		dbRoleStr string
+	)
+
+	err = tx.QueryRowContext(ctx, `
+		INSERT INTO domain_users (kratos_identity_id, email, name, role, status)
+		VALUES ($1,$2,$3,$4,$5)
+		ON CONFLICT (kratos_identity_id)
+		DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, updated_at = now()
+		RETURNING id, role
+	`, kratosIdentityID, email, name, defaultRole.String(), defaultStatus).Scan(&userID, &dbRoleStr)
+
+	if err != nil {
+		return nil, err
+	}
+
+	userRole, err := auth.ParseRole(dbRoleStr)
+	if err != nil {
+		return nil, err
+	}
+
+	sessionID := uuid.New()
+
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO auth_sessions (session_id, user_id, device_id, created_at, last_used_at)
+		VALUES ($1,$2,$3,now(),now())
+	`, sessionID, userID, deviceID)
+
+	if err != nil {
+		return nil, err
+	}
+
 	rawRefresh, err := randomHex(32)
 	if err != nil {
-		log.Printf("[auth:exchange] mint refresh: %v", err)
-		writeErr(w, http.StatusInternalServerError, "token_mint_failed")
-		return
+		return nil, err
 	}
 
 	hash, err := s.refreshTokenHash(rawRefresh)
 	if err != nil {
-		log.Printf("[auth:exchange] hash refresh: %v", err)
-		writeErr(w, http.StatusInternalServerError, "server_error")
-		return
+		return nil, err
 	}
 
 	tokenID := uuid.New()
 	refreshExp := time.Now().Add(30 * 24 * time.Hour)
 
-	_, err = tx.ExecContext(r.Context(), `
-	INSERT INTO refresh_tokens (token_id, session_id, user_id, token_hash, is_current, expires_at, last_used_at)
-	VALUES ($1,$2,$3,$4,TRUE,$5,now())
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO refresh_tokens (token_id, session_id, user_id, token_hash, is_current, expires_at, last_used_at)
+		VALUES ($1,$2,$3,$4,TRUE,$5,now())
 	`, tokenID, sessionID, userID, hash, refreshExp)
+
 	if err != nil {
-		log.Printf("[auth:exchange] insert refresh_token: %v", err)
-		writeErr(w, http.StatusInternalServerError, "server_error")
-		return
+		return nil, err
 	}
 
 	if err := tx.Commit(); err != nil {
-		log.Printf("[auth:exchange] commit: %v", err)
-		writeErr(w, http.StatusInternalServerError, "server_error")
-		return
+		return nil, err
 	}
 
-	// 6) Mint access token (sub must be domain user UUID)
 	access, err := auth.MintAccessTokenHS256(
 		s.cfg.Auth.JWTSecret,
 		s.cfg.Auth.Issuer,
@@ -187,13 +242,12 @@ var (
 		[]auth.Role{userRole},
 		15*time.Minute,
 	)
+
 	if err != nil {
-		log.Printf("[auth:exchange] token_mint_failed: access token: %v", err)
-		writeErr(w, http.StatusInternalServerError, "token_mint_failed")
-		return
+		return nil, err
 	}
 
-	writeJSON(w, http.StatusOK, AuthExchangeResponse{
+	return &AuthExchangeResponse{
 		AccessToken:  access,
 		RefreshToken: rawRefresh,
 		User: ExchangeUser{
@@ -202,7 +256,7 @@ var (
 			Name:  name,
 			Role:  userRole.String(),
 		},
-	})
+	}, nil
 }
 
 func (s *Server) kratosWhoami(ctx context.Context, sessionToken string) (*kratosWhoami, error) {
@@ -234,6 +288,48 @@ func (s *Server) kratosWhoami(ctx context.Context, sessionToken string) (*kratos
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return nil, err
 	}
+	return &out, nil
+}
+
+func (s *Server) kratosWhoamiWithCookie(ctx context.Context, cookieHeader string) (*kratosWhoami, error) {
+	base := strings.TrimRight(strings.TrimSpace(s.cfg.Kratos.PublicBaseURL), "/")
+	if base == "" {
+		return nil, errors.New("kratos public base url empty")
+	}
+
+	cookieHeader = strings.TrimSpace(cookieHeader)
+	if cookieHeader == "" {
+		return nil, errors.New("missing cookie header")
+	}
+
+	url := base + "/sessions/whoami"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Cookie", cookieHeader)
+
+	cli := &http.Client{Timeout: 10 * time.Second}
+
+	resp, err := cli.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("[auth:kratosWhoamiWithCookie] non-200 status=%d", resp.StatusCode)
+		return nil, errKratosWhoamiNon200
+	}
+
+	var out kratosWhoami
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+
 	return &out, nil
 }
 
