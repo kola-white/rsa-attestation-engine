@@ -101,29 +101,34 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
           ? session.identity.id
           : undefined;
 
-      const emailFromKratos =
-        typeof session?.identity?.traits?.email === "string"
-          ? session.identity.traits.email
-          : "";
 
       if (!kratosIdentityId) {
         console.log("[Auth][web whoami] missing identity id", session);
         return false;
       }
 
-      const role = resolveDemoRole(emailFromKratos);
+      const exchangeRes = await fetch(`${API_BASE_URL}/auth/web/exchange`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+        },
+        credentials: "include",
+      });
 
-      setAccessToken(null);
-      setUser({
-        id: kratosIdentityId,
-        email: emailFromKratos,
-        role,
-      } as User);
+      if (!exchangeRes.ok) {
+        console.log("[Auth][web exchange] failed", exchangeRes.status);
+        return false;
+      }
 
+      const tokens = await exchangeRes.json();
+
+      await storeRefreshToken(tokens.refresh_token);
+      setAccessToken(tokens.access_token);
+      setUser(tokens.user);
       setSessionExpiredReason(null);
       setStatus("authenticated");
 
-      console.log("[Auth][web whoami] hydrated authenticated session");
+      console.log("[Auth][web exchange] success", tokens.user);
       return true;
     } catch (error) {
       console.log("[Auth][web whoami] request failed", error);
@@ -214,92 +219,92 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
 
   // --- Refresh (wrapped, single-flight, returns *new access token*) ----------
 
-type RefreshResult = { ok: true; accessToken: string } | { ok: false };
+  type RefreshResult = { ok: true; accessToken: string } | { ok: false };
 
-const refreshInFlightRef = useRef<Promise<RefreshResult> | null>(null);
+  const refreshInFlightRef = useRef<Promise<RefreshResult> | null>(null);
 
-const refresh = useCallback(async (): Promise<RefreshResult> => {
-  if (refreshInFlightRef.current) return refreshInFlightRef.current;
+  const refresh = useCallback(async (): Promise<RefreshResult> => {
+    if (refreshInFlightRef.current) return refreshInFlightRef.current;
 
-  refreshInFlightRef.current = (async () => {
-    console.log("[Auth][refresh] called");
+    refreshInFlightRef.current = (async () => {
+      console.log("[Auth][refresh] called");
 
-    const refreshToken = await getStoredRefreshToken();
-    console.log("[Auth][refresh] stored refresh token present?", !!refreshToken);
+      const refreshToken = await getStoredRefreshToken();
+      console.log("[Auth][refresh] stored refresh token present?", !!refreshToken);
 
-    if (!refreshToken) {
-      console.log("[Auth][refresh] no token -> unauthenticated");
-      setAccessToken(null);
-      setUser(null);
+      if (!refreshToken) {
+        console.log("[Auth][refresh] no token -> unauthenticated");
+        setAccessToken(null);
+        setUser(null);
+        setSessionExpiredReason(null);
+        setStatus("unauthenticated");
+        return { ok: false };
+      }
+
+      console.log(
+        "[Auth][refresh] sending refresh token prefix:",
+        refreshToken.slice(0, 12)
+      );
+
+      let res: Response;
+      try {
+        res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+      } catch (e) {
+        console.log("[Auth][refresh] network exception:", String(e));
+        await clearStoredRefreshToken();
+        setAccessToken(null);
+        setUser(null);
+        setSessionExpiredReason(null);
+        setStatus("unauthenticated");
+        return { ok: false };
+      }
+
+      console.log("[Auth][refresh] response status:", res.status);
+
+      if (res.status === 401) {
+        await markSessionExpired("refresh_unauthorized");
+        return { ok: false };
+      }
+
+      if (!res.ok) {
+        await clearStoredRefreshToken();
+        setAccessToken(null);
+        setUser(null);
+        setSessionExpiredReason(null);
+        setStatus("unauthenticated");
+        return { ok: false };
+      }
+
+      const data = (await res.json()) as TokenPair;
+
+      console.log("[Auth][refresh] OK new access prefix:", data.access_token.slice(0, 12));
+      console.log("[Auth][refresh] OK new refresh prefix:", data.refresh_token.slice(0, 12));
+
+      // IMPORTANT: update state, but ALSO return the new access token
+      setAccessToken(data.access_token);
+      setUser(data.user);
       setSessionExpiredReason(null);
-      setStatus("unauthenticated");
-      return { ok: false };
-    }
+      await storeRefreshToken(data.refresh_token);
+      setStatus("authenticated");
 
-    console.log(
-      "[Auth][refresh] sending refresh token prefix:",
-      refreshToken.slice(0, 12)
-    );
+      return { ok: true, accessToken: data.access_token };
+    })();
 
-    let res: Response;
     try {
-      res = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      });
-    } catch (e) {
-      console.log("[Auth][refresh] network exception:", String(e));
-      await clearStoredRefreshToken();
-      setAccessToken(null);
-      setUser(null);
-      setSessionExpiredReason(null);
-      setStatus("unauthenticated");
-      return { ok: false };
+      return await refreshInFlightRef.current;
+    } finally {
+      refreshInFlightRef.current = null;
     }
-
-    console.log("[Auth][refresh] response status:", res.status);
-
-    if (res.status === 401) {
-      await markSessionExpired("refresh_unauthorized");
-      return { ok: false };
-    }
-
-    if (!res.ok) {
-      await clearStoredRefreshToken();
-      setAccessToken(null);
-      setUser(null);
-      setSessionExpiredReason(null);
-      setStatus("unauthenticated");
-      return { ok: false };
-    }
-
-    const data = (await res.json()) as TokenPair;
-
-    console.log("[Auth][refresh] OK new access prefix:", data.access_token.slice(0, 12));
-    console.log("[Auth][refresh] OK new refresh prefix:", data.refresh_token.slice(0, 12));
-
-    // IMPORTANT: update state, but ALSO return the new access token
-    setAccessToken(data.access_token);
-    setUser(data.user);
-    setSessionExpiredReason(null);
-    await storeRefreshToken(data.refresh_token);
-    setStatus("authenticated");
-
-    return { ok: true, accessToken: data.access_token };
-  })();
-
-  try {
-    return await refreshInFlightRef.current;
-  } finally {
-    refreshInFlightRef.current = null;
-  }
-}, [
-  getStoredRefreshToken,
-  clearStoredRefreshToken,
-  storeRefreshToken,
-  markSessionExpired,
-]);
+  }, [
+      getStoredRefreshToken,
+      clearStoredRefreshToken,
+      storeRefreshToken,
+      markSessionExpired,
+    ]);
 
 
   // --- Global fetch interceptor (API_BASE_URL only) -------------------------
