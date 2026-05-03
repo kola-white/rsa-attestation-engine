@@ -374,6 +374,17 @@ const refresh = useCallback(async (): Promise<RefreshResult> => {
     };
   }, [accessToken, markSessionExpired, refresh]);
 
+  const resolveDemoRole = (email: string): User["role"] | undefined => {
+    switch (email.trim().toLowerCase()) {
+      case "iiw42@mailinator.com":
+        return "requestor";
+      case "iiwhr@mailinator.com":
+        return "hr_reviewer";
+      default:
+        return undefined;
+    }
+  };
+
   // --- Login via Kratos native flow ----------------------------------------
 
   const login: AuthContextValue["login"] = useCallback(
@@ -532,9 +543,14 @@ const refresh = useCallback(async (): Promise<RefreshResult> => {
         }
 
         setAccessToken(null);
+        
+        const resolvedEmail = emailFromKratos ?? identifier;
+        const role = resolveDemoRole(resolvedEmail);
+
         setUser({
           id: kratosIdentityId,
-          email: emailFromKratos ?? identifier,
+          email: resolvedEmail,
+          role,
         } as User);
         setSessionExpiredReason(null);
         setStatus("authenticated");
