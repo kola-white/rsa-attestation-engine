@@ -111,10 +111,13 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         return false;
       }
 
+      const role = resolveDemoRole(emailFromKratos);
+
       setAccessToken(null);
       setUser({
         id: kratosIdentityId,
         email: emailFromKratos,
+        role,
       } as User);
 
       setSessionExpiredReason(null);
@@ -546,6 +549,12 @@ const refresh = useCallback(async (): Promise<RefreshResult> => {
         
         const resolvedEmail = emailFromKratos ?? identifier;
         const role = resolveDemoRole(resolvedEmail);
+
+        console.log("[Auth][web whoami] resolved user", {
+          id: kratosIdentityId,
+          email: resolvedEmail,
+          role,
+        });
 
         setUser({
           id: kratosIdentityId,
