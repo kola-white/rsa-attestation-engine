@@ -77,6 +77,57 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
   const [sessionExpiredReason, setSessionExpiredReason] =
     useState<SessionExpiredReason | null>(null);
 
+  const hydrateWebKratosSession = useCallback(async (): Promise<boolean> => {
+    if (Platform.OS !== "web") return false;
+
+    try {
+      const res = await fetch(`${KRATOS_BASE_URL}/sessions/whoami`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        console.log("[Auth][web whoami] no active session", res.status);
+        return false;
+      }
+
+      const session = await res.json();
+
+      const kratosIdentityId =
+        typeof session?.identity?.id === "string"
+          ? session.identity.id
+          : undefined;
+
+      const emailFromKratos =
+        typeof session?.identity?.traits?.email === "string"
+          ? session.identity.traits.email
+          : "";
+
+      if (!kratosIdentityId) {
+        console.log("[Auth][web whoami] missing identity id", session);
+        return false;
+      }
+
+      setAccessToken(null);
+      setUser({
+        id: kratosIdentityId,
+        email: emailFromKratos,
+      } as User);
+
+      setSessionExpiredReason(null);
+      setStatus("authenticated");
+
+      console.log("[Auth][web whoami] hydrated authenticated session");
+      return true;
+    } catch (error) {
+      console.log("[Auth][web whoami] request failed", error);
+      return false;
+    }
+  }, [KRATOS_BASE_URL]);
+
   // [DEV] minimal state logging
   useEffect(() => {
     console.log("[Auth][state] status:", status, "user:", user?.id ?? null);
@@ -344,8 +395,43 @@ const refresh = useCallback(async (): Promise<RefreshResult> => {
 
       if (!flowRes.ok) {
         const text = await flowRes.text();
+
+        console.log("[Auth][login] create flow failed status", flowRes.status);
+        console.log("[Auth][login] create flow failed body", text);
+
+        let errorId: string | undefined;
+
+        try {
+          const parsed = JSON.parse(text) as {
+            error?: {
+              id?: string;
+            };
+          };
+
+          errorId = parsed.error?.id;
+        } catch {
+          errorId = undefined;
+        }
+
+        if (
+          Platform.OS === "web" &&
+          flowRes.status === 400 &&
+          errorId === "session_already_available"
+        ) {
+          const hydrated = await hydrateWebKratosSession();
+
+          if (hydrated) {
+            return;
+          }
+        }
+
         setStatus("unauthenticated");
-        throw new AuthError("create_login_flow_failed", "Unable to start sign-in.", text);
+
+        throw new AuthError(
+          "create_login_flow_failed",
+          "Unable to start sign-in.",
+          text
+        );
       }
 
       const flow = (await flowRes.json()) as KratosLoginFlow;
@@ -486,7 +572,7 @@ const refresh = useCallback(async (): Promise<RefreshResult> => {
       setSessionExpiredReason(null);
       setStatus("authenticated");
     },
-    [exchangeSessionToken, storeRefreshToken]
+    [exchangeSessionToken, storeRefreshToken, hydrateWebKratosSession]
   );
 
   // --- Register via Kratos native flow -------------------------------------
@@ -703,6 +789,19 @@ const refresh = useCallback(async (): Promise<RefreshResult> => {
       }
     })();
   }, [refresh]);
+
+  // --- Web session hydration (Kratos cookie flow) ---
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+
+    (async () => {
+      const hydrated = await hydrateWebKratosSession();
+
+      if (!hydrated) {
+        setStatus("unauthenticated");
+      }
+    })();
+  }, [hydrateWebKratosSession]);
 
   // --- Context value --------------------------------------------------------
 
