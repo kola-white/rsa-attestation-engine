@@ -67,12 +67,11 @@ const extractRegistrationErrorMessage = (data: KratosErrorResponse): string => {
 // --- Provider --------------------------------------------------------------
 
 export const AuthProvider: React.FC<Props> = ({ children }) => {
-  // NOTE: We keep your AuthStatus type, but we WILL use "session-expired".
-  // If your ./types AuthStatus union does not include it yet, add it there:
-  // 'checking' | 'authenticated' | 'unauthenticated' | 'session-expired'
   const [status, setStatus] = useState<AuthStatus>("checking");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const isLoggingOutRef = useRef(false);
 
   const [sessionExpiredReason, setSessionExpiredReason] =
     useState<SessionExpiredReason | null>(null);
@@ -792,31 +791,90 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
   // --- Logout --------------------------------------------------------------
 
   const logout: AuthContextValue["logout"] = useCallback(async () => {
-    console.log("[Auth][logout] called");
-
-    const refreshToken = await getStoredRefreshToken();
-    console.log("[Auth][logout] has refresh token?", !!refreshToken);
-
-    if (refreshToken) {
-      console.log("[Auth][logout] sending token prefix:", refreshToken.slice(0, 12));
-      try {
-        const res = await fetch(`${API_BASE_URL}/auth/logout`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        });
-        console.log("[Auth][logout] server status:", res.status);
-      } catch (e) {
-        console.log("[Auth][logout] server call failed:", String(e));
-      }
+    if (isLoggingOutRef.current) {
+      console.log("[Auth][logout] ignored duplicate request");
+      return;
     }
 
-    await clearStoredRefreshToken();
-    setAccessToken(null);
-    setUser(null);
-    setSessionExpiredReason(null);
-    setStatus("unauthenticated");
-    console.log("[Auth][logout] complete -> unauthenticated");
+    isLoggingOutRef.current = true;
+    setIsLoggingOut(true);
+
+    console.log("[Auth][logout] called");
+
+    try {
+      const refreshToken = await getStoredRefreshToken();
+      console.log("[Auth][logout] has refresh token?", !!refreshToken);
+
+      if (refreshToken) {
+        console.log("[Auth][logout] sending token prefix:", refreshToken.slice(0, 12));
+
+        try {
+          const res = await fetch(`${API_BASE_URL}/auth/logout`, {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+          });
+
+          console.log("[Auth][logout] EVT API status:", res.status);
+        } catch (e) {
+          // Do not trap the user in authenticated UI if app-domain logout fails.
+          console.log("[Auth][logout] EVT API call failed:", String(e));
+        }
+      }
+
+      if (Platform.OS === "web") {
+        try {
+          const flowRes = await fetch(`${KRATOS_BASE_URL}/self-service/logout/browser`, {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+            },
+            credentials: "include",
+          });
+
+          console.log("[Auth][logout] Kratos logout flow status:", flowRes.status);
+
+          if (flowRes.ok) {
+            const flowJson = (await flowRes.json()) as {
+              logout_url?: string;
+            };
+
+            if (flowJson.logout_url) {
+              const logoutRes = await fetch(flowJson.logout_url, {
+                method: "GET",
+                headers: {
+                  Accept: "application/json",
+                },
+                credentials: "include",
+              });
+
+              console.log("[Auth][logout] Kratos logout status:", logoutRes.status);
+            } else {
+              console.log("[Auth][logout] Kratos logout_url missing");
+            }
+          }
+        } catch (e) {
+          // Local state is still cleared below, but this log matters:
+          // if web refresh silently reauthenticates, inspect this path first.
+          console.log("[Auth][logout] Kratos browser logout failed:", String(e));
+        }
+      }
+
+      await clearStoredRefreshToken();
+
+      setAccessToken(null);
+      setUser(null);
+      setSessionExpiredReason(null);
+      setStatus("unauthenticated");
+
+      console.log("[Auth][logout] complete -> unauthenticated");
+    } finally {
+      isLoggingOutRef.current = false;
+      setIsLoggingOut(false);
+    }
   }, [getStoredRefreshToken, clearStoredRefreshToken]);
 
   // --- Bootstrap on app startup --------------------------------------------
@@ -857,6 +915,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       logout,
       refresh,
       register,
+      isLoggingOut,
 
       // New: session-expired UX hooks
       sessionExpiredReason,
@@ -870,6 +929,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
     logout,
     refresh,
     register,
+    isLoggingOut,
     sessionExpiredReason,
     beginReauth,
   ]);

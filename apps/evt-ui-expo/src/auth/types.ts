@@ -39,6 +39,7 @@ export interface AuthContextValue {
   login(email: string, password: string): Promise<void>;
   logout(): Promise<void>;
   register(input: RegisterInput): Promise<void>;
+  isLoggingOut: boolean;
   sessionExpiredReason: "refresh_unauthorized" | "api_unauthorized" | "api_forbidden" | null;
   beginReauth: () => void;
   refresh: () => Promise<RefreshResult>;
