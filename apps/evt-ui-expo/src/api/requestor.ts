@@ -39,12 +39,20 @@ export function claimFromSnapshot(
   return { employer, job_title, start_mm_yyyy, end_mm_yyyy };
 }
 
-export async function fetchRequestorRequests(apiBaseUrl: string): Promise<RequestorListResp> {
+export async function fetchRequestorRequests(
+  apiBaseUrl: string,
+  accessToken: string
+): Promise<RequestorListResp> {
   const base = apiBaseUrl.replace(/\/$/, "");
+
   const res = await fetch(`${base}/v1/requests`, {
     method: "GET",
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
   });
+
 
   const text = await res.text();
   let json: unknown = null;

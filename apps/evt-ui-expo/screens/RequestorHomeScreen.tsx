@@ -26,18 +26,16 @@ export const RequestorHomeScreen: React.FC = () => {
     });
   }, [navigation]);
 
-  const load = useCallback(async () => {
-    if (!API_BASE_URL) {
-      setErrorMsg("Config error: EXPO_PUBLIC_EVT_API_BASE_URL is empty.");
-      setLoading(false);
-      return;
-    }
+    const load = useCallback(async () => {
+      if (status !== "authenticated" || !accessToken) {
+        return;
+      }
 
-    setLoading(true);
-    setErrorMsg(null);
+      setLoading(true);
+      setErrorMsg(null);
 
     try {
-      const resp = await fetchRequestorRequests(API_BASE_URL);
+      const resp = await fetchRequestorRequests(API_BASE_URL, accessToken);
 
       // Map API rows -> existing UI snapshot shape
       const mapped: RequestRowSnapshot[] = resp.items.map((r) => ({
