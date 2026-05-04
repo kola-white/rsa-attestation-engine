@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { View, ActivityIndicator, Text, Pressable } from "react-native";
+import { View, ActivityIndicator, Text } from "react-native";
 import { useAuth } from "@/src/auth/AuthContext";
 import { runBiometricCheck } from "@/src/auth/biometrics";
 import { AuthNavigator } from "@/src/navigation/AuthNavigator";
 import { MainAppNavigator } from "@/src/navigation/MainAppNavigator";
 import { SessionExpiredScreen } from "screens/SessionExpiredScreen";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 function routeForRole(role: string | undefined): "Recruiter" | "HRReview" | "ReqHome" | "Home" {
   switch (role) {
@@ -22,8 +23,7 @@ function routeForRole(role: string | undefined): "Recruiter" | "HRReview" | "Req
 }
 
 export const AppShell: React.FC = () => {
-  const { status, user, logout } = useAuth();
-
+  const { status, user } = useAuth();
   const [biometricGateDone, setBiometricGateDone] = useState(false);
 
   useEffect(() => {
@@ -78,14 +78,7 @@ export const AppShell: React.FC = () => {
           Your account role couldn’t be loaded. Please sign out and sign in again.
         </Text>
 
-        {typeof logout === "function" && (
-          <Pressable
-            onPress={logout}
-            className="mt-4 px-4 py-2 rounded-lg bg-zinc-900 dark:bg-zinc-100"
-          >
-            <Text className="text-white dark:text-black font-semibold">Sign out</Text>
-          </Pressable>
-        )}
+        <LogoutButton className="mt-4 px-4 py-2 rounded-lg bg-zinc-900 dark:bg-zinc-100" />
       </View>
     );
   }

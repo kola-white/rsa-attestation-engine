@@ -1,10 +1,30 @@
-import React, { useLayoutEffect, useMemo, useEffect, useState, useCallback } from "react";
-import { View, Text, Pressable, ScrollView, ActivityIndicator } from "react-native";
+import React, {
+  useLayoutEffect,
+  useMemo,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { RequestorStackParamList, RequestRowSnapshot, RequestStatus } from "@/src/navigation/requestorTypes";
+import type {
+  RequestorStackParamList,
+  RequestRowSnapshot,
+  RequestStatus,
+} from "@/src/navigation/requestorTypes";
 import { useAuth } from "@/src/auth/AuthContext";
-import { fetchRequestorRequests, claimFromSnapshot } from "@/src/api/requestor";
+import {
+  fetchRequestorRequests,
+  claimFromSnapshot,
+} from "@/src/api/requestor";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 type Nav = NativeStackNavigationProp<RequestorStackParamList, "RequestorHome">;
 
@@ -12,7 +32,7 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_EVT_API_BASE_URL ?? "";
 
 export const RequestorHomeScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
-  const { logout, user } = useAuth();
+  const { user, status, accessToken } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -26,13 +46,13 @@ export const RequestorHomeScreen: React.FC = () => {
     });
   }, [navigation]);
 
-    const load = useCallback(async () => {
-      if (status !== "authenticated" || !accessToken) {
-        return;
-      }
+  const load = useCallback(async () => {
+    if (status !== "authenticated" || !accessToken) {
+      return;
+    }
 
-      setLoading(true);
-      setErrorMsg(null);
+    setLoading(true);
+    setErrorMsg(null);
 
     try {
       const resp = await fetchRequestorRequests(API_BASE_URL, accessToken);
@@ -53,9 +73,7 @@ export const RequestorHomeScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  const { status, accessToken } = useAuth();
+  }, [status, accessToken]);
 
   useEffect(() => {
     if (status !== "authenticated" || !accessToken) {
@@ -63,7 +81,7 @@ export const RequestorHomeScreen: React.FC = () => {
     }
 
     load();
-  }, [status, accessToken]);
+  }, [status, accessToken, load]);
 
   const rows = useMemo(() => items, [items]);
 
@@ -71,9 +89,13 @@ export const RequestorHomeScreen: React.FC = () => {
     <View className="flex-1 bg-white dark:bg-zinc-900">
       <ScrollView contentInsetAdjustmentBehavior="automatic" className="px-5">
         <View className="pt-4">
-          <Text className="text-sm text-zinc-600 dark:text-zinc-300">
-            {user?.email ?? "Signed in"}
-          </Text>
+          <View className="flex-row items-center justify-between gap-3">
+            <Text className="text-sm text-zinc-600 dark:text-zinc-300 flex-1">
+              {user?.email ?? "Signed in"}
+            </Text>
+
+            <LogoutButton className="rounded-xl border border-zinc-300 dark:border-zinc-700 px-4 py-2 bg-white dark:bg-zinc-900" />
+          </View>
 
           <Pressable
             onPress={() => navigation.navigate("RequestorNewRequest")}
@@ -133,7 +155,8 @@ export const RequestorHomeScreen: React.FC = () => {
                 {r.claim.employer}
               </Text>
               <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-1">
-                {r.claim.job_title} • {r.claim.start_mm_yyyy} — {r.claim.end_mm_yyyy ?? "Present"}
+                {r.claim.job_title} • {r.claim.start_mm_yyyy} —{" "}
+                {r.claim.end_mm_yyyy ?? "Present"}
               </Text>
               <Text className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
                 Status: {r.status}
