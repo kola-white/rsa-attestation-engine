@@ -57,9 +57,15 @@ export const RequestorHomeScreen: React.FC = () => {
     }
   }, []);
 
+  const { status, accessToken } = useAuth();
+
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (status !== "authenticated" || !accessToken) {
+      return;
+    }
+
+    load();
+  }, [status, accessToken]);
 
   const rows = useMemo(() => items, [items]);
 
