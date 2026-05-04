@@ -144,20 +144,31 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
   // --- Helpers: refresh token storage --------------------------------------
 
   const storeRefreshToken = useCallback(async (token: string) => {
+    if (Platform.OS === "web") {
+      localStorage.setItem(REFRESH_TOKEN_KEY, token);
+      return;
+    }
+
     await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token);
-    console.log(
-      "[Auth][storeRefreshToken] stored refresh token prefix:",
-      token.slice(0, 12)
-    );
   }, []);
 
   const getStoredRefreshToken = useCallback(async (): Promise<string | null> => {
+    if (Platform.OS === "web") {
+      return localStorage.getItem(REFRESH_TOKEN_KEY);
+    }
+
     return SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
   }, []);
 
   const clearStoredRefreshToken = useCallback(async () => {
+    if (Platform.OS === "web") {
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+      console.log("[Auth][clearStoredRefreshToken] refresh token cleared (web)");
+      return;
+    }
+
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
-    console.log("[Auth][clearStoredRefreshToken] refresh token cleared");
+    console.log("[Auth][clearStoredRefreshToken] refresh token cleared (native)");
   }, []);
 
   // --- Deterministic session-expired transition ----------------------------
