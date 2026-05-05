@@ -34,7 +34,7 @@ export const RequestorHomeScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
   const { user, status, accessToken } = useAuth();
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [items, setItems] = useState<RequestRowSnapshot[]>([]);
 
@@ -77,6 +77,8 @@ export const RequestorHomeScreen: React.FC = () => {
 
   useEffect(() => {
     if (status !== "authenticated" || !accessToken) {
+      setLoading(false);
+      setErrorMsg(null);
       return;
     }
 
