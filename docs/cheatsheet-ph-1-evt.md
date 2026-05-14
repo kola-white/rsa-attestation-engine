@@ -58,7 +58,6 @@ Just **clean, signed employment facts**.
 
   "subject": {
     "identifier": "mailto:user@example.com"
-    // or HR ID, etc. (no heavy résumé fields here)
   },
 
   "employment": {

@@ -492,8 +492,10 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
 
       const submitBody = {
         method: "password",
-        identifier,
-        password,
+        "traits.email": {
+          email,
+          password,
+        },
         ...(Platform.OS === "web" ? { csrf_token: csrfToken } : {}),
       };
 
@@ -688,74 +690,63 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         }
 
         const submitBody = {
-          method: "password",
-          identifier,
-          password,
-          ...(Platform.OS === "web" ? { csrf_token: csrfToken } : {}),
-        };
+        method: "password",
+        "traits.email": email,
+        password,
+        ...(Platform.OS === "web" ? { csrf_token: csrfToken } : {}),
+      };
 
-        console.log("[Auth][login] csrfToken present?", !!csrfToken);
-        console.log("[Auth][login] submitBody keys", Object.keys(submitBody));
+      console.log("[Auth][register] csrfToken present?", !!csrfToken);
+      console.log("[Auth][register] submitBody keys", Object.keys(submitBody));
 
-        const submitRes = await fetch(flow.ui.action, {
-          method: flow.ui.method ?? "POST",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json; charset=utf-8",
-            ...(Platform.OS === "web" && csrfToken
-              ? { "X-CSRF-Token": csrfToken }
-              : {}),
-          },
-          credentials: Platform.OS === "web" ? "include" : "omit",
-          body: JSON.stringify(submitBody),
-        });
+      const submitRes = await fetch(flow.ui.action, {
+        method: flow.ui.method ?? "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json; charset=utf-8",
+          ...(Platform.OS === "web" && csrfToken
+            ? { "X-CSRF-Token": csrfToken }
+            : {}),
+        },
+        credentials: Platform.OS === "web" ? "include" : "omit",
+        body: JSON.stringify(submitBody),
+      });
 
-        // ✅ log response status immediately
-        console.log("[Auth][login] submitRes.status", submitRes.status);
-        console.log("[Auth][login] submitRes.ok", submitRes.ok);
+      console.log("[Auth][register] submitRes.status", submitRes.status);
+      console.log("[Auth][register] submitRes.ok", submitRes.ok);
 
-        // ✅ read response body once
-        const submitJson = await submitRes.json();
+      const submitText = await submitRes.text();
 
-        console.log("[Auth][login] submitJson", JSON.stringify(submitJson));
+      let submitJson: unknown = null;
 
-        // ✅ Read the response body ONCE
-        const submitText = await submitRes.text();
-        console.log("[Auth][register] submitRes.bodyText", submitText);
+      try {
+        submitJson = submitText ? JSON.parse(submitText) : null;
+      } catch {
+        submitJson = submitText;
+      }
 
-        if (submitRes.status === 400) {
-          // ✅ Try to parse Kratos JSON error, but don't assume it's JSON
-          let errJson: KratosErrorResponse | null = null;
-          try {
-            errJson = JSON.parse(submitText) as KratosErrorResponse;
-          } catch {
-            errJson = null;
-          }
+      console.log("[Auth][register] submitJson", JSON.stringify(submitJson));
 
-          if (errJson) {
-            const msg = extractRegistrationErrorMessage(errJson);
-            setStatus("unauthenticated");
-            throw new KratosFormError(msg);
-          }
+      if (submitRes.status === 400) {
+        const msg =
+          typeof submitJson === "object" && submitJson !== null
+            ? extractRegistrationErrorMessage(submitJson as KratosErrorResponse)
+            : "We could not create your account. Please check your details and try again.";
 
-          // Non-JSON 400 (rare, but possible)
-          setStatus("unauthenticated");
-          throw new KratosFormError(
-            "We could not create your account. Please check your details and try again."
-          );
-        }
+        setStatus("unauthenticated");
+        throw new KratosFormError(msg);
+      }
 
-        if (!submitRes.ok) {
-          setStatus("unauthenticated");
-          throw new AuthError(
-            "registration_failed",
-            "Registration failed unexpectedly. Please try again.",
-            submitText
-          );
-        }
+      if (!submitRes.ok) {
+        setStatus("unauthenticated");
+        throw new AuthError(
+          "registration_failed",
+          "Registration failed unexpectedly. Please try again.",
+          typeof submitJson === "string" ? submitJson : JSON.stringify(submitJson)
+        );
+      }
 
-        // ✅ Success path: parse from the same captured body
-        const regResult = JSON.parse(submitText) as KratosSuccessfulNativeRegistration;
+      const regResult = submitJson as KratosSuccessfulNativeRegistration;
 
         if (!regResult.session_token) {
           setStatus("unauthenticated");
@@ -770,7 +761,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
           regResult.session_token.slice(0, 12)
         );
 
-        // 4) Exchange Kratos session_token for your JWTs
+        // 3) Exchange Kratos session_token for your JWTs
         const tokens = await exchangeSessionToken(regResult.session_token);
 
         await storeRefreshToken(tokens.refresh_token);
