@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
-import { useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { AuthStackParamList } from "@/src/navigation/types";
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { AuthStackParamList } from '@/src/navigation/types';
 import {
   View,
   Text,
@@ -11,19 +11,22 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert
 } from 'react-native';
-import { useAuth } from '../src/auth/AuthContext'; // adjust path if needed
+import { useAuth } from '../src/auth/AuthContext';
+import { AuthError, KratosFormError } from '../src/auth/AuthContext';
 
-// If you keep KratosFormError in AuthContext, re-export it there, or just
-// re-check by name string here. For simplicity, we’ll import the class.
-import { KratosFormError } from '../src/auth/AuthContext'; // ensure you export it
+type AuthNav = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
 type RegisterFormState = {
   fullName: string;
   email: string;
   password: string;
 };
+
+type RegisterNotice =
+  | { kind: 'success'; message: string }
+  | { kind: 'error'; message: string }
+  | null;
 
 const initialFormState: RegisterFormState = {
   fullName: '',
@@ -34,17 +37,15 @@ const initialFormState: RegisterFormState = {
 const isValidEmail = (value: string): boolean => {
   const email = value.trim();
   if (!email) return false;
-  // simple shape check is enough; Kratos enforces real validation
   return /\S+@\S+\.\S+/.test(email);
 };
 
 export const RegisterScreen: React.FC = () => {
-type AuthNav = NativeStackNavigationProp<AuthStackParamList, "Register">;
-const navigation = useNavigation<AuthNav>();
+  const navigation = useNavigation<AuthNav>();
   const { register } = useAuth();
 
   const [form, setForm] = useState<RegisterFormState>(initialFormState);
-  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<RegisterNotice>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = useCallback(
@@ -53,8 +54,12 @@ const navigation = useNavigation<AuthNav>();
         ...prev,
         [field]: value,
       }));
+
+      if (notice) {
+        setNotice(null);
+      }
     },
-    [],
+    [notice],
   );
 
   const handleSubmit = useCallback(async () => {
@@ -62,46 +67,88 @@ const navigation = useNavigation<AuthNav>();
     const email = form.email.trim().toLowerCase();
     const password = form.password;
 
-    // Basic client-side validation
     if (!email || !isValidEmail(email)) {
-      setError('Please check your email address and try again.');
+      setNotice({
+        kind: 'error',
+        message: 'Please check your email address and try again.',
+      });
       return;
     }
 
     if (!password) {
-      setError('Please enter a password.');
+      setNotice({
+        kind: 'error',
+        message: 'Please enter a password.',
+      });
       return;
     }
 
-    setError(null);
+    setNotice(null);
     setIsSubmitting(true);
 
     try {
       await register({ email, password, fullName });
 
-      Alert.alert(
-        'Welcome aboard!',
-        'Your account was created successfully.',
-      );
+      setNotice({
+        kind: 'success',
+        message: 'Account created. Please sign in with your new account.',
+      });
+
+      setForm((prev) => ({
+        ...prev,
+        password: '',
+      }));
     } catch (err) {
+      if (
+        err instanceof AuthError &&
+        err.code === 'registration_requires_login'
+      ) {
+        setNotice({
+          kind: 'success',
+          message: 'Account created. Please sign in with your new account.',
+        });
+
+        setForm((prev) => ({
+          ...prev,
+          password: '',
+        }));
+
+        return;
+      }
+
       if (err instanceof KratosFormError) {
-        setError(err.message);
+        setNotice({ kind: 'error', message: err.message });
       } else if (err instanceof Error) {
-        // Map low-level errors to HR-friendly copy
         if (err.message.toLowerCase().includes('already in use')) {
-          setError('This email is already in use. Try signing in instead.');
+          setNotice({
+            kind: 'error',
+            message: 'This email is already in use. Try signing in instead.',
+          });
         } else {
-          setError(
-            'We could not create your account. Please check your details and try again.',
-          );
+          setNotice({
+            kind: 'error',
+            message:
+              'We could not create your account. Please check your details and try again.',
+          });
         }
       } else {
-        setError('Something went wrong. Please try again.');
+        setNotice({
+          kind: 'error',
+          message: 'Something went wrong. Please try again.',
+        });
       }
     } finally {
       setIsSubmitting(false);
     }
   }, [form, register]);
+
+  const noticeStyles =
+    notice?.kind === 'success'
+      ? 'border-emerald-500 bg-emerald-950/60'
+      : 'border-red-500 bg-red-950/60';
+
+  const noticeTextStyles =
+    notice?.kind === 'success' ? 'text-emerald-100' : 'text-red-100';
 
   return (
     <KeyboardAvoidingView
@@ -117,17 +164,19 @@ const navigation = useNavigation<AuthNav>();
           <Text className="text-3xl font-semibold text-white mb-2">
             Create account
           </Text>
+
           <Text className="text-base text-slate-300 mb-6">
             HR access to employment verification cases.
           </Text>
 
-          {error && (
-            <View className="mb-4 rounded-xl border border-red-500 bg-red-950/60 px-4 py-3">
-              <Text className="text-sm text-red-100">{error}</Text>
+          {notice && (
+            <View className={`mb-4 rounded-xl border px-4 py-3 ${noticeStyles}`}>
+              <Text className={`text-sm ${noticeTextStyles}`}>
+                {notice.message}
+              </Text>
             </View>
           )}
 
-          {/* Full name (optional) */}
           <View className="mb-4">
             <Text className="mb-1 text-sm font-medium text-slate-200">
               Full name (optional)
@@ -144,7 +193,6 @@ const navigation = useNavigation<AuthNav>();
             />
           </View>
 
-          {/* Work email */}
           <View className="mb-4">
             <Text className="mb-1 text-sm font-medium text-slate-200">
               Work email
@@ -162,7 +210,6 @@ const navigation = useNavigation<AuthNav>();
             />
           </View>
 
-          {/* Password */}
           <View className="mb-2">
             <Text className="mb-1 text-sm font-medium text-slate-200">
               Password
@@ -185,7 +232,6 @@ const navigation = useNavigation<AuthNav>();
             security standards.
           </Text>
 
-          {/* Submit button */}
           <Pressable
             className="mt-2 h-11 rounded-xl bg-sky-400 items-center justify-center disabled:opacity-50"
             disabled={isSubmitting}
@@ -200,13 +246,14 @@ const navigation = useNavigation<AuthNav>();
             )}
           </Pressable>
 
-          {/* Footer: link back to Login */}
           <View className="mt-6 flex-row justify-center">
             <Text className="text-sm text-slate-400">
               Already have an account?{' '}
             </Text>
-            <Pressable onPress={() => navigation.navigate("Login")}>
-                <Text className="text-sm font-semibold text-sky-400">Sign in</Text>
+            <Pressable onPress={() => navigation.navigate('Login')}>
+              <Text className="text-sm font-semibold text-sky-400">
+                Sign in
+              </Text>
             </Pressable>
           </View>
         </View>
