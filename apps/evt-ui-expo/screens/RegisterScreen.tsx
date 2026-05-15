@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert
 } from 'react-native';
 import { useAuth } from '../src/auth/AuthContext'; // adjust path if needed
 
@@ -78,9 +79,10 @@ const navigation = useNavigation<AuthNav>();
     try {
       await register({ email, password, fullName });
 
-      // On success, the user is fully authenticated via AuthContext.
-      // Navigation: replace this with your real navigation call:
-      // navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+      Alert.alert(
+        'Welcome aboard!',
+        'Your account was created successfully.',
+      );
     } catch (err) {
       if (err instanceof KratosFormError) {
         setError(err.message);
