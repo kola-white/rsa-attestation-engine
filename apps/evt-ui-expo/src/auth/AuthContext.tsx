@@ -536,48 +536,15 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       }
 
       if (Platform.OS === "web") {
-        const browserResult = submitJson as {
-          session?: {
-            id: string;
-            identity?: {
-              id: string;
-              traits?: {
-                email?: string;
-                [key: string]: unknown;
-              };
-            };
-          };
-        };
+        const hydrated = await hydrateWebKratosSession();
 
-        const kratosIdentityId = browserResult.session?.identity?.id;
-        const emailFromKratos = browserResult.session?.identity?.traits?.email;
-
-        if (!browserResult.session || !kratosIdentityId) {
+        if (!hydrated) {
           setStatus("unauthenticated");
           throw new AuthError(
-            "missing_browser_session",
-            "Kratos did not return a valid browser session."
+            "web_exchange_failed",
+            "Sign-in succeeded, but we could not finish loading your app session."
           );
         }
-
-        setAccessToken(null);
-        
-        const resolvedEmail = emailFromKratos ?? identifier;
-        const role = resolveDemoRole(resolvedEmail);
-
-        console.log("[Auth][web whoami] resolved user", {
-          id: kratosIdentityId,
-          email: resolvedEmail,
-          role,
-        });
-
-        setUser({
-          id: kratosIdentityId,
-          email: resolvedEmail,
-          role,
-        } as User);
-        setSessionExpiredReason(null);
-        setStatus("authenticated");
 
         return;
       }
@@ -742,6 +709,20 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
           "Registration failed unexpectedly. Please try again.",
           typeof submitJson === "string" ? submitJson : JSON.stringify(submitJson)
         );
+      }
+
+      if (Platform.OS === "web") {
+        const hydrated = await hydrateWebKratosSession();
+
+        if (!hydrated) {
+          setStatus("unauthenticated");
+          throw new AuthError(
+            "web_exchange_failed",
+            "Registration succeeded, but we could not finish loading your app session."
+          );
+        }
+
+        return;
       }
 
       const regResult = submitJson as KratosSuccessfulNativeRegistration;
