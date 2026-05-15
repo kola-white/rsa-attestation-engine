@@ -660,6 +660,11 @@ export const HRReviewScreenSettingsStyle = () => {
   }
 
   const handleUploadEvidencePress = () => {
+    console.log("[HRReview][upload] pressed");
+    console.log("[HRReview][upload] API_BASE_URL present?", !!API_BASE_URL);
+    console.log("[HRReview][upload] canUpload", canUpload);
+    console.log("[HRReview][upload] uploadState", uploadState.status);
+    console.log("[HRReview][upload] selected", selected?.request_id ?? null);
     if (!API_BASE_URL) {
       setUploadState({
         status: "error",
@@ -670,8 +675,14 @@ export const HRReviewScreenSettingsStyle = () => {
     }
 
     if (!canUpload) {
-      return;
-    }
+     Alert.alert("Upload in progress", "Please wait for the current upload step to finish.");
+       return;
+     }
+
+     if (Platform.OS === "web") {
+      void pickAndUploadDocument();
+     return;
+   }
 
     if (Platform.OS === "ios") {
       ActionSheetIOS.showActionSheetWithOptions(
@@ -744,7 +755,18 @@ const isEmpty = !loading && queue.length === 0;
   }, [selected]);
 
 const handleChooseRequest = () => {
-  if (!queue.length) return;
+  console.log("[HRReview][choose] pressed");
+  console.log("[HRReview][choose] queue.length", queue.length);
+  console.log("[HRReview][choose] loading", loading);
+  if (!queue.length) {
+    Alert.alert("No requests", "There are no requests waiting for review.");
+    return;
+  }
+
+  if (loading) {
+    Alert.alert("Still loading", "Requests are still loading. Try again in a moment.");
+    return;
+  }
 
   const options = ["Cancel", ...queue.map((q) => q.request_id)];
 
@@ -774,14 +796,15 @@ const handleChooseRequest = () => {
         ...queue.map((q) => ({
           text: q.request_id,
           onPress: () => void (async () => {
-            setLoading(true);
-            try {
-              const d = await fetchDetail(q.request_id);
-              setSelected(d);
-            } finally {
-              setLoading(false);
-            }
-          })(),
+             setLoading(true);
+             try {
+               const d = await fetchDetail(q.request_id);
+               setSelected(d);
+               selectedIdRef.current = d.request_id;
+             } finally {
+               setLoading(false);
+             }
+           })(),
         })),
         { text: "Cancel", style: "cancel" },
       ]
@@ -887,13 +910,22 @@ const onPullRefresh = React.useCallback(async () => {
   const [attesting, setAttesting] = useState<EmployerResponseType | null>(null);
 
   async function attest(responseType: EmployerResponseType) {
+    console.log("[HRReview][attest] pressed", responseType);
+    console.log("[HRReview][attest] selected", selected);
+    console.log("[HRReview][attest] accessToken present?", !!accessToken);
+    console.log("[HRReview][attest] queue.length", queue.length);
+    console.log("[HRReview][attest] loading", loading);
+    console.log("[HRReview][attest] attesting", attesting);
 
-  if (attesting) return;
+  if (attesting) {
+    Alert.alert("Decision in progress", "Please wait for the current decision to finish.");
+    return;
+  }
+
   try {
     if (!selected) return Alert.alert("No request selected.");
     if (!API_BASE_URL) return Alert.alert("Config error", "Missing API base URL.");
     if (!accessToken) return Alert.alert("Auth error", "Missing access token.");
-    if (!selected) return Alert.alert("No request selected.");
     if (queue.length === 0) return Alert.alert("No requests waiting for review.");
 
     setAttesting(responseType);
@@ -1074,7 +1106,7 @@ function handleReject() {
                 </Text>
 
                 <Pressable
-                  disabled={!queue.length || loading}
+                  disabled={false}
                   onPress={handleChooseRequest}
                   accessibilityRole="button"
                   accessibilityLabel="Choose request"
@@ -1214,7 +1246,7 @@ function handleReject() {
                 </Text>
                 <View className="mt-3">
                   <Pressable
-                    disabled={!canUpload}
+                    disabled={false}
                     onPress={handleUploadEvidencePress}
                     accessibilityRole="button"
                     accessibilityLabel="Upload evidence"
@@ -1293,7 +1325,16 @@ function handleReject() {
             bottomInset={insets.bottom}
             onApprove={() => void attest("FULL_MATCH")}
             onReject={handleReject}
-            disabled={!!attesting || loading || !selected || isEmpty}
+            disabled={!!attesting || !selected || isEmpty}
+            disabledReason={
+              attesting
+                ? "Decision in progress"
+                : !selected
+                ? "No request selected"
+                : isEmpty
+                ? "No requests waiting for review"
+                : null
+            }
             attesting={attesting}
           />
           </View>
@@ -1424,12 +1465,14 @@ function DecisionBar({
   onApprove,
   onReject,
   disabled,
+  disabledReason,
   attesting
 }: {
   bottomInset: number;
   onApprove: () => void;
   onReject: () => void;
   disabled?: boolean;
+  disabledReason?: string | null;
   attesting: EmployerResponseType | null;
 }) {
   return (
@@ -1474,6 +1517,11 @@ function DecisionBar({
         )}
         </Pressable>
       </View>
+      {disabled && disabledReason ? (
+        <Text className="text-xs text-zinc-500 dark:text-zinc-400 text-center mt-2">
+          {disabledReason}
+        </Text>
+      ) : null}
     </View>
   );
 };
