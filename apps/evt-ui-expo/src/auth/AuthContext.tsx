@@ -133,7 +133,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       console.log("[Auth][web whoami] request failed", error);
       return false;
     }
-  }, [KRATOS_BASE_URL]);
+  }, []);
 
   // [DEV] minimal state logging
   useEffect(() => {
@@ -630,8 +630,6 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         const uiAny = flow.ui as unknown as { nodes?: unknown };
         console.log("[Auth][register] flow.ui.nodes", JSON.stringify(uiAny.nodes ?? []));
 
-        // 2) Submit credentials
-        const identifier = (email ?? "").trim().toLowerCase();
 
         const csrfToken =
           Platform.OS === "web"
@@ -712,17 +710,14 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       }
 
       if (Platform.OS === "web") {
-        const hydrated = await hydrateWebKratosSession();
+        console.log("[Auth][register] registration succeeded; user must sign in");
 
-        if (!hydrated) {
-          setStatus("unauthenticated");
-          throw new AuthError(
-            "web_exchange_failed",
-            "Registration succeeded, but we could not finish loading your app session."
-          );
-        }
+        setStatus("unauthenticated");
 
-        return;
+        throw new AuthError(
+          "registration_requires_login",
+          "Registration succeeded. Please sign in with your new account."
+        );
       }
 
       const regResult = submitJson as KratosSuccessfulNativeRegistration;
