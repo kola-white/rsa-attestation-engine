@@ -691,7 +691,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
 
         const submitBody = {
         method: "password",
-        "traits.email": email,
+        identifier,
         password,
         ...(Platform.OS === "web" ? { csrf_token: csrfToken } : {}),
       };
