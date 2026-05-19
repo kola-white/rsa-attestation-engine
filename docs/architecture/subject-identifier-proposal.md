@@ -34,52 +34,67 @@ without introducing unnecessary complexity into the MVP.
 
 # 2. Problem Statement
 
-The MVP currently uses email-based subject identifiers:
+The MVP currently uses email primarily as:
 
-```json
-{
-  "subject": {
-    "identifier": "mailto:user@example.com"
-  }
-}
+- authentication credential
+- contact method
+- convenience lookup value
+
+Email is currently stored in:
+
+- `evt_kratos.identities.traits.email`
+- `evt.domain_users.email`
+
+However, email is not currently the true persistence anchor for request workflows.
+
+Current request workflows instead rely primarily on:
+
+```text
+evt_requests.candidate_personid
+
 ```
-
-This creates several architectural concerns:
-
-- email is mutable
-- email is contextual
-- email is correlatable
-- email may expose unnecessary personal information
-- email conflates account identity, contact method, and credential subject identity
-- email is unsuitable as a long-term persistence anchor
-
-The system therefore requires a stable internal subject abstraction.
 
 ---
 
-# 3. Proposed Internal Subject Identifier
+# 3. Current Internal Identity Structure
 
-Cvera introduces an internal subject identifier with the following structure:
+The MVP currently maintains two distinct internal identity references:
+
+```text
+domain_users.id
+```
+Stable authenticated application principal identifier.
 
 ```text
 domain_users.kratos_identity_id
 ```
+Upstream authentication-provider linkage reference.
 
-## Example
+The system therefore requires clearer long-term separation between:
 
+- authentication identity
+- authenticated application principal
+- workflow actor identity
+- claim-subject identity
+
+The current MVP partially establishes these boundaries but does not yet maintain a dedicated generalized internal subject model.
+
+Proposed Future Internal Subject Identifier
+
+The MVP does not yet implement a dedicated generalized internal subject identifier.
+
+The currently proposed future structure remains under evaluation:
 ```text
-domain_users.01J8YQZ7X5J6K2R9M4N8P1T3V6
+sid_<ULID>
 ```
+## Proposed Structure Breakdown
+| Component | Meaning                             |
+| --------- | ----------------------------------- |
+| `sid`     | subject identifier prefix           |
+| `_`       | separator                           |
+| `ULID`    | globally unique sortable identifier |
 
-## Structure Breakdown
-
-| Component | Meaning |
-|---|---|
-| `sid` | subject identifier prefix |
-| `_` | separator |
-| `ULID` | globally unique sortable identifier |
-
-The identifier is:
+If implemented, the future identifier would be:
 
 - opaque
 - non-semantic
@@ -87,7 +102,7 @@ The identifier is:
 - internal-only
 - stable across claim records
 
-The identifier is **NOT**:
+The proposed future identifier would NOT be:
 
 - a DID
 - a public subject identifier
@@ -95,9 +110,9 @@ The identifier is **NOT**:
 - an email address
 - a verifier lookup key
 - a universal identity layer
-
----
-
+```
+--- 
+```
 # 4. Principal vs Claim Subject Boundary
 
 Cvera distinguishes between:
@@ -131,26 +146,6 @@ This separation is necessary to avoid coupling:
 
 ---
 
-# 5. Internal Subject Representation
-
-## Example
-
-```json
-{
-  "subject": {
-    "internal_ref": "sid_01J8YQZ7X5J6K2R9M4N8P1T3V6",
-    "exposure": "internal_only"
-  }
-}
-```
-
-## Reference Artifact
-
-```text
-docs/examples/subject-identifier.internal.json
-```
----
-
 ```mermaid
 flowchart TD
   A[Kratos Identity] --> B[Authenticated Principal<br/>domain_users.id]
@@ -159,9 +154,11 @@ flowchart TD
   C --> D[Domain Actor]
   D --> E[Permissions / Workflow]
 
-  F[Claim Subject] -. may differ from .-> B
+  F[Claim Subject]
+  G[evt_requests.candidate_personid]
 
-  G[evt_requests.candidate_personid] --> F
+  G --> F
+  F -. may differ from .-> B
 ```
 ---
 
@@ -191,15 +188,18 @@ External identifiers should instead be:
 }
 ```
 
-## Reference Artifact
+## Illustrative Example
+
+The following example illustrates the intended structure of future external subject representations.
 
 ```text
-docs/examples/subject-identifier.external.json
+docs/architecture/subject-identifier.external.json
 ```
 
+Example artifact paths shown in this document are conceptual references only and may not yet exist within the repository.
 ---
 
-# 5. Privacy Position
+# 6. Privacy Position
 
 This proposal intentionally separates:
 
@@ -227,7 +227,7 @@ rather than universal subject lookup.
 
 ---
 
-# 6. W3C / VC Alignment
+# 7. W3C / VC Alignment
 
 This proposal follows:
 
@@ -246,13 +246,13 @@ However, the design is intended to remain compatible with future evolution towar
 
 ---
 
-# 7. Current Decisions
+# 8. Current Decisions
 
 | Decision | Status |
 |---|---|
-| Internal subject identifier prefix = `sid` | Accepted |
-| Unique ID format = ULID | Accepted |
-| Visibility = internal-only | Accepted |
+| Proposed future internal subject identifier prefix = `sid` | Under evaluation |
+| Proposed future unique ID format = ULID | Under evaluation |
+| Proposed future visibility = internal-only | Under evaluation |
 | External identifiers = typed + scoped | Accepted |
 | Email as canonical subject identity | Rejected |
 | DID requirement for MVP | Rejected |
@@ -260,7 +260,7 @@ However, the design is intended to remain compatible with future evolution towar
 
 ---
 
-# 8. Open Questions for Review
+# 9. Open Questions for Review
 
 - Should internal subject references ever appear inside signed artifacts?
 - Should issuer-scoped identifiers become mandatory externally?
@@ -271,7 +271,7 @@ However, the design is intended to remain compatible with future evolution towar
 
 ---
 
-# 9. Future Review Areas
+# 10. Future Review Areas
 
 Future architecture discussions may include:
 
@@ -288,11 +288,13 @@ Future architecture discussions may include:
 
 ---
 
-# 10. Example Artifacts
+# 11. Example Artifacts
 
 ## Internal Subject Reference Example
 
-**File:** `docs/examples/subject-identifier.internal.json`
+The following structure represents a proposed future generalized internal subject model and is not yet implemented in the current MVP.
+
+**File:** `docs/architecture/subject-identifier.internal.json`
 
 ```json
 {
@@ -305,7 +307,7 @@ Future architecture discussions may include:
 
 ## External Subject Identifier Example
 
-**File:** `docs/examples/subject-identifier.external.json`
+**File:** `docs/architecture/subject-identifier.external.json`
 
 ```json
 {
@@ -322,7 +324,7 @@ Future architecture discussions may include:
 ```
 ---
 
-# 11. Internal Principal vs External Claim Boundary
+# 12. Internal Principal vs External Claim Boundary
 
 ```mermaid
 flowchart LR
@@ -354,7 +356,7 @@ flowchart LR
 ```
   ---
 
-# 12. Summary
+# Summary
 
 Cvera currently separates:
 
@@ -364,7 +366,7 @@ Cvera currently separates:
 - claim-subject semantics
 - verifier-facing identifiers
 
-The architecture intentionally avoids premature commitment to:
+The current MVP architecture intentionally avoids premature commitment to:
 - globally reusable public subject identifiers
 - universal subject lookup
 - premature DID coupling
@@ -375,3 +377,4 @@ Current backend analysis indicates that:
 - `evt_requests.candidate_personid` currently functions as the employment claim-subject reference
 
 A future architecture review will determine whether a dedicated long-term internal subject model is necessary beyond the current MVP structure.
+```
