@@ -29,6 +29,7 @@
 
   * `api.cvera.app` → EVT Go API.
   * `auth.cvera.app` → Kratos public endpoint (behind Nginx).
+  * `mvp.cvera.app` → Expo web MVP product surface and browser-based authentication UI.
 
 * **TLS / Nginx:**
 
@@ -115,6 +116,45 @@ flowchart LR
     class API api;
     class PK,PE db;
 ```
+### Browser vs Native Flow Model (MVP Direction)
+
+The current architecture originated as an API-first / native-first authentication system.
+
+As the MVP evolved during IIW demo preparation, `mvp.cvera.app` became the primary browser-accessible product surface.
+
+The target long-term model is now:
+
+* `mvp.cvera.app`
+
+  * Product landing surface
+  * Browser-rendered login / registration experience backed by Kratos browser flows
+  * Browser-authenticated Kratos sessions are exchanged into EVT API access semantics.
+
+* `auth.cvera.app`
+
+  * Kratos identity provider and self-service flow engine
+  * Browser/API flow orchestration
+  * Identity/session authority
+
+* Native Expo iOS clients
+
+  * Continue using Kratos API/native flows
+  * Continue using EVT API token exchange patterns
+
+This preserves a separation between:
+
+* product UI
+* identity infrastructure
+* domain authorization
+* future holder/wallet systems
+
+Browser flows and native flows intentionally use different session semantics:
+
+* Browser flows rely on Kratos browser self-service flows, cookies, CSRF protections, and browser redirects.
+* Native Expo iOS flows rely on Kratos API/native flows and explicit token exchange patterns.
+
+This distinction is intentional and should remain preserved as the platform evolves.
+
 ---
 
 ## 2. Identity Model
@@ -257,17 +297,108 @@ Validation rules:
 
 ### 4.2 Auth Flow Responsibility
 
-* **Expo iOS app → Kratos (auth.cvera.app)**:
+* **Expo clients → Kratos (`auth.cvera.app`)**
 
-  * Handles:
+  Two distinct client models are supported:
 
-    * Self-service login flow (email/password).
-    * Password reset / registration in future.
-  * Output: a **Kratos session** (session cookie or token, depending on chosen mode).
+  * Browser/web flows (`mvp.cvera.app`)
+  * Native/API flows (Expo iOS)
+
+  Browser flows use Kratos browser self-service flows.
+
+  Native iOS clients use Kratos API/native flows.
 
 * **Expo iOS app → EVT API (api.cvera.app)**:
 
   * After Kratos login, client calls EVT API to get **API tokens**.
+
+### Browser Flow Direction (MVP)
+
+The earlier API-first implementation temporarily used:
+
+```text
+https://api.cvera.app/healthz
+```
+as a browser return target during early infrastructure phases.
+
+The target MVP browser return behavior is:
+
+`https://mvp.cvera.app`
+
+or authenticated product-specific routes under:
+
+`https://mvp.cvera.app/*`
+
+This aligns browser authentication completion with the MVP product surface rather than API infrastructure endpoints.
+
+**Target browser flow model:**
+
+1. User lands on `mvp.cvera.app`
+2. User selects login or registration
+3. `mvp.cvera.app` initiates Kratos browser self-service flows through auth.cvera.app
+4. Kratos handles identity/session orchestration
+5. Successful authentication returns user to `mvp.cvera.app`
+6. Browser session is hydrated into EVT API access
+
+> **Note:** This replaces the earlier API-first placeholder return model that used: `https://api.cvera.app/healthz` as a temporary browser return target during earlier infrastructure phases.
+
+### Planned Verification & Recovery Flows
+
+The MVP browser authentication model will include:
+
+* Email verification flows
+* Password recovery flows
+
+Planned browser-facing routes:
+
+```text
+https://mvp.cvera.app/verify
+https://mvp.cvera.app/recovery
+```
+
+Initial implementation priorities:
+
+1. Registration
+2. Login
+3. Verification
+4. Recovery
+
+The following are intentionally deferred:
+
+* Magic-link authentication
+* MFA / OTP
+* Passkeys / WebAuthn
+* Wallet-holder identity delegation
+
+### Planned Browser Selfservice UI Targets (Future Selfservice Route Direction)
+
+The target MVP browser UI routes are:
+
+```text
+https://mvp.cvera.app/login
+https://mvp.cvera.app/register
+https://mvp.cvera.app/recovery
+https://mvp.cvera.app/verify
+https://mvp.cvera.app/error
+```
+
+Current mounted Expo auth screens:
+
+```text
+Login
+Register
+ForgotPassword
+```
+Additional browser-facing routes will be introduced incrementally during the MVP browser-auth migration.
+
+> **Note:** The current deployed configuration still reflects legacy selfservice UI targets hosted under:
+>
+> ```text
+> https://auth.cvera.app/ui/*
+> ```
+>
+> Migration to MVP browser-facing routes will occur incrementally to avoid disruption to existing authentication flows.
+
 
 ### 4.3 Proposed Integration Pattern
 
@@ -293,6 +424,16 @@ Concretely, introduce:
     4. Stores refresh token hash in `evt.refresh_tokens`.
 
   * Output: same JSON as `/auth/login` in v0.3 (minus password).
+
+### Browser Exchange Variant
+
+As browser-based flows mature under `mvp.cvera.app`, a dedicated browser-oriented exchange path may continue to exist separately from native exchange flows.
+
+Current implementation already includes:
+
+```text
+POST /auth/web/exchange
+```
 
 > **Note:** v0.3 `/auth/login` (email/password) should be considered **deprecated** in favor of `POST /auth/exchange` that uses Kratos as the IDP.
 
