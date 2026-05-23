@@ -43,17 +43,32 @@ identity:
       url: file:///etc/config/kratos/identity.schema.json
 
 selfservice:
-  default_browser_return_url: https://api.cvera.app/healthz
+  default_browser_return_url: https://mvp.cvera.app
   allowed_return_urls:
-    - https://api.cvera.app/*
+    - https://mvp.cvera.app
+    - https://mvp.cvera.app/*
     - cvera://auth/callback
 
   flows:
+    error:
+      ui_url: https://mvp.cvera.app/error
+
     login:
-      ui_url: https://auth.cvera.app/ui/login
+      ui_url: https://mvp.cvera.app/login
       lifespan: 10m
+
     registration:
-      ui_url: https://auth.cvera.app/ui/registration
+      ui_url: https://mvp.cvera.app/register
+      lifespan: 30m
+
+    verification:
+      enabled: true
+      ui_url: https://mvp.cvera.app/verify
+      lifespan: 24h
+
+    recovery:
+      enabled: true
+      ui_url: https://mvp.cvera.app/recovery
       lifespan: 30m
 
 courier:
