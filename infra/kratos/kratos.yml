@@ -73,8 +73,9 @@ selfservice:
 
 courier:
   smtp:
-    # placeholder; we’ll fix later
-    connection_uri: smtps://user:pass@smtp.example.com:465/
+    connection_uri: ${KRATOS_COURIER_SMTP_CONNECTION_URI}
+    from_address: auth@cvera.app
+    from_name: Cvera
 
 secrets:
   default:
