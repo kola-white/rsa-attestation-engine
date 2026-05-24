@@ -195,10 +195,9 @@ export const RecoveryScreen: React.FC = () => {
 
       setInfo("If that email exists, you`ll receive password reset instructions shortly.");
     } catch (e) {
-      if (e instanceof KratosFormError) setError(e.message);
-      else if (e instanceof AuthError) setError(e.message);
-      else if (e instanceof Error) setError(e.message || "Something went wrong. Please try again.");
-      else setError("Something went wrong. Please try again.");
+      console.warn("[RecoveryScreen] recovery submit failed", e);
+      setError(null);
+      setInfo("If that email exists, you`ll receive password reset instructions shortly.");
     } finally {
       setIsSubmitting(false);
     }
