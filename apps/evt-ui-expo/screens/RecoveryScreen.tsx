@@ -20,6 +20,30 @@ const KRATOS_BASE_URL = "https://auth.cvera.app";
 
 type AuthNav = NativeStackNavigationProp<AuthStackParamList, "ForgotPassword">;
 
+const getBrowserFlowId = (): string | null => {
+  if (Platform.OS !== "web") return null;
+  if (typeof window === "undefined") return null;
+
+  return new URLSearchParams(window.location.search).get("flow");
+};
+
+const extractCsrfToken = (flow: KratosRecoveryFlow): string => {
+  const csrfNode = flow.ui.nodes.find(
+    (node) => node.attributes?.name === "csrf_token"
+  );
+
+  const value = csrfNode?.attributes?.value;
+
+  if (!value) {
+    throw new AuthError(
+      "missing_csrf_token",
+      "Unable to start password recovery. Please try again."
+    );
+  }
+
+  return value;
+};
+
 const isValidEmail = (value: string): boolean => {
   const email = value.trim();
   if (!email) return false;
@@ -44,6 +68,7 @@ export const RecoveryScreen: React.FC = () => {
   const [info, setInfo] = useState<string | null>(null);
 
   const handleSubmit = useCallback(async () => {
+    
     const normalizedEmail = email.trim().toLowerCase();
 
     setError(null);
@@ -57,7 +82,72 @@ export const RecoveryScreen: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // 1) Create recovery flow
+      const browserFlowId = getBrowserFlowId();
+
+      if (Platform.OS === "web" && browserFlowId) {
+        // Browser web path:
+        // Use the Kratos browser recovery flow created by the redirect URL:
+        // /recovery?flow=<id>
+        const flowRes = await fetch(
+          `${KRATOS_BASE_URL}/self-service/recovery/flows?id=${encodeURIComponent(
+            browserFlowId
+          )}`,
+          {
+            method: "GET",
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          }
+        );
+
+        if (!flowRes.ok) {
+          const text = await flowRes.text();
+          throw new AuthError(
+            "load_browser_recovery_flow_failed",
+            "Unable to start password recovery. Please try again.",
+            text
+          );
+        }
+
+        const flow = (await flowRes.json()) as KratosRecoveryFlow;
+        const csrfToken = extractCsrfToken(flow);
+
+        const submitRes = await fetch(flow.ui.action, {
+          method: flow.ui.method,
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json; charset=utf-8",
+          },
+          body: JSON.stringify({
+            method: "code",
+            email: normalizedEmail,
+            csrf_token: csrfToken,
+          }),
+        });
+
+        if (submitRes.status === 400) {
+          await submitRes.json().catch(() => null);
+          setInfo("If that email exists, you`ll receive password reset instructions shortly.");
+          return;
+        }
+
+        if (!submitRes.ok) {
+          const text = await submitRes.text();
+          throw new AuthError(
+            "browser_recovery_submit_failed",
+            "We couldn`t send recovery instructions. Please try again.",
+            text
+          );
+        }
+
+        await submitRes.json().catch(() => null);
+
+        setInfo("If that email exists, you`ll receive password reset instructions shortly.");
+        return;
+      }
+
+      // Native iOS / non-browser fallback path:
+      // Preserve your existing Kratos API recovery flow.
       const flowRes = await fetch(`${KRATOS_BASE_URL}/self-service/recovery/api`, {
         method: "GET",
         headers: { Accept: "application/json" },
@@ -74,7 +164,6 @@ export const RecoveryScreen: React.FC = () => {
 
       const flow = (await flowRes.json()) as KratosRecoveryFlow;
 
-      // 2) Submit email to flow
       const submitRes = await fetch(flow.ui.action, {
         method: flow.ui.method,
         headers: {
@@ -82,15 +171,15 @@ export const RecoveryScreen: React.FC = () => {
           "Content-Type": "application/json; charset=utf-8",
         },
         body: JSON.stringify({
-          method: "code", // common Kratos recovery method; server decides actual behavior
+          method: "code",
           email: normalizedEmail,
         }),
       });
 
       if (submitRes.status === 400) {
-        const data = (await submitRes.json()) as KratosErrorResponse;
-        const msg = extractRecoveryMessage(data);
-        throw new KratosFormError(msg);
+        await submitRes.json().catch(() => null);
+        setInfo("If that email exists, you`ll receive password reset instructions shortly.");
+        return;
       }
 
       if (!submitRes.ok) {
@@ -103,9 +192,7 @@ export const RecoveryScreen: React.FC = () => {
       }
 
       await submitRes.json().catch(() => null);
-      
-      // For now: minimal UX
-      // Always show the “safe” message (don’t confirm account existence)
+
       setInfo("If that email exists, you`ll receive password reset instructions shortly.");
     } catch (e) {
       if (e instanceof KratosFormError) setError(e.message);

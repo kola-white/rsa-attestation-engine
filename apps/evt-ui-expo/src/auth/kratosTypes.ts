@@ -21,7 +21,11 @@ export interface KratosUiNodeAttributes {
 export interface KratosUiNode {
   type: string;
   group: string;
-  attributes?: KratosUiNodeAttributes;
+  attributes?: {
+    name?: string;
+    value?: string;
+    type?: string;
+  };
   messages?: KratosUiText[];
   meta?: unknown;
 }
@@ -87,5 +91,10 @@ export class KratosFormError extends Error {
 export interface KratosRecoveryFlow {
   id: string;
   type: 'api' | 'browser';
-  ui: KratosUiContainer;
+  ui: {
+    action: string;
+    method: string;
+    nodes: KratosUiNode[];
+  };
 }
+

@@ -1,5 +1,5 @@
 import "./global.css"; // Must be first import to load env variables
-import { DefaultTheme, DarkTheme } from "@react-navigation/native";
+import { DefaultTheme, DarkTheme, LinkingOptions } from "@react-navigation/native";
 import React, { useEffect } from "react";
 import { View, useColorScheme } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -8,7 +8,20 @@ import * as SystemUI from "expo-system-ui";
 import { NavigationContainer } from "@react-navigation/native";
 import { AuthProvider } from "@/src/auth/AuthContext";
 import { AppShell } from "@/AppShell";
+import { AuthStackParamList } from "./src/navigation/types";
 
+const linking: LinkingOptions<AuthStackParamList> = {
+  prefixes: ["https://mvp.cvera.app", "http://localhost:8081"],
+  config: {
+    screens: {
+      Login: "login",
+      Register: "register",
+      ForgotPassword: "recovery",
+      Verify: "verify",
+      AuthError: "error",
+    },
+  },
+};
 
 export default function App() {
   console.log("EVT API BASE URL:", process.env.EXPO_PUBLIC_EVT_API_BASE_URL);
@@ -32,7 +45,10 @@ export default function App() {
         <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
 
         <AuthProvider>
-          <NavigationContainer theme={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+          <NavigationContainer
+            linking={linking}
+            theme={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+          >            
             <AppShell />
           </NavigationContainer>
         </AuthProvider>
