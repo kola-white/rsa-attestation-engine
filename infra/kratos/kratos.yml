@@ -72,8 +72,9 @@ selfservice:
       lifespan: 30m
 
 courier:
+  delivery_strategy: smtp
   smtp:
-    connection_uri: env://KRATOS_COURIER_SMTP_CONNECTION_URI
+    connection_uri: env://COURIER_SMTP_CONNECTION_URI
     from_address: auth@cvera.app
     from_name: Cvera
 
