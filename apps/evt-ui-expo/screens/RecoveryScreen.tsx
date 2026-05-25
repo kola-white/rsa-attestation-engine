@@ -70,6 +70,8 @@ export const RecoveryScreen: React.FC = () => {
   const handleSubmit = useCallback(async () => {
     
     const normalizedEmail = email.trim().toLowerCase();
+    const browserFlowId = getBrowserFlowId();
+
 
     setError(null);
     setInfo(null);
@@ -79,10 +81,15 @@ export const RecoveryScreen: React.FC = () => {
       return;
     }
 
+    if (Platform.OS === "web" && !browserFlowId) {
+    window.location.href =
+      `${KRATOS_BASE_URL}/self-service/recovery/browser`;
+    return;
+  }
+
     setIsSubmitting(true);
 
     try {
-      const browserFlowId = getBrowserFlowId();
 
       if (Platform.OS === "web" && browserFlowId) {
         // Browser web path:
