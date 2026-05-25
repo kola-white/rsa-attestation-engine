@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { AuthStackParamList } from "@/src/navigation/types";
@@ -66,6 +66,16 @@ export const RecoveryScreen: React.FC = () => {
 
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+
+  useEffect(() => {
+  if (Platform.OS !== "web") return;
+
+  const browserFlowId = getBrowserFlowId();
+
+  if (!browserFlowId) {
+    window.location.href = `${KRATOS_BASE_URL}/self-service/recovery/browser`;
+  }
+}, []);
 
   const handleSubmit = useCallback(async () => {
     
