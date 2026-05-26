@@ -91,6 +91,11 @@ export class KratosFormError extends Error {
 export interface KratosRecoveryFlow {
   id: string;
   type: 'api' | 'browser';
+  expires_at?: string;
+  issued_at?: string;
+  request_url?: string;
+  return_to?: string;
+  state: string;
   ui: {
     action: string;
     method: string;
