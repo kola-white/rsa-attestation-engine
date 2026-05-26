@@ -437,20 +437,29 @@ export const RecoveryScreen: React.FC = () => {
         return;
       }
 
-      if (!response.ok) {
-        setError('That recovery code could not be accepted. Please try again.');
-        dispatch({
-          type: 'EMAIL_SENT',
-          flowId: protocolFlow.id,
-          email: email.trim().toLowerCase() || undefined,
-          canResend: hasRecoveryEmailNode(protocolFlow),
-        });
-        return;
-      }
-
       const data = (await response.json().catch(() => null)) as
-        | KratosRecoveryCodeSubmitResponse
-        | null;
+          | KratosRecoveryCodeSubmitResponse
+          | null;
+
+        if (response.status === 422 && data) {
+          const redirectUrl = getContinueWithRedirect(data);
+
+          if (redirectUrl && Platform.OS === 'web') {
+            window.location.assign(redirectUrl);
+            return;
+          }
+        }
+
+        if (!response.ok) {
+          setError('That recovery code could not be accepted. Please try again.');
+          dispatch({
+            type: 'EMAIL_SENT',
+            flowId: protocolFlow.id,
+            email: email.trim().toLowerCase() || undefined,
+            canResend: hasRecoveryEmailNode(protocolFlow),
+          });
+          return;
+        }
 
       if (data) {
         const redirectUrl = getContinueWithRedirect(data);

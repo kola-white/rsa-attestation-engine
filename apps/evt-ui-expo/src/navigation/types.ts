@@ -5,6 +5,7 @@ export type AuthStackParamList = {
   ForgotPassword: undefined;
   Verify: undefined;
   AuthError: undefined;
+  Settings: undefined;
 };
 
 export type MainStackParamList = {

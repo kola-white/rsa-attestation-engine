@@ -6,6 +6,7 @@ import { RecoveryScreen } from 'screens/RecoveryScreen';
 import { AuthStackParamList } from './types';
 import VerifyScreen from '@/screens/VerifyScreen';
 import AuthErrorScreen from '@/screens/AuthErrorScreen';
+import SettingsScreen from '@/screens/SettingsScreen';
 
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -23,6 +24,7 @@ export const AuthNavigator: React.FC = () => {
       <Stack.Screen name="ForgotPassword" component={RecoveryScreen} />
       <Stack.Screen name="Verify" component={VerifyScreen} />
       <Stack.Screen name="AuthError" component={AuthErrorScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
     </Stack.Navigator>
   );
 };

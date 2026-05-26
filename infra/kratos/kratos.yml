@@ -71,6 +71,10 @@ selfservice:
       enabled: true
       ui_url: https://mvp.cvera.app/recovery
       lifespan: 30m
+    
+    settings:
+      ui_url: https://mvp.cvera.app/settings
+      lifespan: 30m
 
 courier:
   delivery_strategy: smtp
