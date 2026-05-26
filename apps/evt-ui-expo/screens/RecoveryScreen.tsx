@@ -215,7 +215,7 @@ export const RecoveryScreen: React.FC = () => {
 
         const data = (await response.json()) as KratosRecoveryFlow;
         setProtocolFlow(data);
-        dispatch(mapBrowserFlowToAction(data, email || undefined));
+        dispatch(mapBrowserFlowToAction(data));
       } catch (e) {
         dispatch({
           type: 'FLOW_EXPIRED',
@@ -224,7 +224,7 @@ export const RecoveryScreen: React.FC = () => {
         });
       }
     },
-    [email],
+    [],
   );
 
   useEffect(() => {
