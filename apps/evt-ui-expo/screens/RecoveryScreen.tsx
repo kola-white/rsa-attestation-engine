@@ -89,7 +89,11 @@ const extractCsrfToken = (flow: KratosRecoveryFlow): string => {
 };
 
 const hasRecoveryEmailNode = (flow: KratosRecoveryFlow): boolean => {
-  return flow.ui.nodes.some((node) => node.attributes?.name === 'email');
+  return flow.ui.nodes.some(
+    (node) =>
+      node.attributes?.name === 'email' &&
+      node.attributes?.type === 'submit',
+  );
 };
 
 const mapBrowserFlowToAction = (
