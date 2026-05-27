@@ -42,7 +42,7 @@
       <mj-section padding="18px 28px 0 28px">
         <mj-column>
           <mj-text color="#475467" font-size="14px" line-height="22px" padding="0">
-            This code expires in {{ .ExpiresInMinutes }} minutes. Keep this window open and enter the code where Cvera prompted you.
+            This recovery code is time-sensitive and should be used immediately.          
           </mj-text>
         </mj-column>
       </mj-section>

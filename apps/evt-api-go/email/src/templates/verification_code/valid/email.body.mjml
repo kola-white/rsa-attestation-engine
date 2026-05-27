@@ -38,18 +38,15 @@
               {{ .VerificationCode }}
             </mj-text>
           </mj-column>
+      </mj-section>
+        <mj-section padding="18px 28px 0 28px">
+          <mj-column>
+            <mj-text color="#475467" font-size="14px" line-height="22px" padding="0">
+              This verification code is time-sensitive and should be used immediately. If you prefer, you can also verify using this secure link:
+              <a href="{{ .VerificationURL }}" style="color:#5B246C;text-decoration:underline;">verify account</a>.
+            </mj-text>
+          </mj-column>
         </mj-section>
-          </mj-text>
-        </mj-column>
-      </mj-section>
-      <mj-section padding="18px 28px 0 28px">
-        <mj-column>
-          <mj-text color="#475467" font-size="14px" line-height="22px" padding="0">
-            This code expires in {{ .ExpiresInMinutes }} minutes. If you prefer, you can also verify using this secure link:
-            <a href="{{ .VerificationURL }}" style="color:#5B246C;text-decoration:underline;">verify account</a>.
-          </mj-text>
-        </mj-column>
-      </mj-section>
       <mj-include path="../../../partials/security-note.mjml" />
       <mj-include path="../../../partials/footer.mjml" />
     </mj-wrapper>
