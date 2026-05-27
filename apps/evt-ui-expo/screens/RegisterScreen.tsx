@@ -122,7 +122,15 @@ export const RegisterScreen: React.FC = () => {
         }));
         console.log('[RegisterScreen] navigating to Verify with flow', flow);
         if (flow) {
-          navigation.navigate('Verify', { flow });
+          navigation.reset({
+            index: 0,
+            routes: [
+              {
+                name: 'Verify',
+                params: { flow },
+              },
+            ],
+          });
           return;
         }
 
