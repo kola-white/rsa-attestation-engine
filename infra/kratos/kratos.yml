@@ -83,6 +83,23 @@ courier:
     from_address: auth@cvera.app
     from_name: Cvera
 
+  templates:
+    verification_code:
+      valid:
+        email:
+          body:
+            html: file:///etc/config/kratos/courier-templates/verification_code/valid/email.body.gotmpl
+            plaintext: file:///etc/config/kratos/courier-templates/verification_code/valid/email.body.plaintext.gotmpl
+          subject: file:///etc/config/kratos/courier-templates/verification_code/valid/email.subject.gotmpl
+
+    recovery_code:
+      valid:
+        email:
+          body:
+            html: file:///etc/config/kratos/courier-templates/recovery_code/valid/email.body.gotmpl
+            plaintext: file:///etc/config/kratos/courier-templates/recovery_code/valid/email.body.plaintext.gotmpl
+          subject: file:///etc/config/kratos/courier-templates/recovery_code/valid/email.subject.gotmpl
+
 secrets:
   default:
     - ${KRATOS_SECRET_DEFAULT}

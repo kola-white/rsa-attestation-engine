@@ -1,0 +1,53 @@
+<mjml>
+  <mj-head>
+    <mj-title>Reset your Cvera password</mj-title>
+    <mj-preview>Use this recovery code to continue resetting your Cvera password.</mj-preview>
+    <mj-include path="../../../partials/head.mjml" />
+  </mj-head>
+  <mj-body background-color="#f6f7f9" width="640px">
+    <mj-wrapper background-color="#ffffff" border-radius="18px" padding="0" full-width="false">
+      <mj-include path="../../../partials/header.mjml" />
+      <mj-section padding="0 28px 0 28px">
+        <mj-column>
+          <mj-text css-class="eyebrow" color="#5B246C" font-size="12px" font-weight="700" line-height="16px" padding="0 0 10px 0">
+            Password recovery
+          </mj-text>
+          <mj-text color="#101828" font-size="24px" font-weight="700" line-height="32px" padding="0 0 12px 0">
+            Use this recovery code
+          </mj-text>
+          <mj-text padding="0 0 18px 0">
+            Enter this code in Cvera to continue resetting your password.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-section padding="0 28px 0 28px">
+        <mj-column
+          css-class="code-box"
+          background-color="#F9FAFB"
+          border="1px solid #EAECF0"
+          border-radius="12px"
+        >
+          <mj-text
+            align="center"
+            color="#101828"
+            font-size="32px"
+            font-weight="700"
+            line-height="40px"
+            padding="20px 12px"
+          >
+            {{ .RecoveryCode }}
+          </mj-text>
+        </mj-column>
+</mj-section>
+      <mj-section padding="18px 28px 0 28px">
+        <mj-column>
+          <mj-text color="#475467" font-size="14px" line-height="22px" padding="0">
+            This code expires in {{ .ExpiresInMinutes }} minutes. Keep this window open and enter the code where Cvera prompted you.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-include path="../../../partials/security-note.mjml" />
+      <mj-include path="../../../partials/footer.mjml" />
+    </mj-wrapper>
+  </mj-body>
+</mjml>

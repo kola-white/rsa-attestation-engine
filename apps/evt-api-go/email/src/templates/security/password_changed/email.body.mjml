@@ -1,0 +1,45 @@
+<mjml>
+  <mj-head>
+    <mj-title>Your Cvera password was changed</mj-title>
+    <mj-preview>Your Cvera password was changed successfully.</mj-preview>
+    <mj-include path="../../../partials/head.mjml" />
+  </mj-head>
+  <mj-body background-color="#f6f7f9" width="640px">
+    <mj-wrapper background-color="#ffffff" border-radius="18px" padding="0" full-width="false">
+      <mj-include path="../../../partials/header.mjml" />
+      <mj-section padding="0 28px 0 28px">
+        <mj-column>
+          <mj-text css-class="eyebrow" color="#5B246C" font-size="12px" font-weight="700" line-height="16px" padding="0 0 10px 0">
+            Security confirmation
+          </mj-text>
+          <mj-text color="#101828" font-size="24px" font-weight="700" line-height="32px" padding="0 0 12px 0">
+            Your password was changed
+          </mj-text>
+          <mj-text padding="0 0 18px 0">
+            This confirms that the password for your Cvera account was changed successfully.
+          </mj-text>
+          <mj-text color="#475467" font-size="14px" line-height="22px" padding="0">
+            If you made this change, no further action is needed.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-section padding="18px 28px 0 28px">
+        <mj-column
+          background-color="#F9FAFB"
+          border="1px solid #EAECF0"
+          border-radius="10px"
+        >
+          <mj-text
+            font-size="13px"
+            line-height="20px"
+            color="#344054"
+            padding="14px 16px"
+          >
+            If you did not change your password, return to Cvera and reset your password immediately.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-include path="../../../partials/footer.mjml" />
+    </mj-wrapper>
+  </mj-body>
+</mjml>

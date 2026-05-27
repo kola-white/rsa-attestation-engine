@@ -1,0 +1,11 @@
+{
+  "name": "cvera-kratos-mjml-templates",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "mjml": "^4.15.3"
+  }
+}

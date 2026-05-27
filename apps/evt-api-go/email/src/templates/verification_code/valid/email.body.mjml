@@ -1,0 +1,57 @@
+<mjml>
+  <mj-head>
+    <mj-title>Verify your Cvera account</mj-title>
+    <mj-preview>Use this verification code to confirm your Cvera account.</mj-preview>
+    <mj-include path="../../../partials/head.mjml" />
+  </mj-head>
+  <mj-body background-color="#f6f7f9" width="640px">
+    <mj-wrapper background-color="#ffffff" border-radius="18px" padding="0" full-width="false">
+      <mj-include path="../../../partials/header.mjml" />
+      <mj-section padding="0 28px 0 28px">
+        <mj-column>
+          <mj-text css-class="eyebrow" color="#5B246C" font-size="12px" font-weight="700" line-height="16px" padding="0 0 10px 0">
+            Account verification
+          </mj-text>
+          <mj-text color="#101828" font-size="24px" font-weight="700" line-height="32px" padding="0 0 12px 0">
+            Verify your Cvera account
+          </mj-text>
+          <mj-text padding="0 0 18px 0">
+            Enter this code in Cvera to confirm that this email address belongs to you.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+        <mj-section
+          padding="0 28px 0 28px"
+          background-color="#F9FAFB"
+          border="1px solid #EAECF0"
+          border-radius="12px"
+        >
+          <mj-column>
+            <mj-text
+              align="center"
+              color="#101828"
+              font-size="30px"
+              font-weight="700"
+              line-height="38px"
+              padding="18px 12px"
+            >
+              {{ .VerificationCode }}
+            </mj-text>
+          </mj-column>
+        </mj-section>
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-section padding="18px 28px 0 28px">
+        <mj-column>
+          <mj-text color="#475467" font-size="14px" line-height="22px" padding="0">
+            This code expires in {{ .ExpiresInMinutes }} minutes. If you prefer, you can also verify using this secure link:
+            <a href="{{ .VerificationURL }}" style="color:#5B246C;text-decoration:underline;">verify account</a>.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-include path="../../../partials/security-note.mjml" />
+      <mj-include path="../../../partials/footer.mjml" />
+    </mj-wrapper>
+  </mj-body>
+</mjml>
