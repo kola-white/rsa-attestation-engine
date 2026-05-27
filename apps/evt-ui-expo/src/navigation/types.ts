@@ -3,7 +3,7 @@ export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
-  Verify: undefined;
+  Verify: { flow?: string } | undefined;
   AuthError: undefined;
   Settings: undefined;
 };

@@ -710,9 +710,33 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       }
 
       if (Platform.OS === "web") {
-        console.log("[Auth][register] registration succeeded; user must sign in");
+        const verificationUrl =
+          typeof submitJson === "object" &&
+          submitJson !== null &&
+          "continue_with" in submitJson
+            ? (submitJson as {
+                continue_with?: Array<{
+                  action?: string;
+                  flow?: {
+                    id?: string;
+                    url?: string;
+                    verifiable_address?: string;
+                  };
+                }>;
+              }).continue_with?.find(
+                (item) => item.action === "show_verification_ui"
+              )?.flow?.url
+            : undefined;
 
         setStatus("unauthenticated");
+
+        if (verificationUrl) {
+          throw new AuthError(
+            "registration_requires_verification",
+            "Registration succeeded. Please verify your email address.",
+            verificationUrl
+          );
+        }
 
         throw new AuthError(
           "registration_requires_login",
