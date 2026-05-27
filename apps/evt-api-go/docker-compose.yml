@@ -56,6 +56,7 @@ services:
     volumes:
       - /opt/cvera/rsa-attestation-engine/infra/kratos/kratos.yml:/etc/config/kratos/kratos.yml
       - /opt/cvera/rsa-attestation-engine/infra/kratos/identity.schema.json:/etc/config/kratos/identity.schema.json
+      - ./evt-api-go/email/dist:/etc/config/kratos/courier-templates:ro
     depends_on:
       - db
     ports:
@@ -79,7 +80,7 @@ services:
       KRATOS_SECRET_DEFAULT: "${KRATOS_SECRET_DEFAULT}"
       KRATOS_SECRET_COOKIE: "${KRATOS_SECRET_COOKIE}"
       COURIER_SMTP_CONNECTION_URI: "${COURIER_SMTP_CONNECTION_URI}"
-      
+
 volumes:
   evt_pgdata:
 

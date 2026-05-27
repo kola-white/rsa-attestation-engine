@@ -1,0 +1,5 @@
+<mj-section padding="28px 28px 18px 28px">
+  <mj-column>
+    <mj-image src="{{ .BrandLogoURL }}" alt="Cvera" width="42px" align="left" padding="0" />
+  </mj-column>
+</mj-section>
