@@ -99,10 +99,33 @@ export const RegisterScreen: React.FC = () => {
         password: '',
       }));
     } catch (err) {
+    if (err instanceof AuthError) {
       if (
-        err instanceof AuthError &&
-        err.code === 'registration_requires_login'
+        err.code === 'registration_requires_verification' &&
+        typeof err.details === 'string'
       ) {
+        const verificationUrl = new URL(err.details);
+        const flow = verificationUrl.searchParams.get('flow');
+
+        setForm((prev) => ({
+          ...prev,
+          password: '',
+        }));
+
+        if (flow) {
+          navigation.navigate('Verify', { flow });
+          return;
+        }
+
+        setNotice({
+          kind: 'success',
+          message:
+            'Account created. Please check your email to verify your account.',
+        });
+        return;
+      }
+
+      if (err.code === 'registration_requires_login') {
         setNotice({
           kind: 'success',
           message: 'Account created. Please sign in with your new account.',
@@ -116,31 +139,35 @@ export const RegisterScreen: React.FC = () => {
         return;
       }
 
-      if (err instanceof KratosFormError) {
-        setNotice({ kind: 'error', message: err.message });
-      } else if (err instanceof Error) {
-        if (err.message.toLowerCase().includes('already in use')) {
-          setNotice({
-            kind: 'error',
-            message: 'This email is already in use. Try signing in instead.',
-          });
-        } else {
-          setNotice({
-            kind: 'error',
-            message:
-              'We could not create your account. Please check your details and try again.',
-          });
-        }
+      setNotice({ kind: 'error', message: err.message });
+      return;
+    }
+
+    if (err instanceof KratosFormError) {
+      setNotice({ kind: 'error', message: err.message });
+    } else if (err instanceof Error) {
+      if (err.message.toLowerCase().includes('already in use')) {
+        setNotice({
+          kind: 'error',
+          message: 'This email is already in use. Try signing in instead.',
+        });
       } else {
         setNotice({
           kind: 'error',
-          message: 'Something went wrong. Please try again.',
+          message:
+            'We could not create your account. Please check your details and try again.',
         });
       }
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      setNotice({
+        kind: 'error',
+        message: 'Something went wrong. Please try again.',
+      });
     }
-  }, [form, register]);
+  } finally {
+    setIsSubmitting(false);
+  }
+}, [form, navigation, register]);
 
   const noticeStyles =
     notice?.kind === 'success'
