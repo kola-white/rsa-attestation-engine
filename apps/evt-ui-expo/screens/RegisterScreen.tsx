@@ -99,7 +99,16 @@ export const RegisterScreen: React.FC = () => {
         password: '',
       }));
     } catch (err) {
-    if (err instanceof AuthError) {
+        console.log('[RegisterScreen] caught registration error', err);
+        console.log(
+          '[RegisterScreen] caught registration error code',
+          err instanceof AuthError ? err.code : null,
+        );
+        console.log(
+          '[RegisterScreen] caught registration error details',
+          err instanceof AuthError ? err.details : null,
+        );    
+      if (err instanceof AuthError) {
       if (
         err.code === 'registration_requires_verification' &&
         typeof err.details === 'string'
@@ -111,7 +120,7 @@ export const RegisterScreen: React.FC = () => {
           ...prev,
           password: '',
         }));
-
+        console.log('[RegisterScreen] navigating to Verify with flow', flow);
         if (flow) {
           navigation.navigate('Verify', { flow });
           return;
