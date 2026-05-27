@@ -710,23 +710,43 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       }
 
       if (Platform.OS === "web") {
-        const verificationUrl =
+        const continueWith =
           typeof submitJson === "object" &&
           submitJson !== null &&
           "continue_with" in submitJson
-            ? (submitJson as {
-                continue_with?: Array<{
-                  action?: string;
-                  flow?: {
-                    id?: string;
-                    url?: string;
-                    verifiable_address?: string;
-                  };
-                }>;
-              }).continue_with?.find(
-                (item) => item.action === "show_verification_ui"
-              )?.flow?.url
+            ? (submitJson as { continue_with?: unknown }).continue_with
             : undefined;
+
+        const verificationUrl = Array.isArray(continueWith)
+          ? continueWith.find(
+              (
+                item
+              ): item is {
+                action: string;
+                flow: {
+                  id?: string;
+                  url?: string;
+                  verifiable_address?: string;
+                };
+              } =>
+                typeof item === "object" &&
+                item !== null &&
+                "action" in item &&
+                (item as { action?: unknown }).action ===
+                  "show_verification_ui" &&
+                "flow" in item
+            )?.flow?.url
+          : undefined;
+
+        console.log(
+          "[Auth][register] continue_with",
+          JSON.stringify(continueWith ?? null)
+        );
+
+        console.log(
+          "[Auth][register] verificationUrl",
+          verificationUrl ?? null
+        );
 
         setStatus("unauthenticated");
 
