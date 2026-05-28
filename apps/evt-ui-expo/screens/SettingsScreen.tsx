@@ -18,6 +18,10 @@ import {
   View,
 } from 'react-native';
 
+useEffect(() => {
+  console.log('[SettingsScreen] mounted');
+}, []);
+
 import type { AuthStackParamList } from '@/src/navigation/types';
 import type { KratosUiNode } from '@/src/auth/kratosTypes';
 
@@ -102,6 +106,20 @@ const SettingsScreen: React.FC = () => {
 
   const flowId = useMemo(() => getBrowserFlowId(), []);
 
+    useEffect(() => {
+    console.log('[SettingsScreen] mounted', {
+        pathname:
+        Platform.OS === 'web' && typeof window !== 'undefined'
+            ? window.location.pathname
+            : null,
+        search:
+        Platform.OS === 'web' && typeof window !== 'undefined'
+            ? window.location.search
+            : null,
+        flowId,
+    });
+    }, [flowId]);
+
   const clearCountdownTimer = useCallback((): void => {
     if (countdownTimerRef.current) {
       clearInterval(countdownTimerRef.current);
@@ -130,9 +148,11 @@ const SettingsScreen: React.FC = () => {
   );
 
   const loadSettingsFlow = useCallback(async (): Promise<void> => {
+    console.log('[SettingsScreen] loadSettingsFlow start', { flowId });
+
     if (!flowId) {
-      setError('Settings flow is missing. Please restart password recovery.');
-      return;
+        setError('Settings flow is missing. Please restart password recovery.');
+        return;
     }
 
     setLoading(true);
@@ -141,30 +161,44 @@ const SettingsScreen: React.FC = () => {
     try {
       const response = await fetch(
         `${KRATOS_BASE_URL}/self-service/settings/flows?id=${encodeURIComponent(
-          flowId,
+            flowId,
         )}`,
         {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
             Accept: 'application/json',
-          },
+            },
         },
-      );
+        );
 
-      if (!response.ok) {
+        console.log(
+        '[SettingsScreen] settings flow response',
+        response.status,
+        response.ok,
+        );
+
+        if (!response.ok) {
         setError('This password reset session expired. Please restart recovery.');
         return;
       }
 
       const data = (await response.json()) as KratosSettingsFlow;
 
-      if (!hasPasswordMethod(data)) {
-        setError('Password reset is not available for this settings flow.');
-        return;
-      }
+    console.log('[SettingsScreen] settings flow loaded', {
+    id: data.id,
+    type: data.type,
+    action: data.ui.action,
+    hasPasswordMethod: hasPasswordMethod(data),
+    hasCsrfToken: Boolean(extractCsrfToken(data)),
+    });
 
-      setFlow(data);
+    if (!hasPasswordMethod(data)) {
+    setError('Password reset is not available for this settings flow.');
+    return;
+    }
+
+    setFlow(data);
     } catch (e) {
       setError(
         e instanceof Error
@@ -207,6 +241,13 @@ const SettingsScreen: React.FC = () => {
   }, [clearCountdownTimer, passwordUpdated, redirectToLogin]);
 
   const submitPassword = useCallback(async (): Promise<void> => {
+    console.log('[SettingsScreen] submitPassword called', {
+        hasFlow: Boolean(flow),
+        passwordLength: password.length,
+        confirmPasswordLength: confirmPassword.length,
+        passwordsMatch: password === confirmPassword,
+        passwordUpdated,
+        });
     if (passwordUpdated) {
       return;
     }
@@ -251,7 +292,7 @@ const SettingsScreen: React.FC = () => {
           csrf_token: csrfToken,
         }),
       });
-
+      console.log('[SettingsScreen] password submit response', response.status, response.ok);
       const data = (await response.json().catch(() => null)) as
         | KratosSettingsSubmitErrorResponse
         | null;
