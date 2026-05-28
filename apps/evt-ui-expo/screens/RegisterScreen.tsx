@@ -88,6 +88,7 @@ export const RegisterScreen: React.FC = () => {
 
     try {
       const result = await register({ email, password, fullName });
+      console.log('[RegisterScreen] register result', result);
 
       setForm((prev) => ({
         ...prev,
