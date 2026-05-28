@@ -18,10 +18,6 @@ import {
   View,
 } from 'react-native';
 
-useEffect(() => {
-  console.log('[SettingsScreen] mounted');
-}, []);
-
 import type { AuthStackParamList } from '@/src/navigation/types';
 import type { KratosUiNode } from '@/src/auth/kratosTypes';
 
