@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -16,6 +22,7 @@ import type { AuthStackParamList } from '@/src/navigation/types';
 import type { KratosUiNode } from '@/src/auth/kratosTypes';
 
 const KRATOS_BASE_URL = 'https://auth.cvera.app';
+const REDIRECT_SECONDS = 8;
 
 type AuthNav = NativeStackNavigationProp<AuthStackParamList, 'Settings'>;
 
@@ -34,14 +41,19 @@ type KratosSettingsFlow = {
   };
 };
 
-const getBrowserFlowId = (): string | null => {
-  if (Platform.OS !== 'web') {
-    return null;
-  }
+type KratosSettingsSubmitErrorResponse = {
+  ui?: {
+    messages?: {
+      id?: number;
+      text?: string;
+      type?: string;
+    }[];
+  };
+};
 
-  if (typeof window === 'undefined') {
-    return null;
-  }
+const getBrowserFlowId = (): string | null => {
+  if (Platform.OS !== 'web') return null;
+  if (typeof window === 'undefined') return null;
 
   return new URLSearchParams(window.location.search).get('flow');
 };
@@ -65,18 +77,57 @@ const hasPasswordMethod = (flow: KratosSettingsFlow): boolean => {
   );
 };
 
+const extractSettingsErrorMessage = (
+  data: KratosSettingsSubmitErrorResponse | null,
+): string => {
+  return (
+    data?.ui?.messages?.find((message) => Boolean(message.text))?.text ??
+    'Password could not be updated. Please try again.'
+  );
+};
+
 const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<AuthNav>();
 
   const [flow, setFlow] = useState<KratosSettingsFlow | null>(null);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [notice, setNotice] = useState<string | null>(null);
+  const [passwordUpdated, setPasswordUpdated] = useState(false);
+  const [countdownSeconds, setCountdownSeconds] = useState(REDIRECT_SECONDS);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const flowId = useMemo(() => getBrowserFlowId(), []);
+
+  const clearCountdownTimer = useCallback((): void => {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+  }, []);
+
+  const redirectToLogin = useCallback(
+    (source: 'auto' | 'manual'): void => {
+      clearCountdownTimer();
+
+      if (source === 'auto') {
+        console.log('[SettingsScreen] auto redirect to login fired');
+      } else {
+        console.log('[SettingsScreen] manual redirect to login fired');
+      }
+
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.location.assign('/login');
+        return;
+      }
+
+      navigation.navigate('Login');
+    },
+    [clearCountdownTimer, navigation],
+  );
 
   const loadSettingsFlow = useCallback(async (): Promise<void> => {
     if (!flowId) {
@@ -134,9 +185,33 @@ const SettingsScreen: React.FC = () => {
     void loadSettingsFlow();
   }, [loadSettingsFlow]);
 
+  useEffect(() => {
+    if (!passwordUpdated || countdownTimerRef.current) {
+      return;
+    }
+
+    console.log('[SettingsScreen] countdown started', REDIRECT_SECONDS);
+
+    countdownTimerRef.current = setInterval(() => {
+      setCountdownSeconds((currentSeconds) => {
+        if (currentSeconds <= 1) {
+          redirectToLogin('auto');
+          return 0;
+        }
+
+        return currentSeconds - 1;
+      });
+    }, 1000);
+
+    return clearCountdownTimer;
+  }, [clearCountdownTimer, passwordUpdated, redirectToLogin]);
+
   const submitPassword = useCallback(async (): Promise<void> => {
+    if (passwordUpdated) {
+      return;
+    }
+
     setError(null);
-    setNotice(null);
 
     if (!flow) {
       setError('Settings flow is missing. Please restart password recovery.');
@@ -177,19 +252,21 @@ const SettingsScreen: React.FC = () => {
         }),
       });
 
-      const data = await response.json().catch(() => null);
+      const data = (await response.json().catch(() => null)) as
+        | KratosSettingsSubmitErrorResponse
+        | null;
 
       if (!response.ok) {
-        setError(
-          data?.ui?.messages?.[0]?.text ??
-            'Password could not be updated. Please try again.',
-        );
+        setError(extractSettingsErrorMessage(data));
         return;
       }
 
-      setNotice('Password updated. You can now sign in with your new password.');
+      console.log('[SettingsScreen] password update succeeded');
+
       setPassword('');
       setConfirmPassword('');
+      setCountdownSeconds(REDIRECT_SECONDS);
+      setPasswordUpdated(true);
     } catch (e) {
       setError(
         e instanceof Error ? e.message : 'Password update failed. Please try again.',
@@ -197,9 +274,10 @@ const SettingsScreen: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [confirmPassword, flow, password]);
+  }, [confirmPassword, flow, password, passwordUpdated]);
 
   const isBusy = loading || submitting;
+  const formDisabled = isBusy || passwordUpdated;
 
   return (
     <KeyboardAvoidingView
@@ -226,9 +304,23 @@ const SettingsScreen: React.FC = () => {
             </View>
           )}
 
-          {notice && (
+          {passwordUpdated && (
             <View className="mb-4 rounded-xl border border-emerald-500 bg-emerald-950/60 px-4 py-3">
-              <Text className="text-sm text-emerald-100">{notice}</Text>
+                <Text className="text-sm font-semibold text-emerald-100">
+                    Password updated successfully.
+                </Text>
+
+                <Text className="mt-1 text-sm text-emerald-100">
+                    You can now sign in with your new password.
+                </Text>
+
+                <Text className="mt-2 text-sm text-emerald-100">
+                    Redirecting to sign in after {countdownSeconds} seconds…
+                </Text>
+
+                <Text className="mt-1 text-sm text-emerald-200">
+                    Don't want to wait? Use the link below.
+                </Text>
             </View>
           )}
 
@@ -256,7 +348,7 @@ const SettingsScreen: React.FC = () => {
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!isBusy}
+                  editable={!formDisabled}
                   value={password}
                   onChangeText={setPassword}
                 />
@@ -273,7 +365,7 @@ const SettingsScreen: React.FC = () => {
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!isBusy}
+                  editable={!formDisabled}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                 />
@@ -281,7 +373,7 @@ const SettingsScreen: React.FC = () => {
 
               <Pressable
                 className="mt-2 h-11 rounded-xl bg-sky-400 items-center justify-center disabled:opacity-50"
-                disabled={isBusy}
+                disabled={formDisabled}
                 onPress={submitPassword}
               >
                 {submitting ? (
@@ -296,12 +388,9 @@ const SettingsScreen: React.FC = () => {
           )}
 
           <View className="mt-6 flex-row justify-center">
-            <Pressable
-              disabled={isBusy}
-              onPress={() => navigation.navigate('Login')}
-            >
+            <Pressable onPress={() => redirectToLogin('manual')}>
               <Text className="text-sm font-semibold text-sky-400">
-                Back to sign in
+                {passwordUpdated ? 'Sign in now' : 'Back to sign in'}
               </Text>
             </Pressable>
           </View>
