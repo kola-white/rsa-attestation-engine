@@ -13,7 +13,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../src/auth/AuthContext';
-import { AuthError, KratosFormError } from '../src/auth/AuthContext';
+import { KratosFormError } from '../src/auth/AuthContext';
 
 type AuthNav = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -87,103 +87,62 @@ export const RegisterScreen: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      await register({ email, password, fullName });
-
-      setNotice({
-        kind: 'success',
-        message: 'Account created. Please sign in with your new account.',
-      });
+      const result = await register({ email, password, fullName });
 
       setForm((prev) => ({
         ...prev,
         password: '',
       }));
-    } catch (err) {
-        console.log('[RegisterScreen] caught registration error', err);
-        console.log(
-          '[RegisterScreen] caught registration error code',
-          err instanceof AuthError ? err.code : null,
-        );
-        console.log(
-          '[RegisterScreen] caught registration error details',
-          err instanceof AuthError ? err.details : null,
-        );    
-      if (err instanceof AuthError) {
-      if (
-        err.code === 'registration_requires_verification' &&
-        typeof err.details === 'string'
-      ) {
-        const verificationUrl = new URL(err.details);
-        const flow = verificationUrl.searchParams.get('flow');
 
-        setForm((prev) => ({
-          ...prev,
-          password: '',
-        }));
-        console.log('[RegisterScreen] navigating to Verify with flow', flow);
-        if (flow) {
-          navigation.reset({
-            index: 0,
-            routes: [
-              {
-                name: 'Verify',
-                params: { flow },
-              },
-            ],
-          });
-          return;
-        }
-
-        setNotice({
-          kind: 'success',
-          message:
-            'Account created. Please check your email to verify your account.',
+      if (result.kind === 'verification_required') {
+        navigation.reset({
+          index: 0,
+          routes: [
+            {
+              name: 'Verify',
+              params: { flow: result.flow },
+            },
+          ],
         });
+
         return;
       }
 
-      if (err.code === 'registration_requires_login') {
+      if (result.kind === 'login_required') {
         setNotice({
           kind: 'success',
           message: 'Account created. Please sign in with your new account.',
         });
 
-        setForm((prev) => ({
-          ...prev,
-          password: '',
-        }));
-
         return;
       }
 
-      setNotice({ kind: 'error', message: err.message });
       return;
-    }
-
-    if (err instanceof KratosFormError) {
-      setNotice({ kind: 'error', message: err.message });
-    } else if (err instanceof Error) {
-      if (err.message.toLowerCase().includes('already in use')) {
-        setNotice({
-          kind: 'error',
-          message: 'This email is already in use. Try signing in instead.',
-        });
+    } catch (err) {
+      if (err instanceof KratosFormError) {
+        setNotice({ kind: 'error', message: err.message });
+      } else if (err instanceof Error) {
+        if (err.message.toLowerCase().includes('already in use')) {
+          setNotice({
+            kind: 'error',
+            message: 'This email is already in use. Try signing in instead.',
+          });
+        } else {
+          setNotice({
+            kind: 'error',
+            message:
+              'We could not create your account. Please check your details and try again.',
+          });
+        }
       } else {
         setNotice({
           kind: 'error',
-          message:
-            'We could not create your account. Please check your details and try again.',
+          message: 'Something went wrong. Please try again.',
         });
       }
-    } else {
-      setNotice({
-        kind: 'error',
-        message: 'Something went wrong. Please try again.',
-      });
+    } finally {
+      setIsSubmitting(false);
     }
-  } finally {
-    setIsSubmitting(false);
-  }
 }, [form, navigation, register]);
 
   const noticeStyles =

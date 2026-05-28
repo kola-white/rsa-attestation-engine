@@ -16,7 +16,9 @@ import {
   User,
   TokenPair,
   AuthError,
-  RegisterInput} from "./types";
+  RegisterInput, 
+  RegisterResult
+} from "./types";
 import {
   KratosLoginFlow,
   KratosSuccessfulNativeLogin,
@@ -788,6 +790,9 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         setSessionExpiredReason(null);
         setStatus("authenticated");
         console.log("[AuthProvider] AUTHENTICATED -> should render MainAppNavigator");
+        return {
+          kind: "authenticated",
+        } satisfies RegisterResult;
       } catch (e) {
         console.log("[AuthProvider][register] error", String(e));
         setStatus("unauthenticated"); // exits LOADING/GATE

@@ -30,6 +30,19 @@ export interface RegisterInput {
   fullName?: string;
 }
 
+export type RegisterResult =
+  | {
+      kind: 'verification_required';
+      verificationUrl: string;
+      flow: string;
+    }
+  | {
+      kind: 'login_required';
+    }
+  | {
+      kind: 'authenticated';
+    };
+
 export type RefreshResult = { ok: true; accessToken: string } | { ok: false };
 
 export interface AuthContextValue {
@@ -38,7 +51,7 @@ export interface AuthContextValue {
   user: User | null;
   login(email: string, password: string): Promise<void>;
   logout(): Promise<void>;
-  register(input: RegisterInput): Promise<void>;
+  register(input: RegisterInput): Promise<RegisterResult>;
   isLoggingOut: boolean;
   sessionExpiredReason: "refresh_unauthorized" | "api_unauthorized" | "api_forbidden" | null;
   beginReauth: () => void;
