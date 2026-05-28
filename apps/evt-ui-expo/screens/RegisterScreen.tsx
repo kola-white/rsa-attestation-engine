@@ -176,8 +176,12 @@ export const RegisterScreen: React.FC = () => {
             Create account
           </Text>
 
-          <Text className="text-base text-slate-300 mb-6">
-            HR access to employment verification cases.
+          <Text className="text-sm text-zinc-300">
+            Access trusted, portable claims.
+          </Text>
+
+          <Text className="mt-2 text-sm font-semibold tracking-tight text-zinc-100">
+            Claims. Verified.
           </Text>
 
           {notice && (
