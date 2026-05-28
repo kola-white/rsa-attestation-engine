@@ -98,6 +98,11 @@ export const RegisterScreen: React.FC = () => {
           password: '',
         }));
 
+        if (Platform.OS === 'web') {
+          globalThis.window.location.assign(result.verificationUrl);
+          return;
+        }
+
         navigation.reset({
           index: 0,
           routes: [
