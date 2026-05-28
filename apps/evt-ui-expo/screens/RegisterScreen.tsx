@@ -90,12 +90,14 @@ export const RegisterScreen: React.FC = () => {
       const result = await register({ email, password, fullName });
       console.log('[RegisterScreen] register result', result);
 
-      setForm((prev) => ({
-        ...prev,
-        password: '',
-      }));
-
       if (result.kind === 'verification_required') {
+        console.log('[RegisterScreen] resetting to Verify with flow', result.flow);
+
+        setForm((prev) => ({
+          ...prev,
+          password: '',
+        }));
+
         navigation.reset({
           index: 0,
           routes: [
