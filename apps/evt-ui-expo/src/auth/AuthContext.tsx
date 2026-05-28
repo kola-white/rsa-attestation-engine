@@ -753,17 +753,20 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         setStatus("unauthenticated");
 
         if (verificationUrl) {
-          throw new AuthError(
-            "registration_requires_verification",
-            "Registration succeeded. Please verify your email address.",
-            verificationUrl
-          );
+          const flow = new URL(verificationUrl).searchParams.get("flow");
+
+          if (flow) {
+            return {
+              kind: "verification_required",
+              verificationUrl,
+              flow,
+            };
+          }
         }
 
-        throw new AuthError(
-          "registration_requires_login",
-          "Registration succeeded. Please sign in with your new account."
-        );
+        return {
+          kind: "login_required",
+        };
       }
 
       const regResult = submitJson as KratosSuccessfulNativeRegistration;
