@@ -11,10 +11,27 @@ import SettingsScreen from '@/screens/SettingsScreen';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
+const getInitialAuthRouteName = (): keyof AuthStackParamList => {
+  if (typeof window === 'undefined') return 'Login';
+
+  switch (window.location.pathname) {
+    case '/recovery':
+      return 'ForgotPassword';
+    case '/verify':
+      return 'Verify';
+    case '/settings':
+      return 'Settings';
+    case '/error':
+      return 'AuthError';
+    default:
+      return 'Login';
+  }
+};
+
 export const AuthNavigator: React.FC = () => {
   return (
     <Stack.Navigator
-      initialRouteName="Login"
+      initialRouteName={getInitialAuthRouteName()}
       screenOptions={{
         headerShown: false,
       }}
