@@ -916,6 +916,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       typeof window !== "undefined" ? window.location.pathname : "";
 
     const isKratosSelfServiceRoute =
+      pathname === "/login" ||
       pathname === "/recovery" ||
       pathname === "/verify" ||
       pathname === "/settings" ||
