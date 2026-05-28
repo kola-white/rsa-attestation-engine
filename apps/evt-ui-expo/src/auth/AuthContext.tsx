@@ -912,6 +912,25 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
   useEffect(() => {
     if (Platform.OS !== "web") return;
 
+    const pathname =
+      typeof window !== "undefined" ? window.location.pathname : "";
+
+    const isKratosSelfServiceRoute =
+      pathname === "/recovery" ||
+      pathname === "/verify" ||
+      pathname === "/settings" ||
+      pathname === "/error";
+
+    if (isKratosSelfServiceRoute) {
+      console.log(
+        "[Auth][web hydration] skipped on self-service route",
+        pathname
+      );
+
+      setStatus("unauthenticated");
+      return;
+    }
+
     (async () => {
       const hydrated = await hydrateWebKratosSession();
 
