@@ -381,7 +381,7 @@ flowchart LR
         P5[Enterprise SSO]
     end
 
-    subgraph Adapter["Provider Adapter Layer"]
+    subgraph Adapter["Identity Adapter Layer"]
         A[Normalize provider-specific authentication]
     end
 
@@ -430,7 +430,7 @@ An adapter translates provider-specific authentication into canonical authentica
 ```text
 Provider
     ↓
-Provider Adapter
+Identity Adapter
     ↓
 Authentication Proof
     ↓
