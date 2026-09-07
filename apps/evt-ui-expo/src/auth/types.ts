@@ -7,7 +7,8 @@ export type AuthStatus =
 export type SessionExpiredReason =
   | "refresh_unauthorized"
   | "api_unauthorized"
-  | "api_forbidden";
+  | "api_forbidden"
+  | null;
 
 export interface User {
   id: string;
@@ -23,7 +24,6 @@ export interface TokenPair {
   user: User;
 }
 
-// 🔹 New input type for registration
 export interface RegisterInput {
   email: string;
   password: string;
@@ -56,6 +56,8 @@ export interface AuthContextValue {
   sessionExpiredReason: "refresh_unauthorized" | "api_unauthorized" | "api_forbidden" | null;
   beginReauth: () => void;
   refresh: () => Promise<RefreshResult>;
+  hasStoredSession(): Promise<boolean>;
+  restoreSession(): Promise<RefreshResult>;
 }
 
 

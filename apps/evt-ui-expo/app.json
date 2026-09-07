@@ -15,7 +15,13 @@
           "microphonePermission": "Allow $(PRODUCT_NAME) to use your microphone when recording video evidence."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+      "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Cvera to use Face ID"
+        }
+      ]
     ],
     "newArchEnabled": true,
     "splash": {
