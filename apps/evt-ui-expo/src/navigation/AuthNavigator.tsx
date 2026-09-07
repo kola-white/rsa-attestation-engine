@@ -1,4 +1,5 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { LoginScreen } from 'screens/LoginScreen';
 import { RegisterScreen } from 'screens/RegisterScreen';
@@ -12,9 +13,14 @@ import SettingsScreen from '@/screens/SettingsScreen';
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 const getInitialAuthRouteName = (): keyof AuthStackParamList => {
-  if (typeof window === 'undefined') return 'Login';
+  if (Platform.OS !== 'web') return 'Login';
 
-  switch (window.location.pathname) {
+  const pathname =
+    typeof window !== 'undefined' && window.location
+      ? window.location.pathname
+      : '';
+
+  switch (pathname) {
     case '/recovery':
       return 'ForgotPassword';
     case '/verify':

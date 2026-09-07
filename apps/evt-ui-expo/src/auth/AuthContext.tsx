@@ -17,7 +17,9 @@ import {
   TokenPair,
   AuthError,
   RegisterInput, 
-  RegisterResult
+  RegisterResult,
+  RefreshResult,
+  SessionExpiredReason,
 } from "./types";
 import {
   KratosLoginFlow,
@@ -31,14 +33,6 @@ import {
 const KRATOS_BASE_URL = "https://auth.cvera.app";
 const API_BASE_URL = "https://api.cvera.app";
 const REFRESH_TOKEN_KEY = "cvera_refresh_token_v1";
-
-/**
- * Session-expired reason codes (kept local to AuthContext to avoid churn in ./types).
- */
-type SessionExpiredReason =
-  | "refresh_unauthorized"
-  | "api_unauthorized"
-  | "api_forbidden";
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -161,6 +155,20 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
     return SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
   }, []);
 
+  const hasStoredSession = useCallback(async (): Promise<boolean> => {
+  if (Platform.OS === "web") {
+    return false;
+  }
+
+  const refreshToken = await getStoredRefreshToken();
+  console.log(
+  "[Auth][refresh] FULL refresh token:",
+  refreshToken
+);
+
+  return refreshToken !== null && refreshToken.length > 0;
+}, [getStoredRefreshToken]);
+
   const clearStoredRefreshToken = useCallback(async () => {
     if (Platform.OS === "web") {
       localStorage.removeItem(REFRESH_TOKEN_KEY);
@@ -224,14 +232,14 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       }
 
       const data = (await res.json()) as TokenPair;
+      console.log("[Auth][login] exchange OK. access_token prefix:", data.access_token.slice(0, 12));
+      console.log("[Auth][login] exchange OK. refresh_token prefix:", data.refresh_token.slice(0, 12));
       return data;
     },
     []
   );
 
   // --- Refresh (wrapped, single-flight, returns *new access token*) ----------
-
-  type RefreshResult = { ok: true; accessToken: string } | { ok: false };
 
   const refreshInFlightRef = useRef<Promise<RefreshResult> | null>(null);
 
@@ -318,6 +326,9 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       markSessionExpired,
     ]);
 
+  const restoreSession = useCallback(async (): Promise<RefreshResult> => {
+    return refresh();
+  }, [refresh]);
 
   // --- Global fetch interceptor (API_BASE_URL only) -------------------------
 
@@ -393,17 +404,6 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       }
     };
   }, [accessToken, markSessionExpired, refresh]);
-
-  const resolveDemoRole = (email: string): User["role"] | undefined => {
-    switch (email.trim().toLowerCase()) {
-      case "iiw42@mailinator.com":
-        return "requestor";
-      case "iiwhr@mailinator.com":
-        return "hr_reviewer";
-      default:
-        return undefined;
-    }
-  };
 
   // --- Login via Kratos native flow ----------------------------------------
 
@@ -565,11 +565,6 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
 
       // 3) Exchange for YOUR tokens
       const tokens = await exchangeSessionToken(loginResult.session_token);
-
-      console.log(
-        "[Auth][login] exchange OK. access_token prefix:",
-        tokens.access_token.slice(0, 12)
-      );
       console.log(
         "[Auth][login] exchange OK. refresh_token prefix:",
         tokens.refresh_token.slice(0, 12)
@@ -894,20 +889,6 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
     }
   }, [getStoredRefreshToken, clearStoredRefreshToken]);
 
-  // --- Bootstrap on app startup --------------------------------------------
-
-  useEffect(() => {
-    if (Platform.OS === "web") return;
-
-    (async () => {
-      try {
-        await refresh();
-      } catch {
-        setStatus("unauthenticated");
-      }
-    })();
-  }, [refresh]);
-
   // --- Web session hydration (Kratos cookie flow) ---
   useEffect(() => {
     if (Platform.OS !== "web") return;
@@ -951,13 +932,13 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       login,
       logout,
       refresh,
+      restoreSession,
+      hasStoredSession,
       register,
       isLoggingOut,
-
-      // New: session-expired UX hooks
       sessionExpiredReason,
       beginReauth,
-    } as AuthContextValue;
+    };
   }, [
     status,
     accessToken,
@@ -965,6 +946,8 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
     login,
     logout,
     refresh,
+    restoreSession,
+    hasStoredSession,
     register,
     isLoggingOut,
     sessionExpiredReason,
