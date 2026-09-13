@@ -1,6 +1,6 @@
 # ADR — *Selective Disclosure for Attestations*
 
-### ADR-006 (Draft) — Reviewed & Approved by Nicholas
+### ADR-008 (Draft) — Reviewed & Approved by Nicholas
 
 **Status:** Deferred
 **Date:** 2025-11-12
