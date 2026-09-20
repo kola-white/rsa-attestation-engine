@@ -411,7 +411,7 @@ Phase 2 is considered complete because:
 
 ### Phase 3 — Runtime Revision Identity
 
-**Status:** NOT STARTED
+**Status:** IMPLEMENTED — AUTHORITATIVE CI VALIDATION PENDING
 
 #### Objective
 
@@ -419,8 +419,204 @@ Preserve `/healthz` as the existing operational liveness endpoint and
 introduce runtime revision identity so the running Go API can report
 the exact Git SHA from which it was built.
 
-The revision identity must be compiled into the application at build
-time rather than inferred from a runtime `.git` checkout.
+The revision identity is compiled into the application at build time
+rather than inferred from a runtime `.git` checkout.
 
 Phase 3 establishes the runtime identity mechanism required before
 implementing exact-SHA deployment in Phase 4.
+
+#### Runtime Identity Model
+
+Runtime revision identity is represented by:
+
+`internal/buildinfo.GitSHA`
+
+Development builds deliberately default to:
+
+`development`
+
+This is a truthful development identity rather than a fabricated Git
+revision.
+
+Deployment builds are expected to replace this value at compile time
+using Go linker flags.
+
+Runtime application code does not inspect `.git`, execute Git, or
+derive revision identity from the filesystem.
+
+#### Version Endpoint
+
+The Go API exposes:
+
+`GET /version`
+
+The endpoint returns the build revision identity as:
+
+```json
+{
+  "git_sha": "<build-git-sha>"
+}
+```
+
+The endpoint is deliberately separate from:
+
+`GET /healthz`
+
+`/healthz` remains the existing liveness endpoint and its response
+semantics are unchanged.
+
+This separation prevents operational liveness from being conflated
+with deployment identity.
+
+#### Build-Time Identity Injection
+
+The API Dockerfile accepts:
+
+`BUILD_SHA`
+
+with the development-safe default:
+
+`development`
+
+The Go binary is compiled using a linker override equivalent to:
+
+`-X github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/buildinfo.GitSHA=<build-sha>`
+
+This embeds the supplied revision identity into the compiled binary.
+
+The Docker builder continues to use the project's Go 1.25 build
+contract.
+
+#### Authoritative CI Docker Identity Gate
+
+The authoritative GitHub Actions workflow:
+
+`.github/workflows/main.yml`
+
+now includes a blocking API Docker build-identity verification step
+after the Go quality gate and before successful CI evidence manifest
+generation.
+
+The step builds the API Docker builder stage using:
+
+`BUILD_SHA=${GITHUB_SHA}`
+
+It then extracts the compiled Go binary and verifies that the exact
+GitHub revision SHA is present in that binary.
+
+Failure to build the Docker artifact or failure to find the expected
+revision identity causes the authoritative CI job to fail.
+
+This provides an automated regression guard for the path:
+
+`GITHUB_SHA → Docker BUILD_SHA → Go linker injection → compiled API binary`
+
+The application-level `/version` test separately verifies the path:
+
+`buildinfo.GitSHA → /version → git_sha`
+
+Together these tests establish both build-time identity injection and
+application exposure of that identity.
+
+#### CI Evidence Relationship
+
+The Phase 2 CI evidence manifest continues to explicitly record the
+Node and Go quality-gate results.
+
+Phase 3 does not change the Phase 2 evidence schema.
+
+The Docker identity check is nevertheless a blocking step in the same
+authoritative CI job and executes before successful evidence manifest
+generation and archival.
+
+Therefore, a normal successful `main` evidence archive cannot be
+created through this workflow unless the Docker identity gate has also
+succeeded.
+
+#### Local Validation
+
+Before authoritative GitHub validation, local Phase 3 validation
+confirmed:
+
+- `npm run test:ci` passed.
+- `go test ./...` passed.
+- the `/version` handler test passed as part of the Go suite.
+- explicit Go linker injection using `-ldflags -X` compiled
+  successfully.
+- `git diff --check` was clean.
+
+A local Docker build was not performed because the development Mac
+does not have Docker, Podman, Colima, or OrbStack installed.
+
+No local container runtime was installed solely to satisfy this
+verification requirement.
+
+Docker build verification is instead performed by the authoritative
+GitHub Actions environment.
+
+#### Implementation Record
+
+The Phase 3 application implementation was committed as:
+
+`442e907` — `feat: add runtime revision identity`
+
+The implementation includes:
+
+- `internal/buildinfo.GitSHA`;
+- the separate `/version` endpoint;
+- an application-level `/version` test;
+- Docker `BUILD_SHA` support;
+- Go linker-based revision injection; and
+- the blocking authoritative CI Docker identity verification step.
+
+#### Deployment Boundary
+
+Phase 3 introduces no application deployment behavior.
+
+In particular, Phase 3 does not:
+
+- SSH to the DigitalOcean runtime;
+- modify the DigitalOcean checkout;
+- execute `git pull`;
+- check out a deployment revision on the runtime;
+- rebuild or restart the running API container;
+- restart PostgreSQL or Kratos;
+- change legacy JWKS, status-list, or trust-policy publication;
+- modify the legacy `CI Artifacts` workflow;
+- modify the legacy `Publish to DigitalOcean Spaces` workflow; or
+- claim that the currently running DigitalOcean API already exposes
+  the newly implemented revision identity.
+
+The currently deployed runtime is not changed by Phase 3.
+
+Exact-SHA deployment begins in Phase 4.
+
+Post-deployment comparison of the expected revision with `/version`
+belongs to Phase 5.
+
+#### Phase 3 Acceptance
+
+Phase 3 will be considered complete when:
+
+- `/healthz` remains unchanged;
+- `/version` exists as a separate endpoint;
+- `/version` reports the embedded build Git SHA;
+- revision identity is established at compile time;
+- runtime code does not depend on `.git` or Git;
+- the Docker build accepts an explicit `BUILD_SHA`;
+- missing build identity has the deliberate `development` behavior;
+- automated tests prove `/version` exposes the injected build
+  identity;
+- Node and Go regressions remain green;
+- the authoritative GitHub CI Docker identity gate succeeds;
+- no application deployment behavior has been introduced;
+- no DigitalOcean runtime changes have occurred;
+- legacy trust-artifact publication remains unchanged; and
+- no Phase 4 exact-SHA deployment behavior has leaked into Phase 3.
+
+All source-level and local acceptance conditions have been satisfied.
+
+Authoritative GitHub execution of the Docker identity gate remains
+outstanding.
+
+**Phase 3 — Runtime Revision Identity: IMPLEMENTED — AUTHORITATIVE CI VALIDATION PENDING.**
