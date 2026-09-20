@@ -159,4 +159,16 @@ jobs:
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
             "${CVERA_DEPLOY_USER}@${CVERA_DEPLOY_HOST}" \
-            "/opt/cvera/rsa-attestation-engine/scripts/deploy-api.sh '${GITHUB_SHA}'"
+            "set -euo pipefail;
+             cd /opt/cvera/rsa-attestation-engine;
+             if [[ -n \"\$(git status --porcelain)\" ]]; then
+               echo 'ERROR: repository worktree is not clean; refusing deployment' >&2;
+               exit 1;
+             fi;
+             git fetch origin main:refs/remotes/origin/main;
+             if [[ \"\$(git rev-parse origin/main)\" != '${GITHUB_SHA}' ]]; then
+               echo 'ERROR: origin/main does not match validated GitHub SHA' >&2;
+               exit 1;
+             fi;
+             git checkout --detach '${GITHUB_SHA}';
+             exec scripts/deploy-api.sh '${GITHUB_SHA}'"
