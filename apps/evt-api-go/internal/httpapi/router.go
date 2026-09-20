@@ -14,8 +14,8 @@ import (
 
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/auth"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/config"
-	evtmod "github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/evt"
 	evtdb "github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db"
+	evtmod "github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/evt"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/storage"
 )
 
@@ -65,6 +65,8 @@ func NewRouter(cfg *config.Config) http.Handler {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"ok": "true"})
 	})
+
+	mux.HandleFunc("GET /version", handleVersion)
 
 	// Auth (EXCHANGE, REFRESH, LOGOUT)
 	mux.HandleFunc("POST /auth/exchange", s.HandleAuthExchange)
@@ -123,7 +125,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 	})
 
 	mux.Handle("/v1/", evtEngine)
-	
+
 	return withReqLog(withCORS(mux))
 }
 
@@ -138,5 +140,3 @@ func withReqLog(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-
-

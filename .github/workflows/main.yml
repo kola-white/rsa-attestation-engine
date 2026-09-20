@@ -41,6 +41,31 @@ jobs:
           set -o pipefail
           go test ./... 2>&1 | tee ../../.ci-evidence/go-tests.txt
 
+      - name: Verify API Docker build identity
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker build \
+            --target build \
+            --build-arg BUILD_SHA="${GITHUB_SHA}" \
+            -t cvera-api:ci-builder \
+            apps/evt-api-go
+
+          container_id="$(docker create cvera-api:ci-builder)"
+          trap 'docker rm -f "${container_id}" >/dev/null 2>&1 || true' EXIT
+
+          docker cp \
+            "${container_id}:/out/evt-api-go" \
+            /tmp/evt-api-go-ci
+
+          if ! strings /tmp/evt-api-go-ci | grep -Fq "${GITHUB_SHA}"; then
+            echo "ERROR: Docker-built API binary does not contain expected Git SHA"
+            exit 1
+          fi
+
+          echo "Verified Docker-built API revision identity: ${GITHUB_SHA}"
+
       - name: Create CI evidence manifest
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         shell: bash
