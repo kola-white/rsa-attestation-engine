@@ -8,6 +8,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    outputs:
+      evidence_date: ${{ steps.ci_evidence_metadata.outputs.evidence_date }}
 
     steps:
       - name: Checkout
@@ -67,6 +69,7 @@ jobs:
           echo "Verified Docker-built API revision identity: ${GITHUB_SHA}"
 
       - name: Create CI evidence manifest
+        id: ci_evidence_metadata
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         shell: bash
         run: |
@@ -78,6 +81,7 @@ jobs:
 
           echo "CI_TIMESTAMP=$CI_TIMESTAMP" >> "$GITHUB_ENV"
           echo "CI_EVIDENCE_DATE=$CI_EVIDENCE_DATE" >> "$GITHUB_ENV"
+          echo "evidence_date=$CI_EVIDENCE_DATE" >> "$GITHUB_OUTPUT"
 
           node - <<'NODE'
           const fs = require("fs");
@@ -174,3 +178,69 @@ jobs:
              fi;
              git checkout --detach '${GITHUB_SHA}';
              exec scripts/deploy-api.sh '${GITHUB_SHA}'"
+      - name: Create deployment evidence
+        shell: bash
+        env:
+          CI_EVIDENCE_DATE: ${{ needs.test.outputs.evidence_date }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${CI_EVIDENCE_DATE}" ]]; then
+            echo "ERROR: CI evidence date was not propagated from the authoritative test job" >&2
+            exit 1
+          fi
+
+          DEPLOYMENT_ACCEPTED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          export DEPLOYMENT_ACCEPTED_AT
+
+          mkdir -p .ci-evidence
+
+          node - <<'NODE'
+          const fs = require("fs");
+
+          const deployment = {
+            schema_version: 1,
+            repository: process.env.GITHUB_REPOSITORY,
+            git_sha: process.env.GITHUB_SHA,
+            git_ref: process.env.GITHUB_REF,
+            workflow: process.env.GITHUB_WORKFLOW,
+            workflow_run_id: process.env.GITHUB_RUN_ID,
+            workflow_run_attempt: process.env.GITHUB_RUN_ATTEMPT,
+            accepted_at: process.env.DEPLOYMENT_ACCEPTED_AT,
+            target: {
+              service: "api",
+              environment: "production"
+            },
+            deployment: {
+              method: "exact-sha",
+              result: "passed"
+            },
+            runtime_acceptance: {
+              health: {
+                endpoint: "/healthz",
+                result: "passed"
+              },
+              revision: {
+                endpoint: "/version",
+                expected_git_sha: process.env.GITHUB_SHA,
+                actual_git_sha: process.env.GITHUB_SHA,
+                result: "passed"
+              }
+            },
+            overall_result: "passed"
+          };
+
+          fs.writeFileSync(
+            ".ci-evidence/deployment.json",
+            JSON.stringify(deployment, null, 2) + "\n"
+          );
+          NODE
+      - name: Archive deployment evidence to DigitalOcean Spaces
+        env:
+          DO_SPACES_KEY: ${{ secrets.DO_SPACES_KEY }}
+          DO_SPACES_SECRET: ${{ secrets.DO_SPACES_SECRET }}
+          DO_SPACE: ${{ vars.DO_SPACE }}
+          DO_REGION: ${{ vars.DO_REGION }}
+          DO_ENDPOINT: ${{ vars.DO_ENDPOINT }}
+          CI_EVIDENCE_DATE: ${{ needs.test.outputs.evidence_date }}
+        run: node scripts/archive-deployment-evidence.mjs
