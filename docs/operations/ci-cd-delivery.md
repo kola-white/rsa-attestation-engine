@@ -411,7 +411,7 @@ Phase 2 is considered complete because:
 
 ### Phase 3 — Runtime Revision Identity
 
-**Status:** IMPLEMENTED — AUTHORITATIVE CI VALIDATION PENDING
+**Status:** COMPLETE
 
 #### Objective
 
@@ -614,9 +614,34 @@ Phase 3 will be considered complete when:
 - legacy trust-artifact publication remains unchanged; and
 - no Phase 4 exact-SHA deployment behavior has leaked into Phase 3.
 
-All source-level and local acceptance conditions have been satisfied.
+All Phase 3 acceptance conditions have been satisfied.
 
-Authoritative GitHub execution of the Docker identity gate remains
-outstanding.
+#### Authoritative Validation Record
 
-**Phase 3 — Runtime Revision Identity: IMPLEMENTED — AUTHORITATIVE CI VALIDATION PENDING.**
+The first authoritative `main` revision proving the complete Phase 3
+runtime-identity mechanism was:
+
+`05561708165a853fa6b7705caaca12d56a5df9d4`
+
+The authoritative GitHub Actions `CI` workflow successfully verified
+that the Docker-built API binary contained exactly:
+
+`05561708165a853fa6b7705caaca12d56a5df9d4`
+
+The same successful `main` validation archived CI evidence under:
+
+`ci-evidence/2026-09-20/05561708165a853fa6b7705caaca12d56a5df9d4/`
+
+The evidence package contains:
+
+- `manifest.json`
+- `node-tests.txt`
+- `go-tests.txt`
+
+This establishes correlation between the authoritative validated
+revision, Docker build identity, and immutable CI evidence.
+
+Phase 3 did not deploy this revision to the DigitalOcean application
+runtime. Exact-SHA deployment remains the responsibility of Phase 4.
+
+**Phase 3 — Runtime Revision Identity: COMPLETE.**
