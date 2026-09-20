@@ -119,3 +119,44 @@ jobs:
           DO_ENDPOINT: ${{ vars.DO_ENDPOINT }}
           CI_EVIDENCE_DATE: ${{ env.CI_EVIDENCE_DATE }}
         run: node scripts/archive-ci-evidence.mjs
+
+  deploy:
+    name: Deploy exact validated revision
+    needs: test
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure deployment SSH
+        shell: bash
+        env:
+          CVERA_DEPLOY_SSH_KEY: ${{ secrets.CVERA_DEPLOY_SSH_KEY }}
+          CVERA_DEPLOY_HOST: ${{ secrets.CVERA_DEPLOY_HOST }}
+        run: |
+          set -euo pipefail
+
+          install -d -m 700 ~/.ssh
+
+          printf '%s\n' "${CVERA_DEPLOY_SSH_KEY}" > ~/.ssh/cvera_deploy
+          chmod 600 ~/.ssh/cvera_deploy
+
+          printf '%s %s\n' \
+            "${CVERA_DEPLOY_HOST}" \
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFiETQzlFl4i2E3kkJ2nif5F5n7I0xagqHt7XNjHVgF7" \
+            > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy exact validated revision
+        shell: bash
+        env:
+          CVERA_DEPLOY_HOST: ${{ secrets.CVERA_DEPLOY_HOST }}
+          CVERA_DEPLOY_USER: ${{ secrets.CVERA_DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+
+          ssh \
+            -i ~/.ssh/cvera_deploy \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "${CVERA_DEPLOY_USER}@${CVERA_DEPLOY_HOST}" \
+            "/opt/cvera/rsa-attestation-engine/scripts/deploy-api.sh '${GITHUB_SHA}'"
