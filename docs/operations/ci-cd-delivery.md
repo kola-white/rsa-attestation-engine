@@ -645,3 +645,214 @@ Phase 3 did not deploy this revision to the DigitalOcean application
 runtime. Exact-SHA deployment remains the responsibility of Phase 4.
 
 **Phase 3 — Runtime Revision Identity: COMPLETE.**
+
+---
+
+### Phases 4–7 — Delivery Completion Record
+
+Phases 4 through 7 completed the production delivery path established
+by Phases 1 through 3.
+
+This section records the resulting operational state without replacing
+the detailed historical records above.
+
+#### Phase 4 — Exact-SHA Deployment
+
+**Status:** COMPLETE
+
+The authoritative `CI` workflow deploys only a successfully validated
+push to `main`.
+
+Deployment uses the exact GitHub revision identified by
+`${GITHUB_SHA}`. The DigitalOcean runtime fetches `origin/main`,
+requires it to equal the validated SHA, checks out that exact revision
+in detached-HEAD state, and invokes:
+
+`scripts/deploy-api.sh <full-git-sha>`
+
+The deployment script rebuilds the API with that SHA supplied as
+`BUILD_SHA` and recreates only the API service.
+
+PostgreSQL, Kratos, and other persistent services are not part of the
+API deployment operation.
+
+Generic `git pull` is not the deployment primitive.
+
+**Phase 4 — Exact-SHA Deployment: COMPLETE.**
+
+#### Phase 5 — Runtime Acceptance
+
+**Status:** COMPLETE
+
+A deployment is not accepted merely because the API container was
+rebuilt or started.
+
+`scripts/deploy-api.sh` performs post-deployment runtime acceptance
+against the host-local API.
+
+Acceptance requires:
+
+- `GET /healthz` to return the expected healthy response; and
+- `GET /version` to report the exact Git SHA requested for deployment.
+
+A revision mismatch fails deployment acceptance.
+
+These checks establish that the expected revision is both running and
+healthy without coupling application deployment to legacy JWKS,
+status-list, trust-policy, or credential-verification behavior.
+
+**Phase 5 — Runtime Acceptance: COMPLETE.**
+
+#### Phase 6 — Deployment Evidence
+
+**Status:** COMPLETE
+
+After successful runtime acceptance, GitHub Actions creates immutable
+deployment evidence under the same CI validation hierarchy:
+
+`ci-evidence/YYYY-MM-DD/<full-git-sha>/deployment.json`
+
+The directory date is the UTC date of the authoritative CI validation,
+and the full Git SHA remains the correlation key.
+
+The deployment record identifies:
+
+- the repository and exact revision;
+- the workflow run;
+- the production API target;
+- exact-SHA deployment success;
+- `/healthz` acceptance;
+- `/version` revision acceptance; and
+- the overall successful result.
+
+Deployment evidence is archived only after the deployment and runtime
+acceptance steps succeed.
+
+Together with `manifest.json`, `node-tests.txt`, and `go-tests.txt`,
+this provides one SHA-correlated evidence package for validation and
+accepted production delivery.
+
+**Phase 6 — Deployment Evidence: COMPLETE.**
+
+#### Phase 7 — Legacy Publishing Cleanup
+
+**Status:** COMPLETE
+
+Legacy credential trust-artifact publication remains supported during
+the standards migration, but it is explicitly separated from
+authoritative application delivery.
+
+The current workflow responsibilities are:
+
+- `.github/workflows/main.yml` — authoritative application CI,
+  exact-SHA deployment, runtime acceptance, and immutable evidence;
+- `.github/workflows/publish.yml` — legacy compatibility trust-artifact
+  publication to DigitalOcean Spaces;
+- `.github/workflows/ci.yml` — manual-only legacy/development artifact
+  generation and review.
+
+`CI Artifacts` no longer runs automatically for pushes or pull
+requests. It is invoked only through `workflow_dispatch`.
+
+There is no status-list generator in the current legacy/development
+artifact workflow. The canonical source-controlled legacy status list
+is:
+
+`trust/statuslist.json`
+
+The legacy publisher requires all three core compatibility trust
+artifacts:
+
+- `trust/jwks.json`
+- `trust/policy.json`
+- `trust/statuslist.json`
+
+A missing required artifact fails publication rather than being
+silently skipped.
+
+Legacy vectors, JWS outputs, and audit-log inputs remain optional
+publication inputs.
+
+The obsolete `DO_PAT` / `doctl` CDN-purge path has been removed from
+the legacy publication workflow.
+
+The Phase 7 cleanup was proven on `main` by revision:
+
+`bd33450a0aaaa6599ad55446c7ab0f1c74d86130`
+
+For that revision:
+
+- the authoritative `CI` workflow passed;
+- the exact validated revision was successfully deployed and accepted;
+  and
+- `Publish to DigitalOcean Spaces` successfully executed the cleaned
+  legacy compatibility publication path.
+
+**Phase 7 — Legacy Publishing Cleanup: COMPLETE.**
+
+---
+
+## Current Operational Model
+
+The current Cvera delivery model has three deliberately separate
+workflow responsibilities.
+
+### Authoritative Application Delivery
+
+`.github/workflows/main.yml`
+
+This is the authoritative application delivery path:
+
+`validation → immutable CI evidence → exact-SHA API deployment → runtime acceptance → immutable deployment evidence`
+
+A successful application delivery therefore correlates validation,
+runtime identity, deployment acceptance, and durable evidence using the
+full Git SHA.
+
+### Legacy Compatibility Publication
+
+`.github/workflows/publish.yml`
+
+This workflow publishes the legacy credential trust surface that
+remains necessary while legacy JWS compatibility exists.
+
+It runs on pushes to `main` and may also be invoked manually.
+
+Its responsibilities are legacy compatibility publication, not
+standards-based application deployment.
+
+The required source-controlled trust artifacts are:
+
+- `trust/jwks.json`
+- `trust/policy.json`
+- `trust/statuslist.json`
+
+Failure to locate one of those required artifacts fails publication.
+
+### Legacy/Development Artifact Utility
+
+`.github/workflows/ci.yml`
+
+`CI Artifacts` is a manual-only, non-authoritative development utility.
+
+It may generate development keys, JWKS material, optional vectors, and
+review artifacts.
+
+It does not determine whether an application revision is validated,
+deployable, deployed, or accepted in production.
+
+### Architectural Boundary
+
+DigitalOcean Spaces currently serves two distinct purposes that must
+not be conflated:
+
+1. private immutable operational evidence for authoritative CI and
+   accepted deployment; and
+2. legacy compatibility trust-artifact publication.
+
+Legacy trust publication is not a prerequisite stage in the
+standards-based application deployment path.
+
+The standards-based credential architecture may continue to replace
+legacy compatibility mechanisms independently of the authoritative
+application delivery pipeline.
