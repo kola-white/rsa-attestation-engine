@@ -1,9 +1,6 @@
 name: CI Artifacts
 
 on:
-  push:
-    branches: [ main ]   
-  pull_request:
   workflow_dispatch: {}
 
 jobs:
@@ -30,12 +27,6 @@ jobs:
 
       - name: Build JWKS
         run: node scripts/make-jwks.mjs
-
-      - name: Build status list (if present)
-        run: |
-          if [ -f "scripts/update-statuslist.mjs" ]; then
-            node scripts/update-statuslist.mjs
-          fi
 
       - name: Build vectors (if present)
         run: |

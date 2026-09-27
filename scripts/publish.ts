@@ -37,19 +37,20 @@ type UploadSpec = {
   stable?: boolean;     // also promote to stable copy
   contentType?: string;
   isPrefix?: boolean;   // dst is a "folder" prefix (for globbed files)
+  required?: boolean;   // fail if no matches found
 };
 
 const specs: UploadSpec[] = [
-  // core trust artifacts
-  { src: "trust/jwks.json",          dst: `${prefix}/trust/jwks.json`,          contentType: "application/json", stable: true },
-  { src: "trust/policy.json",        dst: `${prefix}/trust/policy.json`,        contentType: "application/json", stable: true },
-  { src: "status/statuslist.json",   dst: `${prefix}/trust/statuslist.json`,   contentType: "application/json", stable: true },
+  // required legacy compatibility trust artifacts
+  { src: "trust/jwks.json",          dst: `${prefix}/trust/jwks.json`,          contentType: "application/json", stable: true, required: true },
+  { src: "trust/policy.json",        dst: `${prefix}/trust/policy.json`,        contentType: "application/json", stable: true, required: true },
+  { src: "trust/statuslist.json",    dst: `${prefix}/trust/statuslist.json`,   contentType: "application/json", stable: true, required: true },
 
-  // vectors & jws (globbed)
+  // optional legacy vectors & jws
   { src: "examples/**/*.json",       dst: `${prefix}/vectors/`,                 contentType: "application/json", isPrefix: true },
   { src: "out/**/*.jws",             dst: `${prefix}/vectors/`,                 contentType: "application/jose", isPrefix: true },
 
-  // audit logs (globbed)
+  // optional legacy audit logs
   { src: "audit/**/*.jsonl",         dst: `${prefix}/audit/`,                   contentType: "text/plain",       isPrefix: true },
 ];
 
@@ -62,7 +63,12 @@ async function main() {
 
   for (const spec of specs) {
     const matches = globSync(spec.src, { nodir: true });
-    if (matches.length === 0) continue;
+    if (matches.length === 0) {
+      if (spec.required) {
+        throw new Error(`Missing required legacy publication artifact: ${spec.src}`);
+      }
+      continue;
+    }
 
     for (const m of matches) {
       const key = spec.isPrefix
