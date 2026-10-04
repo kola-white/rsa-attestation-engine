@@ -52,3 +52,5 @@ type AuthorityEvaluation struct {
 	GrantID  string
 	Reason   string
 }
+
+const AuthorityReasonResolutionFailed = "AUTHORITY_RESOLUTION_FAILED"
