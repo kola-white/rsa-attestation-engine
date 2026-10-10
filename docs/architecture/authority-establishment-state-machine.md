@@ -625,10 +625,6 @@ stateDiagram-v2
     SUSPENDED --> ACTIVE: REINSTATE
     SUSPENDED --> EXPIRED: EXPIRE
     SUSPENDED --> REVOKED: REVOKE
-
-    REJECTED --> [*]
-    EXPIRED --> [*]
-    REVOKED --> [*]
 ```
 
 REJECTED, EXPIRED, and REVOKED are terminal for the authorization lifecycle.
