@@ -4,16 +4,14 @@ import { createPublicKey } from "node:crypto";
 import { exportJWK } from "jose";
 
 const INPUTS = [
-  "keys/issuer-dev-key-1.pem",
-  "keys/issuer-dev-key-2.pem",
-  "keys/issuer-dev-key-3.pem",
+  "keys/public/issuer-prod-2026-10.pub.pem",
 ];
 
 const OUT_PATH = "trust/jwks.json";
 
 function kidFromPath(p) {
   const base = p.split("/").pop() || p;
-  return base.replace(/\.pem$/i, "");
+  return base.replace(/\.pub\.pem$/i, "").replace(/\.pem$/i, "");
 }
 
 function stripPad(s) {

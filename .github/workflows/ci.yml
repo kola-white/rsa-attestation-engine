@@ -22,9 +22,6 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Optional keygen (dev only)
-        run: bash scripts/dev-keygen.sh || echo "Skipping keygen."
-
       - name: Build JWKS
         run: node scripts/make-jwks.mjs
 
