@@ -18,9 +18,10 @@ type AuthoritySnapshotEntry struct {
 // AuthoritySnapshot represents a coherent authoritative registry view.
 // Complete is an assurance supplied by the trusted snapshot producer.
 type AuthoritySnapshot struct {
-	Complete        bool
-	RecordedThrough time.Time
-	Entries         []AuthoritySnapshotEntry
+	Complete          bool
+	RecordingPosition int64
+	RecordedThrough   time.Time
+	Entries           []AuthoritySnapshotEntry
 }
 
 // SnapshotAuthorityResolver resolves grants from an immutable snapshot.
