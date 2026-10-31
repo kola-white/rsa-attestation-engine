@@ -11,3 +11,12 @@ reports/
 
 # macOS
 .DS_Store
+
+# Cvera signing secrets: never commit private keys
+*.key
+*.p12
+*.pfx
+keys/*.pem
+keys/**/*.key
+keys/**/*.pem
+!keys/**/*.pub.pem

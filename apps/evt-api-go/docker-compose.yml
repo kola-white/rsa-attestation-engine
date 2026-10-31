@@ -44,10 +44,10 @@ services:
       DO_SPACES_KEY: "${DO_SPACES_KEY}"
       DO_SPACES_SECRET: "${DO_SPACES_SECRET}"
       # ✅ Attestation signer (server-side JWS)
-      EVT_ATTESTATION_SIGNER_PEM_PATH: "/run/secrets/issuer-dev-key-1.pem"
+      EVT_ATTESTATION_SIGNER_PEM_PATH: "/run/secrets/issuer-prod-2026-10.pem"
     
     volumes:
-      - /opt/cvera/secrets/issuer-dev-key-1.pem:/run/secrets/issuer-dev-key-1.pem:ro
+      - /opt/cvera/secrets/issuer-prod-2026-10.pem:/run/secrets/issuer-prod-2026-10.pem:ro
 
     depends_on:
       db:
