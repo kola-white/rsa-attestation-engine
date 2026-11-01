@@ -73,6 +73,18 @@ func securityTestServer(t *testing.T) (*Server, *pgxpool.Pool) {
  CREATE TABLE refresh_tokens(token_id uuid PRIMARY KEY, session_id uuid REFERENCES auth_sessions, user_id uuid, token_hash text UNIQUE, is_current boolean, expires_at timestamptz, last_used_at timestamptz, revoked_at timestamptz, revoke_reason text, replaced_at timestamptz);
  CREATE UNIQUE INDEX one_current_refresh ON refresh_tokens(session_id) WHERE is_current;
  CREATE TYPE employer_response_type AS ENUM('FULL_MATCH','PARTIAL_MATCH','REJECTED_NO_RECORD','REJECTED_POLICY');
+ -- Explicit Proposal A fixture only: not evidence of deployed legacy DDL.
+ CREATE TABLE evt_employer_config(employer_id text PRIMARY KEY, dispatch_mode text NOT NULL DEFAULT 'AUTO');
+ CREATE TABLE employer_hr_assignments(
+ assignment_id uuid PRIMARY KEY, principal_id uuid NOT NULL REFERENCES domain_users(id),
+ employer_id text NOT NULL REFERENCES evt_employer_config(employer_id),
+ granted_at timestamptz NOT NULL, granted_by text NOT NULL CHECK(btrim(granted_by)<>''),
+ grant_basis_ref text NOT NULL CHECK(btrim(grant_basis_ref)<>''),
+ revoked_at timestamptz, revoked_by text, revocation_reason text,
+ CHECK ((revoked_at IS NULL AND revoked_by IS NULL AND revocation_reason IS NULL) OR
+ (revoked_at IS NOT NULL AND revoked_at>=granted_at AND btrim(revoked_by)<>'' AND btrim(revocation_reason)<>'' AND revoked_by IS NOT NULL AND revocation_reason IS NOT NULL)));
+ CREATE UNIQUE INDEX employer_hr_one_active ON employer_hr_assignments(principal_id,employer_id) WHERE revoked_at IS NULL;
+ REVOKE ALL ON employer_hr_assignments FROM PUBLIC;
  CREATE TABLE evt_requests(request_id text PRIMARY KEY, employer_id text, status text, claim_snapshot jsonb DEFAULT '{}', created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now(), version int DEFAULT 1, employer_response_type employer_response_type, employer_response jsonb, attestation_jws text, attested_at timestamptz);
  CREATE TABLE evt_request_events(request_id text, actor_role text, actor_personid text, event_type text, from_status text, to_status text, payload jsonb);
  `)
@@ -204,10 +216,8 @@ func TestSecurityPostgresConcurrentRefreshLogout(t *testing.T) {
 	}
 }
 
-// This is evidence of an OPEN release blocker, not a security acceptance test.
-// It intentionally demonstrates that a global HR role can act for employer B
-// without any relationship between that employer and the authenticated user.
-func TestReleaseBlockerEmployerScopeEvidenceAndLocalSigning(t *testing.T) {
+// Authorized HTTP issuance remains on the production signer/verifier paths.
+func TestEmployerAssignedLocalSigning(t *testing.T) {
 	s, pool := securityTestServer(t)
 	key, err := rsa.GenerateKey(rand.Reader, 3072)
 	if err != nil {
@@ -229,8 +239,15 @@ func TestReleaseBlockerEmployerScopeEvidenceAndLocalSigning(t *testing.T) {
 	engine := gin.New()
 	engine.Use(auth.GinRequireAuth(s.cfg.Auth.JWTSecret, s.cfg.Auth.Issuer, s.cfg.Auth.Audience))
 	m.Register(engine.Group("/v1"))
-	// No membership/employer claim exists on this principal.
-	raw, err := auth.MintAccessTokenHS256(s.cfg.Auth.JWTSecret, s.cfg.Auth.Issuer, s.cfg.Auth.Audience, "unrelated-hr-user", "", []auth.Role{auth.RoleHRReviewer}, time.Minute)
+	principal := uuid.NewString()
+	if _, err := s.db.Exec(`INSERT INTO domain_users(id,role,status) VALUES($1,'hr_reviewer','active')`, principal); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.Exec(`INSERT INTO evt_employer_config(employer_id) VALUES('employer-b')`); err != nil {
+		t.Fatal(err)
+	}
+	grantEmployer(t, pool, principal, "employer-b")
+	raw, err := auth.MintAccessTokenHS256(s.cfg.Auth.JWTSecret, s.cfg.Auth.Issuer, s.cfg.Auth.Audience, principal, "", []auth.Role{auth.RoleHRReviewer}, time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,9 +262,9 @@ func TestReleaseBlockerEmployerScopeEvidenceAndLocalSigning(t *testing.T) {
 		r.Header.Set("Content-Type", "application/json")
 		engine.ServeHTTP(w, r)
 		if w.Code != 200 {
-			t.Fatalf("scope-gap reproduction %s: %d %s", tc.path, w.Code, w.Body.String())
+			t.Fatalf("assigned endpoint %s: %d %s", tc.path, w.Code, w.Body.String())
 		}
-		t.Logf("RELEASE BLOCKER reproduced: unrelated global HR principal received HTTP 200 for %s %s", tc.method, tc.path)
+		t.Logf("assigned HR principal received HTTP 200 for %s %s", tc.method, tc.path)
 	}
 	var compact string
 	if err := s.db.QueryRow(`SELECT attestation_jws FROM evt_requests WHERE request_id='employer-b-request'`).Scan(&compact); err != nil {
