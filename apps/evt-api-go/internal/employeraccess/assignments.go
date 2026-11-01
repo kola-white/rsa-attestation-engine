@@ -16,27 +16,25 @@ import (
 // grant/revoke transactions take the exclusive version of the same lock first.
 // Callers must use READ COMMITTED so a waiter reads grants after revocation.
 func Authorize(ctx context.Context, tx pgx.Tx, principal, employer string) error {
-	if err := lockReviewer(ctx, tx, principal, false); err != nil {
-		return err
-	}
-	var assignment uuid.UUID
-	err := tx.QueryRow(ctx, `SELECT assignment_id FROM employer_hr_assignments
- WHERE principal_id=$1 AND employer_id=$2 AND revoked_at IS NULL`, principal, employer).Scan(&assignment)
-	if errors.Is(err, pgx.ErrNoRows) {
+	if _, err := uuid.Parse(principal); err != nil {
 		return db.ErrNotFound
 	}
-	return err
+	var allowed bool
+	if err := tx.QueryRow(ctx, `SELECT check_employer_hr_assignment($1,$2)`, principal, employer).Scan(&allowed); err != nil {
+		return err
+	}
+	if !allowed {
+		return db.ErrNotFound
+	}
+	return nil
 }
 
-func lockReviewer(ctx context.Context, tx pgx.Tx, principal string, exclusive bool) error {
+func lockReviewer(ctx context.Context, tx pgx.Tx, principal string) error {
 	if _, err := uuid.Parse(principal); err != nil {
 		return db.ErrNotFound
 	}
 	var status, role string
-	query := `SELECT status, role FROM domain_users WHERE id=$1 FOR SHARE`
-	if exclusive {
-		query = `SELECT status, role FROM domain_users WHERE id=$1 FOR UPDATE`
-	}
+	query := `SELECT status, role FROM lock_employer_hr_principal($1)`
 	err := tx.QueryRow(ctx, query, principal).Scan(&status, &role)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return db.ErrNotFound
@@ -57,7 +55,7 @@ func Grant(ctx context.Context, tx pgx.Tx, principal, employer, actor, basis str
 	if strings.TrimSpace(actor) == "" || strings.TrimSpace(basis) == "" || strings.TrimSpace(employer) == "" {
 		return uuid.Nil, errors.New("actor, approval basis and employer are required")
 	}
-	if err := lockReviewer(ctx, tx, principal, true); err != nil {
+	if err := lockReviewer(ctx, tx, principal); err != nil {
 		return uuid.Nil, err
 	}
 	var exists bool
@@ -90,7 +88,7 @@ func Revoke(ctx context.Context, tx pgx.Tx, id uuid.UUID, actor, reason string) 
 	}
 	// Lock in the same order as authorization, before modifying an assignment.
 	var locked uuid.UUID
-	if err = tx.QueryRow(ctx, `SELECT id FROM domain_users WHERE id=$1 FOR UPDATE`, principal).Scan(&locked); err != nil {
+	if err = tx.QueryRow(ctx, `SELECT id FROM lock_employer_hr_principal($1)`, principal).Scan(&locked); err != nil {
 		return err
 	}
 	tag, err := tx.Exec(ctx, `UPDATE employer_hr_assignments

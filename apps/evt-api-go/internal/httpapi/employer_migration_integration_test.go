@@ -105,6 +105,14 @@ func TestEmployerMigrationConfirmedParentMetadata(t *testing.T) {
 	if err := pool.QueryRow(ctx, `SELECT NOT p.prosecdef, EXISTS(SELECT 1 FROM unnest(p.proconfig) c WHERE c LIKE 'search_path=pg_catalog,%pg_temp') FROM pg_proc p WHERE p.oid='enforce_employer_hr_assignment()'::regprocedure`).Scan(&invoker, &fixedPath); err != nil || !invoker || !fixedPath {
 		t.Fatal("trigger security contract", err)
 	}
+	for _, fn := range []string{"check_employer_hr_assignment(uuid,text)", "lock_employer_hr_principal(uuid)"} {
+		var bounded, private bool
+		err := pool.QueryRow(ctx, `SELECT p.prosecdef AND p.provolatile='v' AND EXISTS(SELECT 1 FROM unnest(p.proconfig) c WHERE c LIKE 'search_path=pg_catalog,%pg_temp'), NOT EXISTS(SELECT 1 FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE a.grantee<>p.proowner AND a.privilege_type='EXECUTE') FROM pg_proc p WHERE p.oid=$1::regprocedure`, fn).Scan(&bounded, &private)
+		if err != nil || !bounded || !private {
+			t.Fatalf("bounded private locking function %s: %v", fn, err)
+		}
+	}
+
 }
 
 func TestEmployerMigrationTransactionAndPreflight(t *testing.T) {
@@ -215,7 +223,7 @@ func TestEmployerPrivilegeBindingRejectsUnsafeRoles(t *testing.T) {
 	ctx := context.Background()
 	runtime := createEmployerProbeRole(t, pool)
 	operator := createEmployerProbeRole(t, pool)
-	for _, mode := range []string{"same-role", "owner", "membership", "rls", "default-acl", "user-role-write", "operator-record-read", "operator-provenance-write"} {
+	for _, mode := range []string{"same-role", "owner", "membership", "rls", "default-acl", "operator-user-write", "operator-record-read", "operator-provenance-write"} {
 		tx, err := pool.Begin(ctx)
 		if err != nil {
 			t.Fatal(err)
@@ -235,8 +243,8 @@ func TestEmployerPrivilegeBindingRejectsUnsafeRoles(t *testing.T) {
 			_, err = tx.Exec(ctx, `ALTER TABLE domain_users ENABLE ROW LEVEL SECURITY`)
 		case "default-acl":
 			_, err = tx.Exec(ctx, `GRANT SELECT ON employer_hr_assignments TO PUBLIC`)
-		case "user-role-write":
-			_, err = tx.Exec(ctx, `GRANT UPDATE(role) ON domain_users TO `+pgx.Identifier{runtime}.Sanitize())
+		case "operator-user-write":
+			_, err = tx.Exec(ctx, `GRANT UPDATE(role) ON domain_users TO `+pgx.Identifier{operator}.Sanitize())
 		case "operator-record-read":
 			_, err = tx.Exec(ctx, `GRANT SELECT ON evt_requests TO `+pgx.Identifier{operator}.Sanitize())
 		case "operator-provenance-write":
@@ -278,5 +286,203 @@ func TestEmployerReadOnlyMetadataQuerySyntax(t *testing.T) {
 	defer conn.Exec(context.Background(), `ROLLBACK`)
 	if _, err = conn.Exec(context.Background(), employerSQL(t, "../../operations/hr-assignment-metadata.sql")); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestEmployerCheckWithoutProfileWritesAndLegacyGrantCompatibility(t *testing.T) {
+	s, pool := securityTestServer(t)
+	a, _ := seedEmployerFixture(t, s)
+	ctx := context.Background()
+	runtime := createEmployerProbeRole(t, pool)
+	operator := createEmployerProbeRole(t, pool)
+	// Match the verified evt-app legacy privileges, without changing their scope.
+	for _, table := range []string{"domain_users", "evt_employer_config", "evt_requests"} {
+		if _, err := pool.Exec(ctx, `GRANT SELECT,INSERT,UPDATE,DELETE ON `+pgx.Identifier{table}.Sanitize()+` TO `+pgx.Identifier{runtime}.Sanitize()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	grantEmployer(t, pool, a, "employer-a")
+	applyEmployerBindings(t, pool, runtime, operator)
+	for _, table := range []string{"domain_users", "evt_employer_config", "evt_requests"} {
+		for _, priv := range []string{"SELECT", "INSERT", "UPDATE", "DELETE"} {
+			var allowed bool
+			if err := pool.QueryRow(ctx, `SELECT has_table_privilege($1,$2,$3)`, runtime, table, priv).Scan(&allowed); err != nil || !allowed {
+				t.Fatalf("legacy %s on %s changed: %v", priv, table, err)
+			}
+		}
+	}
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err = tx.Exec(ctx, `SET LOCAL ROLE `+pgx.Identifier{runtime}.Sanitize()); err != nil {
+		t.Fatal(err)
+	}
+	if err = employeraccess.Authorize(ctx, tx, a, "employer-a"); err != nil {
+		t.Fatal(err)
+	}
+	if err = employeraccess.Authorize(ctx, tx, a, "employer-b"); err == nil {
+		t.Fatal("legacy DML conferred another employer grant")
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO employer_hr_assignments(assignment_id,principal_id,employer_id,granted_by,grant_basis_ref) VALUES($1,$2,'employer-b','runtime','unreviewed')`, uuid.New(), a)
+	expectEmployerSQLState(t, err, "42501")
+}
+
+func TestEmployerBoundedFunctionSearchPathIsolationAndRLS(t *testing.T) {
+	s, pool := securityTestServer(t)
+	a, _ := seedEmployerFixture(t, s)
+	ctx := context.Background()
+	runtime := createEmployerProbeRole(t, pool)
+	operator := createEmployerProbeRole(t, pool)
+	grantEmployer(t, pool, a, "employer-a")
+	applyEmployerBindings(t, pool, runtime, operator)
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err = tx.Exec(ctx, `SET LOCAL ROLE `+pgx.Identifier{runtime}.Sanitize()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `CREATE TEMP TABLE domain_users(id uuid,status text,role text); CREATE TEMP TABLE employer_hr_assignments(principal_id uuid,employer_id text,revoked_at timestamptz)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO pg_temp.domain_users VALUES($1,'active','hr_reviewer');`, a); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO pg_temp.employer_hr_assignments VALUES($1,'employer-b',NULL)`, a); err != nil {
+		t.Fatal(err)
+	}
+	if err = employeraccess.Authorize(ctx, tx, a, "employer-a"); err != nil {
+		t.Fatalf("trusted grant masked: %v", err)
+	}
+	if err = employeraccess.Authorize(ctx, tx, a, "employer-b"); err == nil {
+		t.Fatal("temporary table bypassed authorization")
+	}
+	if err = tx.Rollback(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for _, isolation := range []pgx.TxIsoLevel{pgx.RepeatableRead, pgx.Serializable} {
+		tx, err := pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: isolation})
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = employeraccess.Authorize(ctx, tx, a, "employer-a")
+		tx.Rollback(ctx)
+		expectEmployerSQLState(t, err, "55000")
+	}
+	tx, err = pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err = tx.Exec(ctx, `ALTER TABLE domain_users ENABLE ROW LEVEL SECURITY`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `SET LOCAL ROLE `+pgx.Identifier{runtime}.Sanitize()); err != nil {
+		t.Fatal(err)
+	}
+	err = employeraccess.Authorize(ctx, tx, a, "employer-a")
+	expectEmployerSQLState(t, err, "55000")
+}
+
+func TestEmployerMigrationClearsInheritedCreationDefaults(t *testing.T) {
+	_, pool := securityTestServer(t)
+	ctx := context.Background()
+	runtime := createEmployerProbeRole(t, pool)
+	operator := createEmployerProbeRole(t, pool)
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	schema := "hr_default_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	if _, err = tx.Exec(ctx, `CREATE SCHEMA `+pgx.Identifier{schema}.Sanitize()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `SELECT set_config('search_path',$1,true)`, schema); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, employerSQL(t, "testdata/proposal_a_legacy_schema.sql")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `ALTER DEFAULT PRIVILEGES IN SCHEMA `+pgx.Identifier{schema}.Sanitize()+` GRANT SELECT,INSERT,UPDATE,DELETE ON TABLES TO `+pgx.Identifier{runtime}.Sanitize()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `ALTER DEFAULT PRIVILEGES IN SCHEMA `+pgx.Identifier{schema}.Sanitize()+` GRANT EXECUTE ON FUNCTIONS TO `+pgx.Identifier{runtime}.Sanitize()+`,`+pgx.Identifier{operator}.Sanitize()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, employerSQL(t, "../../migrations/000014_employer_hr_assignments.sql")); err != nil {
+		t.Fatal(err)
+	}
+	var exposed bool
+	if err = tx.QueryRow(ctx, `SELECT has_any_column_privilege($1,'employer_hr_assignments','SELECT') OR has_any_column_privilege($1,'employer_hr_assignments','INSERT') OR has_any_column_privilege($1,'employer_hr_assignments','UPDATE') OR has_table_privilege($1,'employer_hr_assignments','DELETE')`, runtime).Scan(&exposed); err != nil || exposed {
+		t.Fatal("creation defaults exposed assignment access", err)
+	}
+	for _, r := range []string{runtime, operator, "public"} {
+		if r == "public" {
+			var publicExec bool
+			if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_proc p,LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE p.oid IN ('check_employer_hr_assignment(uuid,text)'::regprocedure,'lock_employer_hr_principal(uuid)'::regprocedure) AND a.grantee=0 AND a.privilege_type='EXECUTE')`).Scan(&publicExec); err != nil || publicExec {
+				t.Fatal("PUBLIC function access remained", err)
+			}
+			continue
+		}
+		if err = tx.QueryRow(ctx, `SELECT has_function_privilege($1,'check_employer_hr_assignment(uuid,text)','EXECUTE') OR has_function_privilege($1,'lock_employer_hr_principal(uuid)','EXECUTE')`, r).Scan(&exposed); err != nil || exposed {
+			t.Fatal("creation defaults exposed definer execution", err)
+		}
+	}
+}
+
+func TestEmployerMigrationAtomicWithoutExternalRunner(t *testing.T) {
+	_, pool := securityTestServer(t)
+	ctx := context.Background()
+	schema := "hr_atomic_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	quoted := pgx.Identifier{schema}.Sanitize()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err = tx.Exec(ctx, `CREATE SCHEMA `+quoted); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `SELECT set_config('search_path',$1,true)`, schema); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, employerSQL(t, "testdata/proposal_a_legacy_schema.sql")); err != nil {
+		t.Fatal(err)
+	}
+	// Force a failure after the migration creates its assignment table/index.
+	if _, err = tx.Exec(ctx, `CREATE FUNCTION check_employer_hr_assignment(uuid,text) RETURNS boolean LANGUAGE sql AS 'SELECT false'`); err != nil {
+		t.Fatal(err)
+	}
+	if err = tx.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if _, err := pool.Exec(context.Background(), `DROP SCHEMA `+quoted+` CASCADE`); err != nil {
+			t.Error(err)
+		}
+	})
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Release()
+	var original string
+	if err = conn.QueryRow(ctx, `SELECT current_setting('search_path')`).Scan(&original); err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Exec(context.Background(), `SELECT set_config('search_path',$1,false)`, original)
+	if _, err = conn.Exec(ctx, `SELECT set_config('search_path',$1,false)`, schema); err != nil {
+		t.Fatal(err)
+	}
+	// Intentionally no explicit transaction: the single DO must be atomic.
+	_, err = conn.Exec(ctx, employerSQL(t, "../../migrations/000014_employer_hr_assignments.sql"))
+	expectEmployerSQLState(t, err, "42723")
+	var absent bool
+	if err = conn.QueryRow(ctx, `SELECT to_regclass($1) IS NULL`, schema+".employer_hr_assignments").Scan(&absent); err != nil || !absent {
+		t.Fatal("autocommit migration left partial assignment objects", err)
 	}
 }

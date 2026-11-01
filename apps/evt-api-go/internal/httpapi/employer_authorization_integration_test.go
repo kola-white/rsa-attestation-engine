@@ -173,7 +173,7 @@ func TestEmployerAuthorizationCurrentIdentityAndFailClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Missing schema must never produce implicit permission or a successful list.
-	if _, err := s.db.Exec(`ALTER TABLE employer_hr_assignments RENAME TO unavailable_assignments`); err != nil {
+	if _, err := s.db.Exec(`DROP TABLE employer_hr_assignments`); err != nil {
 		t.Fatal(err)
 	}
 	assertEmployerEndpoints(t, engine, token, 500)
@@ -413,6 +413,17 @@ func TestEmployerAssignmentsRestrictedRuntimeCannotAdminister(t *testing.T) {
 		t.Fatalf("restricted authorization: %v", err)
 	}
 	operations := []func(pgx.Tx) error{
+		func(tx pgx.Tx) error { _, err := tx.Exec(ctx, `SELECT * FROM employer_hr_assignments`); return err },
+		func(tx pgx.Tx) error { _, err := tx.Exec(ctx, `SELECT * FROM domain_users`); return err },
+		func(tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, `UPDATE domain_users SET email='unwanted@example.invalid' WHERE id=$1`, a)
+			return err
+		},
+		func(tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, `SELECT * FROM lock_employer_hr_principal($1)`, a)
+			return err
+		},
+
 		func(tx pgx.Tx) error {
 			_, err := employeraccess.Grant(ctx, tx, a, "employer-b", "runtime", "unreviewed")
 			return err

@@ -1,6 +1,10 @@
 -- Proposal A only. Apply as a trusted migration owner in the verified legacy
 -- schema (public in the operator-supplied production metadata), in a transaction.
 -- Runtime/operator role bindings are deliberately separate and require review.
+-- The single outer DO keeps all new objects and ACL cleanup atomic even for an
+-- autocommit client; it does not invent a runner or version-recording mechanism.
+DO $atomic_migration$
+BEGIN
 DO $preflight$
 DECLARE
     target_schema TEXT := current_schema();
@@ -24,7 +28,7 @@ BEGIN
     LOOP
         SELECT a.atttypid INTO actual_type
         FROM pg_catalog.pg_attribute a
-        WHERE a.attrelid = pg_catalog.to_regclass(format('%I.%I', target_schema, expected.table_name))
+        WHERE a.attrelid = pg_catalog.to_regclass(pg_catalog.format('%I.%I', target_schema, expected.table_name))
           AND a.attname = expected.column_name AND a.attnum > 0 AND NOT a.attisdropped;
         IF actual_type IS DISTINCT FROM expected.type_oid THEN
             RAISE EXCEPTION 'legacy schema prerequisite mismatch: %.%.%',
@@ -57,12 +61,60 @@ CREATE UNIQUE INDEX employer_hr_one_active
 REVOKE ALL ON employer_hr_assignments FROM PUBLIC;
 
 -- Enforce the same lock protocol for reviewed operator SQL as for the CLI.
--- SECURITY INVOKER: this function grants no extra database privileges.
+-- The invoker trigger calls the separately permissioned operator lock helper.
 DO $install$
 DECLARE
     target_schema TEXT := current_schema();
 BEGIN
-    EXECUTE format($definition$
+    -- These bounded SECURITY DEFINER functions delegate row locking, never
+    -- profile mutation. Typed parameters, fixed SQL/search_path, no PUBLIC ACL.
+    -- Refuse isolation/RLS changes rather than silently bypass their semantics.
+    EXECUTE pg_catalog.format($definition$
+        CREATE FUNCTION %I.check_employer_hr_assignment(p_principal UUID, p_employer TEXT)
+        RETURNS BOOLEAN LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+        SET search_path = pg_catalog, %I, pg_temp
+        AS $body$
+        DECLARE principal_status TEXT; principal_role TEXT;
+        BEGIN
+            IF current_setting('transaction_isolation') <> 'read committed' THEN
+                RAISE EXCEPTION 'employer authorization requires READ COMMITTED' USING ERRCODE = '55000';
+            END IF;
+            IF EXISTS(SELECT 1 FROM pg_catalog.pg_class WHERE oid IN
+                ('domain_users'::regclass,'employer_hr_assignments'::regclass)
+                AND (relrowsecurity OR relforcerowsecurity)) THEN
+                RAISE EXCEPTION 'employer authorization RLS requires review' USING ERRCODE = '55000';
+            END IF;
+            SELECT d.status,d.role INTO principal_status,principal_role
+            FROM domain_users d WHERE d.id=p_principal FOR SHARE;
+            IF NOT FOUND OR principal_status <> 'active' OR principal_role <> 'hr_reviewer' THEN
+                RETURN FALSE;
+            END IF;
+            RETURN EXISTS(SELECT 1 FROM employer_hr_assignments a
+                WHERE a.principal_id=p_principal AND a.employer_id=p_employer AND a.revoked_at IS NULL);
+        END;
+        $body$;
+    $definition$,target_schema,target_schema);
+    EXECUTE pg_catalog.format($definition$
+        CREATE FUNCTION %I.lock_employer_hr_principal(p_principal UUID)
+        RETURNS TABLE(id UUID,status TEXT,role TEXT)
+        LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+        SET search_path = pg_catalog, %I, pg_temp
+        AS $body$
+        BEGIN
+            IF current_setting('transaction_isolation') <> 'read committed' THEN
+                RAISE EXCEPTION 'employer administration requires READ COMMITTED' USING ERRCODE = '55000';
+            END IF;
+            IF EXISTS(SELECT 1 FROM pg_catalog.pg_class WHERE oid IN
+                ('domain_users'::regclass,'employer_hr_assignments'::regclass)
+                AND (relrowsecurity OR relforcerowsecurity)) THEN
+                RAISE EXCEPTION 'employer administration RLS requires review' USING ERRCODE = '55000';
+            END IF;
+            RETURN QUERY SELECT d.id,d.status,d.role FROM domain_users d
+                WHERE d.id=p_principal FOR UPDATE;
+        END;
+        $body$;
+    $definition$,target_schema,target_schema);
+    EXECUTE pg_catalog.format($definition$
         CREATE FUNCTION %I.enforce_employer_hr_assignment() RETURNS TRIGGER
         LANGUAGE plpgsql SECURITY INVOKER
         SET search_path = pg_catalog, %I, pg_temp
@@ -90,7 +142,7 @@ BEGIN
             END IF;
 
             SELECT status, role INTO principal_status, principal_role
-            FROM domain_users WHERE id = NEW.principal_id FOR UPDATE;
+            FROM lock_employer_hr_principal(NEW.principal_id);
             IF NOT FOUND THEN
                 RAISE EXCEPTION 'assignment principal does not exist' USING ERRCODE = '23503';
             END IF;
@@ -102,11 +154,46 @@ BEGIN
         END;
         $body$;
     $definition$, target_schema, target_schema);
-    EXECUTE format('REVOKE ALL ON FUNCTION %I.enforce_employer_hr_assignment() FROM PUBLIC', target_schema);
-    EXECUTE format(
+    EXECUTE pg_catalog.format('REVOKE ALL ON FUNCTION %I.enforce_employer_hr_assignment() FROM PUBLIC', target_schema);
+    EXECUTE pg_catalog.format(
         'CREATE TRIGGER trg_employer_hr_assignment_guard BEFORE INSERT OR UPDATE ON %I.employer_hr_assignments '
         'FOR EACH ROW EXECUTE FUNCTION %I.enforce_employer_hr_assignment()',
         target_schema, target_schema
     );
 END;
 $install$;
+
+-- New objects start owner-only, including when ALTER DEFAULT PRIVILEGES would
+-- otherwise grant this runtime writes or other identities routine execution.
+-- This affects only objects created above; no legacy parent ACL is changed.
+DO $acl$
+DECLARE target_schema TEXT := current_schema(); recipient RECORD; routine RECORD;
+BEGIN
+    FOR recipient IN
+        SELECT DISTINCT a.grantee FROM pg_catalog.pg_class c,
+        LATERAL pg_catalog.aclexplode(coalesce(c.relacl,pg_catalog.acldefault('r',c.relowner))) a
+        WHERE c.oid=pg_catalog.to_regclass(pg_catalog.format('%I.employer_hr_assignments',target_schema))
+          AND a.grantee <> c.relowner
+    LOOP
+        EXECUTE pg_catalog.format('REVOKE ALL ON TABLE %I.employer_hr_assignments FROM %s',target_schema,
+            CASE WHEN recipient.grantee=0 THEN 'PUBLIC' ELSE pg_catalog.quote_ident(pg_catalog.pg_get_userbyid(recipient.grantee)) END);
+    END LOOP;
+    FOR routine IN SELECT * FROM (VALUES
+        ('check_employer_hr_assignment','uuid,text'),
+        ('lock_employer_hr_principal','uuid'),('enforce_employer_hr_assignment','')
+    ) r(name,args) LOOP
+        FOR recipient IN
+            SELECT DISTINCT a.grantee FROM pg_catalog.pg_proc p,
+            LATERAL pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+            WHERE p.oid=pg_catalog.to_regprocedure(pg_catalog.format('%I.%I(%s)',target_schema,routine.name,routine.args))
+              AND a.grantee <> p.proowner
+        LOOP
+            EXECUTE pg_catalog.format('REVOKE ALL ON FUNCTION %I.%I(%s) FROM %s',target_schema,routine.name,routine.args,
+                CASE WHEN recipient.grantee=0 THEN 'PUBLIC' ELSE pg_catalog.quote_ident(pg_catalog.pg_get_userbyid(recipient.grantee)) END);
+        END LOOP;
+    END LOOP;
+END;
+$acl$;
+
+END;
+$atomic_migration$;

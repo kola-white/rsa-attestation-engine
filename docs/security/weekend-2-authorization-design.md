@@ -1,6 +1,6 @@
 # Weekend 2 authorization proposals — approval required
 
-Status: **Proposal A APPROVED; application/operator code and migration 000014 verified locally against the supplied parent-schema subset; production role/RLS binding and deployment remain unresolved. Proposal B remains PROPOSED, NOT APPROVED OR IMPLEMENTED.** See [Proposal A implementation evidence and missing schema requirements](weekend-2-employer-assignments.md). No production provisioning, deployment or merge is authorized. The sections below preserve the designs reviewed for approval.
+Status: **Proposal A APPROVED; application/operator code and migration 000014 verified locally against the supplied parent-schema subset; operator-supplied production role/ownership/disabled-RLS evidence received; bounded check/lock functions replace profile-write locking; dedicated operator binding and production execution remain unresolved. Proposal B remains PROPOSED, NOT APPROVED OR IMPLEMENTED.** See [Proposal A implementation evidence and missing schema requirements](weekend-2-employer-assignments.md). No production provisioning, deployment or merge is authorized. The sections below preserve the designs reviewed for approval.
 
 ## Observed identifiers, relationships, and provisioning
 
