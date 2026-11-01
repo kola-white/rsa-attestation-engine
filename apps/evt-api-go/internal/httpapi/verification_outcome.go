@@ -137,7 +137,7 @@ func verifySDJWTVCOutcome(
 	r *http.Request,
 	rawCredential string,
 ) VerificationOutcome {
-	resolver := &sdjwtvc.IssuerMetadataResolver{}
+	resolver := &sdjwtvc.IssuerMetadataResolver{Client: issuerMetadataHTTPClient}
 
 	profile := sdjwtvc.New(
 		resolver,

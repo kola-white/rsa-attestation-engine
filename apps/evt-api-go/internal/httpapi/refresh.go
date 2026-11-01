@@ -52,6 +52,24 @@ func (s *Server) HandleAuthRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
+	// Serialize rotation and logout on the session before locking token rows.
+	// A revoked session must reject even a token left current by a racing logout.
+	var sessionRevokedAt sql.NullTime
+	err = tx.QueryRowContext(r.Context(), `
+    SELECT revoked_at FROM auth_sessions
+    WHERE session_id = (SELECT session_id FROM refresh_tokens WHERE token_hash = $1)
+    FOR UPDATE
+  `, incomingHash).Scan(&sessionRevokedAt)
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && sessionRevokedAt.Valid) {
+		writeErr(w, http.StatusUnauthorized, "invalid_refresh_token")
+		return
+	}
+	if err != nil {
+		log.Printf("[auth:refresh] lock session: %v", err)
+		writeErr(w, http.StatusInternalServerError, "server_error")
+		return
+	}
+
 	// Lock the token row if it exists
 	var (
 		tokenID   uuid.UUID

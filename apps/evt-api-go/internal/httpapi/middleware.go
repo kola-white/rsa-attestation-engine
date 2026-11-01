@@ -12,10 +12,10 @@ func withCORS(next http.Handler) http.Handler {
 		"http://localhost:19006": true,
 
 		// Your real domains (browser origin)
-		"https://cvera.app":     true,
-		"https://www.cvera.app": true,
+		"https://cvera.app":                            true,
+		"https://www.cvera.app":                        true,
 		"https://cvera-iiw-mvp-expo-app--mvp.expo.app": true,
-		"https://mvp.cvera.app": true,
+		"https://mvp.cvera.app":                        true,
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +36,15 @@ func withCORS(next http.Handler) http.Handler {
 			return
 		}
 
+		next.ServeHTTP(w, r)
+	})
+}
+
+// JSON endpoints accept metadata and compact credentials, never file contents.
+// Match the existing verification endpoint's limit before decoding any body.
+func withRequestLimit(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 		next.ServeHTTP(w, r)
 	})
 }

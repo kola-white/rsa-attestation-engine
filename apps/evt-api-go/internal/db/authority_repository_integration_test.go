@@ -1420,8 +1420,17 @@ func openIsolatedAuthoritySnapshotPool(t *testing.T) *pgxpool.Pool {
 		t.Fatalf("locate authority migrations: %v", err)
 	}
 	sort.Strings(files)
-	if len(files) < 9 {
-		t.Fatalf("expected at least nine authority migrations, found %d", len(files))
+	// This helper validates authority persistence in an authority-only schema.
+	// Later application migrations require legacy tables and have their own tests.
+	authorityFiles := files[:0]
+	for _, file := range files {
+		if filepath.Base(file) < "000014_" {
+			authorityFiles = append(authorityFiles, file)
+		}
+	}
+	files = authorityFiles
+	if len(files) != 13 {
+		t.Fatalf("expected authority migrations 1-13, found %d", len(files))
 	}
 	for i, file := range files {
 		expectedPrefix := fmt.Sprintf("%06d_", i+1)
