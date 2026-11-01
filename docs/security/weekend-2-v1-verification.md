@@ -1,5 +1,7 @@
 # Weekend 2: targeted remediation and release verification
 
+**Closeout update:** [current review, patched-build verification and deployment gate](weekend-2-closeout.md) supersedes historical toolchain/dependency and migration-runner uncertainty below. Proposal B remains acknowledged and unresolved.
+
 Date: 2026-11-01. Repository: `kola-white/rsa-attestation-engine`. Base: fetched `origin/main`, `2813e7e` (PR #129). Branch: `security/weekend-2-v1-remediation`.
 
 **Acceptance result: BLOCKED.** Proposal A employer authorization and migration 000014 pass local integration tests against the operator-supplied parent-schema subset. Operator-supplied production ownership, evt-app flags/legacy DML and disabled parent RLS are confirmed. Dedicated operator approval, live API schema resolution and an approved production migration/version-recording process remain unresolved; no production migration is authorized. The arbitrary-case evidence-upload gap remains a high-severity release blocker. Independent acceptance must not sign off Weekend 2 while these conditions remain. Passing local tests does not satisfy the release definition of done. This is a targeted assessment of the six requested areas, not a comprehensive repository audit.

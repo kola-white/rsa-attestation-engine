@@ -1,5 +1,7 @@
 # Proposal A: locking, privileges, and local verification
 
+**Closeout update:** [current review, patched-build verification and deployment gate](weekend-2-closeout.md) supersedes historical toolchain/dependency and migration-runner uncertainty below. Proposal B remains acknowledged and unresolved.
+
 **Proposal A is implemented and locally verified; production execution remains unauthorized.** Draft PR #130 must remain draft. Proposal B is untouched and remains an unresolved **high-severity release blocker**. No production SQL, migrations, grants, deployment, infrastructure changes or merge were executed by this work.
 
 ## Authoritative evidence supplied by the operator

@@ -100,6 +100,26 @@ func TestEvidenceRoutesRequireAuthentication(t *testing.T) {
 	}
 }
 
+func TestEvidenceCompletionRemainsAuthenticatedAndUnsupported(t *testing.T) {
+	cfg := &config.Config{Auth: config.AuthConfig{JWTSecret: strings.Repeat("s", 32), Issuer: "test-issuer", Audience: "test-audience"}}
+	s := &Server{cfg: cfg}
+	mux := http.NewServeMux()
+	s.registerEvidenceRoutes(mux)
+	raw, err := auth.MintAccessTokenHS256(cfg.Auth.JWTSecret, cfg.Auth.Issuer, cfg.Auth.Audience, "synthetic-user", "", []auth.Role{auth.RoleRequestor}, time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"/v1/cases/case-b/checks/check-b/evidence:complete", "/v1/evidence/commit"} {
+		r := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{}`))
+		r.Header.Set("Authorization", "Bearer "+raw)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, r)
+		if w.Code != http.StatusNotImplemented || !strings.Contains(w.Body.String(), "evidence_complete_requires_persistence") {
+			t.Fatalf("%s returned %d: %s", path, w.Code, w.Body.String())
+		}
+	}
+}
+
 // Authentication is fixed, but case authorization/persistence remains an OPEN
 // release blocker. Offline presigning uses synthetic credentials and no upload.
 func TestReleaseBlockerEvidenceCaseScope(t *testing.T) {

@@ -1,4 +1,5 @@
-FROM golang:1.25 AS build
+FROM golang:1.26.10 AS build
+ENV GOTOOLCHAIN=local
 WORKDIR /src
 
 ARG BUILD_SHA=development

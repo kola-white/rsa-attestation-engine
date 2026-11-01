@@ -1,5 +1,7 @@
 # Weekend 2 dependency finding dispositions
 
+**Closeout update:** [current review, patched-build verification and deployment gate](weekend-2-closeout.md) supersedes historical toolchain/dependency and migration-runner uncertainty below. Proposal B remains acknowledged and unresolved.
+
 Design follow-up to draft PR #130. This classifies the **existing 16 symbol-level findings**; it is not a fresh audit or scanner run. Original advisories, affected versions, tool configuration and example traces remain in [the saved results](weekend-2-vulnerability-results.json). No dependency or compiler was changed.
 
 Classification meanings:

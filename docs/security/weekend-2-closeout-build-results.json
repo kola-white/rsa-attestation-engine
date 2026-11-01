@@ -1,0 +1,86 @@
+{
+  "status": "Local Linux target verified; exact Docker/CI release verification required before merge",
+  "toolchain": "go1.26.10",
+  "target": {
+    "GOOS": "linux",
+    "GOARCH": "amd64",
+    "CGO_ENABLED": "0"
+  },
+  "x_net": "v0.60.0",
+  "required_transitive_updates": [
+    "x/crypto v0.57.0",
+    "x/mod v0.41.0",
+    "x/sync v0.23.0",
+    "x/sys v0.48.0",
+    "x/text v0.42.0",
+    "x/tools v0.49.0"
+  ],
+  "candidate_binary_sha256": "a105c12c45d7b48295dda1aac831be713363ed4b91de00d6f3460646d7f8cde9",
+  "build_identity": "closeout-candidate; vcs.modified=true; not an exact committed release or deployed image",
+  "original_findings": "weekend-2-vulnerability-results.json retained without modification",
+  "scans": {
+    "source": {
+      "config": {
+        "protocol_version": "v1.0.0",
+        "scanner_name": "govulncheck",
+        "scanner_version": "v1.9.0",
+        "db": "https://vuln.go.dev",
+        "db_last_modified": "2026-10-27T21:16:18Z",
+        "go_version": "go1.26.10",
+        "scan_level": "symbol",
+        "scan_mode": "source"
+      },
+      "all_finding_ids": [
+        "GO-2025-4017",
+        "GO-2025-4233",
+        "GO-2026-4771",
+        "GO-2026-4772",
+        "GO-2026-5004",
+        "GO-2026-5676",
+        "GO-2026-5764",
+        "GO-2026-5932",
+        "GO-2026-6860",
+        "GO-2026-6866"
+      ],
+      "symbol_finding_ids": [
+        "GO-2025-4233",
+        "GO-2026-5004",
+        "GO-2026-5676",
+        "GO-2026-5764"
+      ],
+      "target_finding_ids": []
+    },
+    "linux_binary": {
+      "config": {
+        "protocol_version": "v1.0.0",
+        "scanner_name": "govulncheck",
+        "scanner_version": "v1.9.0",
+        "db": "https://vuln.go.dev",
+        "db_last_modified": "2026-10-27T21:16:18Z",
+        "scan_level": "symbol",
+        "scan_mode": "binary"
+      },
+      "all_finding_ids": [
+        "GO-2025-4017",
+        "GO-2025-4233",
+        "GO-2026-4771",
+        "GO-2026-4772",
+        "GO-2026-5004",
+        "GO-2026-5676",
+        "GO-2026-5764",
+        "GO-2026-5932",
+        "GO-2026-6860",
+        "GO-2026-6866"
+      ],
+      "symbol_finding_ids": [
+        "GO-2025-4017",
+        "GO-2025-4233",
+        "GO-2026-4771",
+        "GO-2026-5004",
+        "GO-2026-5676",
+        "GO-2026-5764"
+      ],
+      "target_finding_ids": []
+    }
+  }
+}
