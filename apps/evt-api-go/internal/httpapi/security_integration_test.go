@@ -34,7 +34,7 @@ import (
 )
 
 // Only the existing disposable local database is allowed. Each test gets an
-// isolated schema; these are minimal runtime fixtures, not production DDL.
+// isolated schema; confirmed parent metadata is separated from workflow fixtures.
 func securityTestServer(t *testing.T) (*Server, *pgxpool.Pool) {
 	t.Helper()
 	raw := os.Getenv("CVERA_AUTHORITY_TEST_DATABASE_URL")
@@ -67,30 +67,36 @@ func securityTestServer(t *testing.T) (*Server, *pgxpool.Pool) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { database.Close() })
+
+	// Reproduce confirmed parent keys/types and apply the actual migration.
+	// Omitted legacy workflow DDL remains explicitly labelled test scaffolding.
+	for _, path := range []string{"testdata/proposal_a_legacy_schema.sql", "../../migrations/000014_employer_hr_assignments.sql"} {
+		sqlBytes, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tx, err := database.Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err = tx.Exec(string(sqlBytes)); err != nil {
+			tx.Rollback()
+			t.Fatalf("apply %s: %v", path, err)
+		}
+		if err = tx.Commit(); err != nil {
+			t.Fatal(err)
+		}
+	}
 	_, err = database.Exec(`
- CREATE TABLE domain_users(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), kratos_identity_id text UNIQUE, email text, name text, role text, status text, updated_at timestamptz DEFAULT now());
  CREATE TABLE auth_sessions(session_id uuid PRIMARY KEY, user_id uuid, device_id text, created_at timestamptz, last_used_at timestamptz, revoked_at timestamptz, revoke_reason text);
  CREATE TABLE refresh_tokens(token_id uuid PRIMARY KEY, session_id uuid REFERENCES auth_sessions, user_id uuid, token_hash text UNIQUE, is_current boolean, expires_at timestamptz, last_used_at timestamptz, revoked_at timestamptz, revoke_reason text, replaced_at timestamptz);
  CREATE UNIQUE INDEX one_current_refresh ON refresh_tokens(session_id) WHERE is_current;
- CREATE TYPE employer_response_type AS ENUM('FULL_MATCH','PARTIAL_MATCH','REJECTED_NO_RECORD','REJECTED_POLICY');
- -- Explicit Proposal A fixture only: not evidence of deployed legacy DDL.
- CREATE TABLE evt_employer_config(employer_id text PRIMARY KEY, dispatch_mode text NOT NULL DEFAULT 'AUTO');
- CREATE TABLE employer_hr_assignments(
- assignment_id uuid PRIMARY KEY, principal_id uuid NOT NULL REFERENCES domain_users(id),
- employer_id text NOT NULL REFERENCES evt_employer_config(employer_id),
- granted_at timestamptz NOT NULL, granted_by text NOT NULL CHECK(btrim(granted_by)<>''),
- grant_basis_ref text NOT NULL CHECK(btrim(grant_basis_ref)<>''),
- revoked_at timestamptz, revoked_by text, revocation_reason text,
- CHECK ((revoked_at IS NULL AND revoked_by IS NULL AND revocation_reason IS NULL) OR
- (revoked_at IS NOT NULL AND revoked_at>=granted_at AND btrim(revoked_by)<>'' AND btrim(revocation_reason)<>'' AND revoked_by IS NOT NULL AND revocation_reason IS NOT NULL)));
- CREATE UNIQUE INDEX employer_hr_one_active ON employer_hr_assignments(principal_id,employer_id) WHERE revoked_at IS NULL;
- REVOKE ALL ON employer_hr_assignments FROM PUBLIC;
- CREATE TABLE evt_requests(request_id text PRIMARY KEY, employer_id text, status text, claim_snapshot jsonb DEFAULT '{}', created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now(), version int DEFAULT 1, employer_response_type employer_response_type, employer_response jsonb, attestation_jws text, attested_at timestamptz);
- CREATE TABLE evt_request_events(request_id text, actor_role text, actor_personid text, event_type text, from_status text, to_status text, payload jsonb);
+ CREATE TABLE evt_request_events(request_id uuid, actor_role text, actor_personid text, event_type text, from_status text, to_status text, payload jsonb);
  `)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	pool, err := pgxpool.New(context.Background(), u.String())
 	if err != nil {
 		t.Fatal(err)
@@ -231,21 +237,23 @@ func TestEmployerAssignedLocalSigning(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.db.Exec(`INSERT INTO evt_requests(request_id,employer_id,status,claim_snapshot) VALUES('employer-b-request','employer-b','ATTESTATION_PENDING','{"subject":"synthetic-only"}')`); err != nil {
-		t.Fatal(err)
-	}
-	d := &evtdb.DB{Pool: pool}
-	m := &evt.Module{Employer: &evt.EmployerHandlers{DB: d, Repo: &evt.Repo{DB: d, Signer: signer}}}
-	engine := gin.New()
-	engine.Use(auth.GinRequireAuth(s.cfg.Auth.JWTSecret, s.cfg.Auth.Issuer, s.cfg.Auth.Audience))
-	m.Register(engine.Group("/v1"))
+
 	principal := uuid.NewString()
-	if _, err := s.db.Exec(`INSERT INTO domain_users(id,role,status) VALUES($1,'hr_reviewer','active')`, principal); err != nil {
+	if _, err := s.db.Exec(`INSERT INTO domain_users(id,kratos_identity_id,role,status) VALUES($1::uuid,$1::uuid::text,'hr_reviewer','active')`, principal); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.db.Exec(`INSERT INTO evt_employer_config(employer_id) VALUES('employer-b')`); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := s.db.Exec(`INSERT INTO evt_requests(request_id,candidate_personid,employer_id,status,claim_snapshot) VALUES('00000000-0000-4000-8000-00000000000c',$1,'employer-b','ATTESTATION_PENDING','{"subject":"synthetic-only"}')`, principal); err != nil {
+		t.Fatal(err)
+	}
+
+	d := &evtdb.DB{Pool: pool}
+	m := &evt.Module{Employer: &evt.EmployerHandlers{DB: d, Repo: &evt.Repo{DB: d, Signer: signer}}}
+	engine := gin.New()
+	engine.Use(auth.GinRequireAuth(s.cfg.Auth.JWTSecret, s.cfg.Auth.Issuer, s.cfg.Auth.Audience))
+	m.Register(engine.Group("/v1"))
 	grantEmployer(t, pool, principal, "employer-b")
 	raw, err := auth.MintAccessTokenHS256(s.cfg.Auth.JWTSecret, s.cfg.Auth.Issuer, s.cfg.Auth.Audience, principal, "", []auth.Role{auth.RoleHRReviewer}, time.Minute)
 	if err != nil {
@@ -253,8 +261,8 @@ func TestEmployerAssignedLocalSigning(t *testing.T) {
 	}
 	for _, tc := range []struct{ method, path, body string }{
 		{"GET", "/v1/employer/requests?employer_id=employer-b", ""},
-		{"GET", "/v1/employer/requests/employer-b-request?employer_id=employer-b", ""},
-		{"POST", "/v1/employer/requests/employer-b-request/attest", `{"employer_id":"employer-b","response_type":"FULL_MATCH","response_body":{"claim":{"value":{"title":"Engineer"}}}}`},
+		{"GET", "/v1/employer/requests/00000000-0000-4000-8000-00000000000c?employer_id=employer-b", ""},
+		{"POST", "/v1/employer/requests/00000000-0000-4000-8000-00000000000c/attest", `{"employer_id":"employer-b","response_type":"FULL_MATCH","response_body":{"claim":{"value":{"title":"Engineer"}}}}`},
 	} {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
@@ -267,7 +275,7 @@ func TestEmployerAssignedLocalSigning(t *testing.T) {
 		t.Logf("assigned HR principal received HTTP 200 for %s %s", tc.method, tc.path)
 	}
 	var compact string
-	if err := s.db.QueryRow(`SELECT attestation_jws FROM evt_requests WHERE request_id='employer-b-request'`).Scan(&compact); err != nil {
+	if err := s.db.QueryRow(`SELECT attestation_jws FROM evt_requests WHERE request_id='00000000-0000-4000-8000-00000000000c'`).Scan(&compact); err != nil {
 		t.Fatal(err)
 	}
 	enc := base64.RawURLEncoding

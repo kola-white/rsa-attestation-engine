@@ -82,10 +82,10 @@ func employerCall(engine *gin.Engine, token, method, path, body string) *httptes
 func seedEmployerFixture(t *testing.T, s *Server) (string, string) {
 	t.Helper()
 	a, b := uuid.NewString(), uuid.NewString()
-	if _, err := s.db.Exec(`INSERT INTO domain_users(id,role,status) VALUES($1,'hr_reviewer','active'),($2,'hr_reviewer','active')`, a, b); err != nil {
+	if _, err := s.db.Exec(`INSERT INTO domain_users(id,kratos_identity_id,role,status) VALUES($1::uuid,$1::uuid::text,'hr_reviewer','active'),($2::uuid,$2::uuid::text,'hr_reviewer','active')`, a, b); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.db.Exec(`INSERT INTO evt_employer_config(employer_id) VALUES('employer-a'),('employer-b'); INSERT INTO evt_requests(request_id,employer_id,status) VALUES('request-a','employer-a','ATTESTATION_PENDING'),('request-b','employer-b','ATTESTATION_PENDING')`); err != nil {
+	if _, err := s.db.Exec(`INSERT INTO evt_employer_config(employer_id) VALUES('employer-a'),('employer-b'); INSERT INTO evt_requests(request_id,candidate_personid,employer_id,status) VALUES('00000000-0000-4000-8000-00000000000a','00000000-0000-4000-8000-000000000001','employer-a','ATTESTATION_PENDING'),('00000000-0000-4000-8000-00000000000b','00000000-0000-4000-8000-000000000002','employer-b','ATTESTATION_PENDING')`); err != nil {
 		t.Fatal(err)
 	}
 	return a, b
@@ -103,27 +103,27 @@ func TestEmployerAuthorizationBoundaries(t *testing.T) {
 		want               int
 	}{
 		{"GET", "/v1/employer/requests?employer_id=employer-a", "", 200},
-		{"GET", "/v1/employer/requests/request-a?employer_id=employer-a", "", 200},
+		{"GET", "/v1/employer/requests/00000000-0000-4000-8000-00000000000a?employer_id=employer-a", "", 200},
 		{"GET", "/v1/employer/requests?employer_id=employer-b", "", 404},
-		{"GET", "/v1/employer/requests/request-b?employer_id=employer-b", "", 404},
-		{"GET", "/v1/employer/requests/request-b?employer_id=employer-a", "", 404},
-		{"GET", "/v1/employer/requests/request-a?employer_id=employer-b", "", 404},
-		{"POST", "/v1/employer/requests/request-b/attest", `{"employer_id":"employer-b","response_type":"FULL_MATCH"}`, 404},
-		{"POST", "/v1/employer/requests/request-b/attest", `{"employer_id":"employer-a","response_type":"FULL_MATCH"}`, 404},
+		{"GET", "/v1/employer/requests/00000000-0000-4000-8000-00000000000b?employer_id=employer-b", "", 404},
+		{"GET", "/v1/employer/requests/00000000-0000-4000-8000-00000000000b?employer_id=employer-a", "", 404},
+		{"GET", "/v1/employer/requests/00000000-0000-4000-8000-00000000000a?employer_id=employer-b", "", 404},
+		{"POST", "/v1/employer/requests/00000000-0000-4000-8000-00000000000b/attest", `{"employer_id":"employer-b","response_type":"FULL_MATCH"}`, 404},
+		{"POST", "/v1/employer/requests/00000000-0000-4000-8000-00000000000b/attest", `{"employer_id":"employer-a","response_type":"FULL_MATCH"}`, 404},
 		{"GET", "/v1/employer/requests?employer_id=unknown", "", 404},
 	} {
 		w := employerCall(engine, token, tc.method, tc.path, tc.body)
 		if w.Code != tc.want {
 			t.Fatalf("%s %s returned %d: %s", tc.method, tc.path, w.Code, w.Body.String())
 		}
-		if tc.want == 200 && strings.Contains(w.Body.String(), "request-b") {
+		if tc.want == 200 && strings.Contains(w.Body.String(), "00000000-0000-4000-8000-00000000000b") {
 			t.Fatal("foreign request disclosed")
 		}
 	}
 	var status string
 	var events int
 	var compact *string
-	if err := s.db.QueryRow(`SELECT status,attestation_jws FROM evt_requests WHERE request_id='request-b'`).Scan(&status, &compact); err != nil {
+	if err := s.db.QueryRow(`SELECT status,attestation_jws FROM evt_requests WHERE request_id='00000000-0000-4000-8000-00000000000b'`).Scan(&status, &compact); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.db.QueryRow(`SELECT count(*) FROM evt_request_events`).Scan(&events); err != nil {
@@ -137,10 +137,10 @@ func TestEmployerAuthorizationBoundaries(t *testing.T) {
 	if w := employerCall(engine, token, "GET", "/v1/employer/requests?employer_id=employer-b", ""); w.Code != 200 {
 		t.Fatalf("explicit second employer grant: %d", w.Code)
 	}
-	if _, err := s.db.Exec(`UPDATE evt_requests SET status='SUBMITTED' WHERE request_id='request-a'`); err != nil {
+	if _, err := s.db.Exec(`UPDATE evt_requests SET status='SUBMITTED' WHERE request_id='00000000-0000-4000-8000-00000000000a'`); err != nil {
 		t.Fatal(err)
 	}
-	if w := employerCall(engine, token, "POST", "/v1/employer/requests/request-a/attest", `{"employer_id":"employer-a","response_type":"FULL_MATCH"}`); w.Code != 409 {
+	if w := employerCall(engine, token, "POST", "/v1/employer/requests/00000000-0000-4000-8000-00000000000a/attest", `{"employer_id":"employer-a","response_type":"FULL_MATCH"}`); w.Code != 409 {
 		t.Fatalf("workflow state gate: %d", w.Code)
 	}
 }
@@ -183,8 +183,8 @@ func assertEmployerEndpoints(t *testing.T, engine *gin.Engine, token string, wan
 	t.Helper()
 	for _, tc := range []struct{ method, path, body string }{
 		{"GET", "/v1/employer/requests?employer_id=employer-a", ""},
-		{"GET", "/v1/employer/requests/request-a?employer_id=employer-a", ""},
-		{"POST", "/v1/employer/requests/request-a/attest", `{"employer_id":"employer-a","response_type":"FULL_MATCH"}`},
+		{"GET", "/v1/employer/requests/00000000-0000-4000-8000-00000000000a?employer_id=employer-a", ""},
+		{"POST", "/v1/employer/requests/00000000-0000-4000-8000-00000000000a/attest", `{"employer_id":"employer-a","response_type":"FULL_MATCH"}`},
 	} {
 		w := employerCall(engine, token, tc.method, tc.path, tc.body)
 		if w.Code != want {
@@ -298,7 +298,9 @@ func TestEmployerRevocationSerializesWithAuthorization(t *testing.T) {
 			return
 		}
 		pid <- p
-		if err = employeraccess.Revoke(ctx, tx, id, "operator", "concurrent revocation"); err == nil {
+		// Deliberately bypass the CLI helper: the migration trigger must enforce
+		// the principal lock even for a direct reviewed operator UPDATE.
+		if _, err = tx.Exec(ctx, `UPDATE employer_hr_assignments SET revoked_at=clock_timestamp(),revoked_by='operator',revocation_reason='concurrent revocation' WHERE assignment_id=$1`, id); err == nil {
 			err = tx.Commit(ctx)
 		}
 		done <- err
@@ -393,22 +395,9 @@ func TestEmployerAssignmentsRestrictedRuntimeCannotAdminister(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	var schema string
-	if err := pool.QueryRow(ctx, `SELECT current_schema()`).Scan(&schema); err != nil {
-		t.Fatal(err)
-	}
-	schemaName := pgx.Identifier{schema}.Sanitize()
-	for _, query := range []string{
-		`GRANT USAGE ON SCHEMA ` + schemaName + ` TO ` + quoted,
-		`GRANT SELECT ON domain_users,evt_employer_config,employer_hr_assignments TO ` + quoted,
-		// Row locks need UPDATE on at least one user column; the existing exchange
-		// already updates email. This does not grant role/status/assignment writes.
-		`GRANT UPDATE(email) ON domain_users TO ` + quoted,
-	} {
-		if _, err := pool.Exec(ctx, query); err != nil {
-			t.Fatal(err)
-		}
-	}
+
+	operator := createEmployerProbeRole(t, pool)
+	applyEmployerBindings(t, pool, role, operator)
 	asRuntime := func(operation func(pgx.Tx) error) error {
 		tx, err := pool.Begin(ctx)
 		if err != nil {
