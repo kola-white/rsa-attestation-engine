@@ -38,10 +38,16 @@ BEGIN
 END;
 $preflight$;
 
-CREATE TABLE employer_hr_assignments (
+-- Pin every DDL reference to the schema validated above, even if this
+-- administrator session has colliding temporary tables in its search path.
+DO $objects$
+DECLARE target_schema TEXT := current_schema();
+BEGIN
+    EXECUTE pg_catalog.format($table$
+CREATE TABLE %1$I.employer_hr_assignments (
     assignment_id UUID PRIMARY KEY,
-    principal_id UUID NOT NULL REFERENCES domain_users(id) ON UPDATE RESTRICT ON DELETE RESTRICT,
-    employer_id TEXT NOT NULL REFERENCES evt_employer_config(employer_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    principal_id UUID NOT NULL REFERENCES %1$I.domain_users(id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    employer_id TEXT NOT NULL REFERENCES %1$I.evt_employer_config(employer_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
     granted_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
     granted_by TEXT NOT NULL CHECK (btrim(granted_by) <> ''),
     grant_basis_ref TEXT NOT NULL CHECK (btrim(grant_basis_ref) <> ''),
@@ -56,9 +62,11 @@ CREATE TABLE employer_hr_assignments (
          AND revocation_reason IS NOT NULL AND btrim(revocation_reason) <> '')
     )
 );
-CREATE UNIQUE INDEX employer_hr_one_active
-    ON employer_hr_assignments(principal_id, employer_id) WHERE revoked_at IS NULL;
-REVOKE ALL ON employer_hr_assignments FROM PUBLIC;
+    $table$,target_schema);
+    EXECUTE pg_catalog.format('CREATE UNIQUE INDEX employer_hr_one_active ON %I.employer_hr_assignments(principal_id,employer_id) WHERE revoked_at IS NULL',target_schema);
+    EXECUTE pg_catalog.format('REVOKE ALL ON TABLE %I.employer_hr_assignments FROM PUBLIC',target_schema);
+END;
+$objects$;
 
 -- Enforce the same lock protocol for reviewed operator SQL as for the CLI.
 -- The invoker trigger calls the separately permissioned operator lock helper.
@@ -70,9 +78,9 @@ BEGIN
     -- profile mutation. Typed parameters, fixed SQL/search_path, no PUBLIC ACL.
     -- Refuse isolation/RLS changes rather than silently bypass their semantics.
     EXECUTE pg_catalog.format($definition$
-        CREATE FUNCTION %I.check_employer_hr_assignment(p_principal UUID, p_employer TEXT)
+        CREATE FUNCTION %1$I.check_employer_hr_assignment(p_principal UUID, p_employer TEXT)
         RETURNS BOOLEAN LANGUAGE plpgsql VOLATILE SECURITY DEFINER
-        SET search_path = pg_catalog, %I, pg_temp
+        SET search_path = pg_catalog, %1$I, pg_temp
         AS $body$
         DECLARE principal_status TEXT; principal_role TEXT;
         BEGIN
@@ -80,44 +88,44 @@ BEGIN
                 RAISE EXCEPTION 'employer authorization requires READ COMMITTED' USING ERRCODE = '55000';
             END IF;
             IF EXISTS(SELECT 1 FROM pg_catalog.pg_class WHERE oid IN
-                ('domain_users'::regclass,'employer_hr_assignments'::regclass)
+                (%2$L::regclass,%3$L::regclass)
                 AND (relrowsecurity OR relforcerowsecurity)) THEN
                 RAISE EXCEPTION 'employer authorization RLS requires review' USING ERRCODE = '55000';
             END IF;
             SELECT d.status,d.role INTO principal_status,principal_role
-            FROM domain_users d WHERE d.id=p_principal FOR SHARE;
+            FROM %1$I.domain_users d WHERE d.id=p_principal FOR SHARE;
             IF NOT FOUND OR principal_status <> 'active' OR principal_role <> 'hr_reviewer' THEN
                 RETURN FALSE;
             END IF;
-            RETURN EXISTS(SELECT 1 FROM employer_hr_assignments a
+            RETURN EXISTS(SELECT 1 FROM %1$I.employer_hr_assignments a
                 WHERE a.principal_id=p_principal AND a.employer_id=p_employer AND a.revoked_at IS NULL);
         END;
         $body$;
-    $definition$,target_schema,target_schema);
+    $definition$,target_schema,pg_catalog.format('%I.domain_users',target_schema),pg_catalog.format('%I.employer_hr_assignments',target_schema));
     EXECUTE pg_catalog.format($definition$
-        CREATE FUNCTION %I.lock_employer_hr_principal(p_principal UUID)
+        CREATE FUNCTION %1$I.lock_employer_hr_principal(p_principal UUID)
         RETURNS TABLE(id UUID,status TEXT,role TEXT)
         LANGUAGE plpgsql VOLATILE SECURITY DEFINER
-        SET search_path = pg_catalog, %I, pg_temp
+        SET search_path = pg_catalog, %1$I, pg_temp
         AS $body$
         BEGIN
             IF current_setting('transaction_isolation') <> 'read committed' THEN
                 RAISE EXCEPTION 'employer administration requires READ COMMITTED' USING ERRCODE = '55000';
             END IF;
             IF EXISTS(SELECT 1 FROM pg_catalog.pg_class WHERE oid IN
-                ('domain_users'::regclass,'employer_hr_assignments'::regclass)
+                (%2$L::regclass,%3$L::regclass)
                 AND (relrowsecurity OR relforcerowsecurity)) THEN
                 RAISE EXCEPTION 'employer administration RLS requires review' USING ERRCODE = '55000';
             END IF;
-            RETURN QUERY SELECT d.id,d.status,d.role FROM domain_users d
+            RETURN QUERY SELECT d.id,d.status,d.role FROM %1$I.domain_users d
                 WHERE d.id=p_principal FOR UPDATE;
         END;
         $body$;
-    $definition$,target_schema,target_schema);
+    $definition$,target_schema,pg_catalog.format('%I.domain_users',target_schema),pg_catalog.format('%I.employer_hr_assignments',target_schema));
     EXECUTE pg_catalog.format($definition$
-        CREATE FUNCTION %I.enforce_employer_hr_assignment() RETURNS TRIGGER
+        CREATE FUNCTION %1$I.enforce_employer_hr_assignment() RETURNS TRIGGER
         LANGUAGE plpgsql SECURITY INVOKER
-        SET search_path = pg_catalog, %I, pg_temp
+        SET search_path = pg_catalog, %1$I, pg_temp
         AS $body$
         DECLARE
             principal_status TEXT;
@@ -142,7 +150,7 @@ BEGIN
             END IF;
 
             SELECT status, role INTO principal_status, principal_role
-            FROM lock_employer_hr_principal(NEW.principal_id);
+            FROM %1$I.lock_employer_hr_principal(NEW.principal_id);
             IF NOT FOUND THEN
                 RAISE EXCEPTION 'assignment principal does not exist' USING ERRCODE = '23503';
             END IF;
@@ -153,7 +161,7 @@ BEGIN
             RETURN NEW;
         END;
         $body$;
-    $definition$, target_schema, target_schema);
+    $definition$, target_schema);
     EXECUTE pg_catalog.format('REVOKE ALL ON FUNCTION %I.enforce_employer_hr_assignment() FROM PUBLIC', target_schema);
     EXECUTE pg_catalog.format(
         'CREATE TRIGGER trg_employer_hr_assignment_guard BEFORE INSERT OR UPDATE ON %I.employer_hr_assignments '

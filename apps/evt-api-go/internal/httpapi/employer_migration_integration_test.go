@@ -486,3 +486,168 @@ func TestEmployerMigrationAtomicWithoutExternalRunner(t *testing.T) {
 		t.Fatal("autocommit migration left partial assignment objects", err)
 	}
 }
+
+func TestEmployerMigrationDDLTargetsIgnoreTemporaryCollisions(t *testing.T) {
+	_, pool := securityTestServer(t)
+	ctx := context.Background()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	schema := "hr_ddl_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	if _, err = tx.Exec(ctx, `CREATE SCHEMA `+pgx.Identifier{schema}.Sanitize()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `SELECT set_config('search_path',$1,true)`, schema); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, employerSQL(t, "testdata/proposal_a_legacy_schema.sql")); err != nil {
+		t.Fatal(err)
+	}
+	// Deliberately use the default implicit TEMP precedence. The migration must
+	// bind its DDL to the selected persistent schema, not these same-session decoys.
+	if _, err = tx.Exec(ctx, `CREATE TEMP TABLE domain_users(id text); CREATE TEMP TABLE evt_employer_config(employer_id text); CREATE TEMP TABLE employer_hr_assignments(principal_id uuid,employer_id text,revoked_at timestamptz)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, employerSQL(t, "../../migrations/000014_employer_hr_assignments.sql")); err != nil {
+		t.Fatal(err)
+	}
+	var targetCorrect bool
+	if err = tx.QueryRow(ctx, `SELECT i.indrelid=$1::regclass AND i.indisunique FROM pg_index i WHERE i.indexrelid=$2::regclass`, schema+".employer_hr_assignments", schema+".employer_hr_one_active").Scan(&targetCorrect); err != nil || !targetCorrect {
+		t.Fatal("unique index did not target persistent table", err)
+	}
+	var foreignKeys int
+	if err = tx.QueryRow(ctx, `SELECT count(*) FROM pg_constraint WHERE conrelid=$1::regclass AND contype='f' AND confrelid IN ($2::regclass,$3::regclass)`, schema+".employer_hr_assignments", schema+".domain_users", schema+".evt_employer_config").Scan(&foreignKeys); err != nil || foreignKeys != 2 {
+		t.Fatal("FKs did not target confirmed persistent parents", err)
+	}
+}
+
+func TestEmployerVerifiedTableDefaultsRemainDeniedAfterBinding(t *testing.T) {
+	_, pool := securityTestServer(t)
+	ctx := context.Background()
+	runtime := createEmployerProbeRole(t, pool)
+	operator := createEmployerProbeRole(t, pool)
+	publicOnly := createEmployerProbeRole(t, pool)
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	schema := "hr_verified_acl_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	if _, err = tx.Exec(ctx, `CREATE SCHEMA `+pgx.Identifier{schema}.Sanitize()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `SELECT set_config('search_path',$1,true)`, schema); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, employerSQL(t, "testdata/proposal_a_legacy_schema.sql")); err != nil {
+		t.Fatal(err)
+	}
+	for _, table := range []string{"domain_users", "evt_employer_config", "evt_requests"} {
+		if _, err = tx.Exec(ctx, `GRANT SELECT,INSERT,UPDATE,DELETE ON `+pgx.Identifier{schema, table}.Sanitize()+` TO `+pgx.Identifier{runtime}.Sanitize()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err = tx.Exec(ctx, `ALTER DEFAULT PRIVILEGES IN SCHEMA `+pgx.Identifier{schema}.Sanitize()+` GRANT SELECT,INSERT,UPDATE,DELETE ON TABLES TO `+pgx.Identifier{runtime}.Sanitize()); err != nil {
+		t.Fatal(err)
+	}
+	// No custom default-function grants: retain normal PUBLIC EXECUTE defaults.
+	if _, err = tx.Exec(ctx, employerSQL(t, "../../migrations/000014_employer_hr_assignments.sql")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `SELECT set_config('cvera.hr_runtime_role',$1,true),set_config('cvera.hr_operator_role',$2,true)`, runtime, operator); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, employerSQL(t, "../../operations/hr-assignment-privileges.sql")); err != nil {
+		t.Fatal(err)
+	}
+	principal := uuid.NewString()
+	if _, err = tx.Exec(ctx, `INSERT INTO domain_users(id,kratos_identity_id) VALUES($1::uuid,$1::uuid::text)`, principal); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO evt_employer_config(employer_id) VALUES('verified-employer')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = employeraccess.Grant(ctx, tx, principal, "verified-employer", "operator", "reviewed"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `GRANT USAGE ON SCHEMA `+pgx.Identifier{schema}.Sanitize()+` TO `+pgx.Identifier{publicOnly}.Sanitize()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `SET LOCAL ROLE `+pgx.Identifier{runtime}.Sanitize()); err != nil {
+		t.Fatal(err)
+	}
+	if err = employeraccess.Authorize(ctx, tx, principal, "verified-employer"); err != nil {
+		t.Fatal(err)
+	}
+	for _, query := range []string{
+		`SELECT * FROM employer_hr_assignments`,
+		`INSERT INTO employer_hr_assignments(assignment_id,principal_id,employer_id,granted_by,grant_basis_ref) VALUES(gen_random_uuid(),$1,'verified-employer','runtime','not approved')`,
+		`UPDATE employer_hr_assignments SET revoked_at=clock_timestamp() WHERE principal_id=$1`,
+		`DELETE FROM employer_hr_assignments WHERE principal_id=$1`,
+		`SELECT * FROM lock_employer_hr_principal($1)`,
+	} {
+		if _, err = tx.Exec(ctx, `SAVEPOINT denied_access`); err != nil {
+			t.Fatal(err)
+		}
+		// Parameterless SELECT must not be executed with an unused parameter.
+		if query == `SELECT * FROM employer_hr_assignments` {
+			_, err = tx.Exec(ctx, query)
+		} else {
+			_, err = tx.Exec(ctx, query, principal)
+		}
+		expectEmployerSQLState(t, err, "42501")
+		if _, err = tx.Exec(ctx, `ROLLBACK TO SAVEPOINT denied_access`); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err = tx.Exec(ctx, `RESET ROLE`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `SET LOCAL ROLE `+pgx.Identifier{publicOnly}.Sanitize()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `SAVEPOINT denied_public`); err != nil {
+		t.Fatal(err)
+	}
+	_, err = tx.Exec(ctx, `SELECT * FROM lock_employer_hr_principal($1)`, principal)
+	expectEmployerSQLState(t, err, "42501")
+	if _, err = tx.Exec(ctx, `ROLLBACK TO SAVEPOINT denied_public`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, `RESET ROLE`); err != nil {
+		t.Fatal(err)
+	}
+	var stillDefault bool
+	if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_default_acl d,LATERAL aclexplode(d.defaclacl) a WHERE d.defaclnamespace=$1::regnamespace AND d.defaclobjtype='r' AND a.grantee=(SELECT oid FROM pg_roles WHERE rolname=$2) AND a.privilege_type='INSERT')`, schema, runtime).Scan(&stillDefault); err != nil || !stillDefault {
+		t.Fatal("global/default policy was unexpectedly changed", err)
+	}
+}
+
+func TestEmployerMigrationRerunRefusesWithoutChangingGrants(t *testing.T) {
+	s, pool := securityTestServer(t)
+	a, _ := seedEmployerFixture(t, s)
+	ctx := context.Background()
+	runtime := createEmployerProbeRole(t, pool)
+	operator := createEmployerProbeRole(t, pool)
+	applyEmployerBindings(t, pool, runtime, operator)
+	id := grantEmployer(t, pool, a, "employer-a")
+	var beforeTable, beforeFunction uint32
+	if err := pool.QueryRow(ctx, `SELECT 'employer_hr_assignments'::regclass::oid,'check_employer_hr_assignment(uuid,text)'::regprocedure::oid`).Scan(&beforeTable, &beforeFunction); err != nil {
+		t.Fatal(err)
+	}
+	_, err := pool.Exec(ctx, employerSQL(t, "../../migrations/000014_employer_hr_assignments.sql"))
+	expectEmployerSQLState(t, err, "42P07")
+	var afterTable, afterFunction uint32
+	var unchanged bool
+	if err = pool.QueryRow(ctx, `SELECT 'employer_hr_assignments'::regclass::oid,'check_employer_hr_assignment(uuid,text)'::regprocedure::oid,EXISTS(SELECT 1 FROM employer_hr_assignments WHERE assignment_id=$1 AND revoked_at IS NULL AND grant_basis_ref='fixture-reviewed-approval')`, id).Scan(&afterTable, &afterFunction, &unchanged); err != nil || !unchanged || beforeTable != afterTable || beforeFunction != afterFunction {
+		t.Fatal("rerun changed assignment objects or grant history", err)
+	}
+	// Binding is repeatable; it must not delete data or widen runtime rights.
+	applyEmployerBindings(t, pool, runtime, operator)
+	var tableWrite bool
+	if err = pool.QueryRow(ctx, `SELECT has_any_column_privilege($1,'employer_hr_assignments','INSERT') OR has_any_column_privilege($1,'employer_hr_assignments','UPDATE') OR has_table_privilege($1,'employer_hr_assignments','DELETE')`, runtime).Scan(&tableWrite); err != nil || tableWrite {
+		t.Fatal("rebinding widened runtime privileges", err)
+	}
+}

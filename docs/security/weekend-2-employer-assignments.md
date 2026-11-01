@@ -6,6 +6,8 @@
 
 The separately completed, rolled-back production inspections establish database `evt`, PostgreSQL **16.11**; database/existing table owner `postgres`; `public` schema owner `pg_database_owner`; and application role **`evt-app`**, LOGIN, non-superuser, without CREATEDB/CREATEROLE/BYPASSRLS or memberships. `postgres` directly grants it SELECT/INSERT/UPDATE/DELETE on `domain_users`, `evt_employer_config`, and `evt_requests`, without grant options. RLS is disabled on those tables. `public.employer_hr_assignments` and `public.schema_migrations` do not exist. These are operator-supplied observations, not queries independently executed by this assistant.
 
+The latest completed metadata inspection also confirms `evt-app` has public-schema USAGE without CREATE, no database CREATE, and database TEMP. There are no applicable role/database search-path overrides; the admin session sees `"$user", public`. This does **not** verify the live API connection's search path. `postgres` has a public-schema default TABLE ACL granting `evt-app` SELECT/INSERT/UPDATE/DELETE; ordinary PUBLIC function EXECUTE defaults apply (no custom default-function ACL rows). These defaults are neutralized on the new objects only, not changed globally.
+
 The earlier supplied parent definitions establish UUID application principal `domain_users.id`, unique non-null text Kratos identity linkage, text role/status and supplied defaults/timestamps; text employer primary key; UUID request primary key/candidate reference; employer FK; nullable UUID `hr_assigned_personid`; and request-status enum/default. The nullable HR field is not substituted for the explicitly approved employer grant model.
 
 [`testdata/proposal_a_legacy_schema.sql`](../../apps/evt-api-go/internal/httpapi/testdata/proposal_a_legacy_schema.sql) reproduces the supplied parent subset in isolated local schemas. UUID request IDs, nullability/defaults and the employer FK are exercised. Remaining workflow columns/enum labels are explicitly labelled test scaffolding. Complete index/trigger definitions were not supplied and are not fabricated. This is local integration with the supplied subset, not a complete production clone, connection/authentication test of `evt-app`, or production verification.
@@ -21,7 +23,7 @@ Migration [`000014_employer_hr_assignments.sql`](../../apps/evt-api-go/migration
 | `check_employer_hr_assignment(UUID,TEXT) → BOOLEAN` | Runtime-only authorization check. Takes the shared principal-row lock, requires current active HR status, and checks the exact unrevoked employer assignment. Returns only a boolean; cannot modify profiles or grants. |
 | `lock_employer_hr_principal(UUID) → (id,status,role)` | Operator-only exclusive principal-row lock. Returns only the selected principal's ID/status/role, permitting reviewed grant/revoke operations and the invoker trigger to coordinate without direct principal UPDATE/SELECT grants. It does not modify records. |
 
-These routines use typed parameters, fixed SQL, fixed `pg_catalog, <trusted schema>, pg_temp` search paths, and no caller-supplied SQL or dynamic execution in their bodies. EXECUTE is owner-only until reviewed binding; PUBLIC and other default execution grants are removed. They require READ COMMITTED and reject unreviewed RLS on principals/assignments rather than silently applying owner-bypass semantics. PostgreSQL's [SECURITY DEFINER guidance](https://www.postgresql.org/docs/16/sql-createfunction.html) explains the fixed trusted search path and selective EXECUTE requirements. The trusted schema's CREATE ACL still requires the review below.
+These routines use typed parameters, fixed SQL, fixed `pg_catalog, <trusted schema>, pg_temp` search paths, and no caller-supplied SQL or dynamic execution in their bodies. EXECUTE is owner-only until reviewed binding; PUBLIC and other default execution grants are removed. They require READ COMMITTED and reject unreviewed RLS on principals/assignments rather than silently applying owner-bypass semantics. PostgreSQL's [SECURITY DEFINER guidance](https://www.postgresql.org/docs/16/sql-createfunction.html) explains the fixed trusted search path and selective EXECUTE requirements. The runtime cannot create public-schema objects; approval of any other schema creators and the live caller lookup remains an operational prerequisite.
 
 [`employeraccess.Authorize/Grant/Revoke`](../../apps/evt-api-go/internal/employeraccess/assignments.go) now use these functions. All employer list/get/attest repository guards, JWT/role gates, exact request/employer binding, current-user/workflow checks and generic denials remain. The shared lock is held through the protected transaction; operator grant/revoke takes its exclusive counterpart. Revocation waiting for an authorized transaction, authorization waiting behind revocation, and direct operator-SQL coordination remain tested. No profile UPDATE privilege is used to acquire those locks.
 
@@ -29,7 +31,11 @@ These routines use typed parameters, fixed SQL, fixed `pg_catalog, <trusted sche
 
 The unmerged/unapplied migration retains the verified UUID/text FK types, restrictive parent referential actions, one-active-grant partial index, complete attribution/revocation constraints, immutable grant provenance and immutable revoked records. The invoker trigger uses the operator lock routine and validates active HR status for new grants. It creates **no assignments**, roles, memberships, authority records or case permissions.
 
+This review found unqualified migration DDL references could resolve same-session temporary tables when creating indexes or processing privileges. DDL now explicitly qualifies the assignment table, parent FKs, index target and ACL targets. Function bodies also explicitly qualify their parent/assignment/helper references while retaining fixed paths with `pg_temp` last. This is a same-administrator-session collision issue, not evidence that a separate API session could inject its temporary tables into a migration connection. Regression tests create colliding temporary tables and verify the persistent index and both FK targets.
+
 All DDL and ACL normalization are enclosed in **one outer DO statement**. New objects are atomic even with an autocommit client; this does not invent a migration runner or version ledger. Creation clears non-owner privileges on the new assignment table and all three new routines, including custom ALTER DEFAULT PRIVILEGES grants, before they become visible. No legacy parent ACL/default-privilege policy is modified. Production remains unchanged; editing 000014 here does not rewrite an already-applied migration.
+
+000014 is intentionally **once-only**, not an idempotent adoption script. A rerun fails on the existing table, rolls back, and preserves object identities and grant history (tested). Do not drop objects or add `IF NOT EXISTS` to bypass this check. The separate binding is repeatable and tested not to widen runtime writes. File numbering supplies no version-recording guarantee. The approved executor must establish provenance/version recording outside this change; an absent `public.schema_migrations` does not authorize creating or populating one.
 
 ## Least-privilege binding and verified legacy DML
 
@@ -64,16 +70,16 @@ The targeted search covered tracked SQL files, Go startup/DB code, commands/depe
 
 ## Remaining production facts and decisions
 
-Already resolved by the supplied inspection: database/parent owners, `evt-app` identity/flags/memberships, its explicit parent DML, disabled parent RLS, and absent public assignment/version tables. Do not repeat those checks as though unknown.
+Already resolved: database/parent owners, `evt-app` identity/flags/memberships, its explicit parent DML, disabled parent RLS, absent public assignment/version tables, runtime schema/database CREATE denial, runtime TEMP, default ACL exposure and absence of role/database search-path overrides. Do not repeat these as unknown.
 
-Still required before binding or any separately authorized execution:
+Still required before separately authorized production execution:
 
-1. The dedicated operator identity and approved organizational-assignment provisioning/revocation responsibility. Confirm its effective rights/memberships and that runtime cannot assume it.
-2. Trusted `public` schema CREATE ACLs, database CREATE rights, relevant default ACLs and confirmed application schema/search_path configuration (without exporting DSNs). New-object defaults are neutralized, but the privileged routines must live in a schema not writable by untrusted identities.
-3. The actual external/manual migration process, if any: tool/entrypoint/version, approved migration identity, intended new-object owner, target schema, transactional/version-recording convention, rollback/backup and rollout responsibility. If no process exists, that requires an explicit operator decision; this task did not invent one.
-4. Full omitted workflow/enum/index/trigger definitions only where needed to claim complete production-schema parity; current tests deliberately claim the supplied subset. Parent hard-deletion behavior must account for the new restrictive grant FKs.
+1. A dedicated existing operator identity and approved organizational provisioning/revocation authority. Its effective rights/memberships must satisfy the binding; no role is selected or created here. Validate that other public-schema creators are trusted.
+2. An approved execution/version-recording process, trusted migration executor and ownership decision, rollback/backup plan and rollout authority. Repository evidence identifies no production runner. The compatible candidate is an explicitly approved DBA session as existing owner `postgres`, retaining ownership of the new table/routines; this identifies a database capability, not an approved human operator.
+3. The live API and separate CLI connection schema resolution. Admin-session defaults do not establish these; unqualified application function calls must resolve to the intended public functions. Inspect through an approved operational method without exposing a DSN or adding a diagnostic endpoint.
+4. Full omitted workflow/enum/index/trigger definitions only if needed to claim complete production-schema parity. Current tests claim the supplied subset only. Account for restrictive grant FKs before hard-deleting principals/employers.
 
-The existing [read-only metadata script](../../apps/evt-api-go/operations/hr-assignment-metadata.sql) contains database/schema/default ACL outputs and membership metadata useful for the remaining review. Do not re-run completed checks unnecessarily. It does not read application records, passwords, role configuration values, connection strings, private keys or active SQL; RLS expressions are excluded. It cannot establish an external migration command. No production queries are executed by this work.
+The [operator procedure](../operations/employer-assignment-migration-procedure.md) separates review, rollback rehearsal, migration/binding commit and assignment administration. It is a proposed procedure requiring human approval, not an installed runner or execution authorization. No production queries were run. The existing [metadata script](../../apps/evt-api-go/operations/hr-assignment-metadata.sql) remains available; completed inspection need not be repeated.
 
 ## Verification evidence
 
@@ -87,11 +93,14 @@ Added/preserved regressions cover:
 - Successful binding with the verified legacy SELECT/INSERT/UPDATE/DELETE profile, unchanged parent grants, and denied new assignment writes.
 - Operator grant/revoke without principal update privileges; immutable provenance/history and restrictive FKs.
 - Fixed function ownership/security/search paths, temporary-table shadowing denial, unsupported isolation/RLS failure, and removal of PUBLIC/custom creation-default execution/write privileges.
+- Verified default TABLE CRUD grants plus ordinary PUBLIC function defaults: successful runtime check but direct SELECT/INSERT/UPDATE/DELETE and operator-lock execution denied; a role with only PUBLIC execution rights is denied the operator lock. Default privilege policy itself remains unchanged.
+- Persistent DDL/FK/index targets despite colliding temporary tables; once-only rerun failure preserving objects/history; repeatable binding.
 - Migration rollback/preflight, atomic failure without an external transaction wrapper, and owner-only object creation, plus preserved authority/auth/SSRF/body-limit/signing regressions. Proposal B's intentionally passing gap reproduction still denotes an open blocker.
 
 | Command | Final result |
 | --- | --- |
-| `go test ./... -count=1 -timeout=90s` | PASS with local database enabled. |
+| `go test ./internal/httpapi -run 'TestEmployer(MigrationDDLTargets\|VerifiedTableDefaults\|MigrationRerun)' -count=1 -timeout=90s -v` | PASS: all three new regressions, with local database enabled. |
+| `go test ./... -count=1 -timeout=90s` | PASS with local database enabled, rerun after these SQL/test changes. |
 | `go test -race ./internal/httpapi ./internal/auth ./internal/employeraccess -count=1 -timeout=90s` | PASS. |
 | `go vet ./...` | PASS. |
 | `git diff --check` | PASS. |
