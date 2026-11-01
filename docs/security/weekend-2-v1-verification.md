@@ -6,7 +6,7 @@ Date: 2026-11-01. Repository: `kola-white/rsa-attestation-engine`. Base: fetched
 
 The supplied key-rotation, JWKS matching, policy, health, and selected secret-scan baseline is accepted as prior evidence. Those checks were not repeated. No production key, service, database, or deployment was accessed. No Git history was rewritten. Tests use synthetic identities, temporary keys, and an existing disposable local PostgreSQL 16 container.
 
-Follow-up design review: [two proposed authorization designs](weekend-2-authorization-design.md) and [individual dispositions of the existing 16 dependency findings](weekend-2-dependency-triage.md). Proposal A is approved and its [implementation evidence and missing schema requirements](weekend-2-employer-assignments.md) are recorded separately; Proposal B remains unapproved.
+Follow-up design review: [two proposed authorization designs](weekend-2-authorization-design.md) and [individual dispositions of the existing 16 dependency findings](weekend-2-dependency-triage.md). Proposal A is approved and its [implementation evidence and missing schema requirements](weekend-2-employer-assignments.md) are recorded separately; Proposal B remediation is now authorized within the requested scope, but implementation is blocked on authoritative case schema/access evidence; the earlier proposed schema and writable-state choices are not treated as existing controls.
 
 ## Security baseline matrix
 
@@ -56,6 +56,36 @@ See [the implementation evidence](weekend-2-employer-assignments.md) for exact f
 Required decision: use an authoritative existing case access policy and persistence model, or explicitly authorize disabling the unfinished upload boundary for V1. Implementing an invented membership model or silently disabling the API was outside this assignment. Authentication remediation alone does not resolve this blocker.
 
 `TestReleaseBlockerEvidenceCaseScope` intentionally **passes when the documented case-upload gap is reproduced**; it is evidence collection, not authorization acceptance. The employer reproduction was replaced with deny/allow authorization regressions and an explicitly assigned local-signing test after Proposal A approval.
+
+## Proposal B follow-up: stopped at the missing authoritative case relationship
+
+Implementation was requested after commit `6ab9205`, with an explicit instruction to stop if the case schema or ownership relationship could not be established. Targeted inspection confirms that condition. **No application code, migration, authorization policy, upload limit or expiry was changed. Proposal A is unchanged. Proposal B remains a HIGH release blocker and is not locally verified.**
+
+Observed repository evidence:
+
+- [`HandleEvidenceInit`](../../apps/evt-api-go/internal/httpapi/handlers_evidence.go) accepts external string case/check IDs, validates path/body consistency and file policy, then calls `PresignPut` without a case lookup, entitlement lookup or state transaction. Both init paths in [`registerEvidenceRoutes`](../../apps/evt-api-go/internal/httpapi/router.go) share that handler and JWT authentication. Both completion paths still authenticate and invoke the unchanged 501 stub.
+- [`v1-evidence-upload.md`, Postgres Schema (V1)](../api/v1-evidence-upload.md) contains proposed `cases(case_id text)` and `verification_checks(case_id,check_id)` definitions, status/deletion fields, upload-session and evidence tables. These definitions are documentation, not applied-schema evidence. They include no authoritative principal-to-case entitlement. No tracked migration, case provisioning function or application case ownership query was found. Migrations 000001–000013 concern issuer authority; 000014 concerns employer assignments, not case access.
+- [`evt/repo.go`](../../apps/evt-api-go/internal/evt/repo.go) uses UUID `evt_requests.request_id` and candidate scoping. There is no demonstrated mapping from the external evidence case string to that request UUID. Neither candidate identity nor the approved employer assignment establishes upload entitlement to an arbitrary external case. The previously proposed case-grant table is not an existing relationship.
+- [`S3Store.PresignPut`](../../apps/evt-api-go/internal/storage/s3_store.go) receives a ten-minute expiry from init. Database entitlement/state revocation cannot retract an already issued storage bearer capability; exposure can remain until URL expiry (up to ten minutes), and an upload begun while valid may finish later. No storage-side revocation was verified. Expiry is unchanged. Completion accepts no evidence through these routes because it still returns 501; this is not proof that other object consumers enforce acceptance rules.
+- The mounted init/complete implementation has no server-side SHA-256 verification/deduplication persistence to preserve or certify. The [hashing contract](../api/v1-evidence-hashing-contract) describes client UX deduplication and treats client digests as non-authoritative. No claim is made that the documented evidence lifecycle is implemented.
+
+Minimum information needed to resume, without application records or credentials:
+
+1. The authoritative source/schema for evidence **cases and checks**, or explicit confirmation that those entities are not yet persisted: schema-qualified table names, actual identifier types, primary/unique keys and case-to-check FK; current status/deletion columns, allowed values and constraints. If evidence cases map to EVT requests, provide the established mapping and its key constraints; do not infer equality of identifiers.
+2. The existing server-side principal-to-case upload entitlement relationship/policy, including canonical principal FK, current validity/revocation fields, eligible case/check states, and the trusted creation/revocation mechanism. If none exists, explicitly decide whether to introduce the earlier proposed case-upload grants and establish the missing parent records/provisioning first. An implementation request is not evidence of an existing ownership relationship.
+3. Once those objects are identified, their owners, effective runtime/operator privileges, RLS and state/access mutation paths are needed to bind least-privilege enforcement and design/test concurrent revocation/closure ordering. Use separately reviewed schema/catalog-only inspection if necessary; no production access is authorized here.
+
+After those facts/decisions: implement one shared deny-by-default gate for both init paths using the authenticated canonical principal, exact persisted case/check and current entitlement/state; coordinate presigning and revocation/state transitions with the actual mutation paths; preserve file policy, ten-minute expiry and authenticated completion 501. Add allowed, missing/cross-case/check, revoked/disabled/closed/deleted and concurrent-denial regressions against the verified schema before claiming remediation. Do not substitute an invented fixture for authoritative schema evidence or add blanket grants.
+
+Verification for this follow-up (no implementation changes):
+
+| Command, from `apps/evt-api-go` | Result |
+| --- | --- |
+| `go test -race ./internal/httpapi -run 'TestEvidenceRoutesRequireAuthentication\|TestReleaseBlockerEvidenceCaseScope' -count=1 -timeout=90s -v` | PASS. Authentication regression and **vulnerable behavior reproduction**, not authorization acceptance. Synthetic credentials/offline presigning; no storage upload. |
+| `go vet ./...` | PASS, no diagnostics. |
+| `git diff --check` | PASS. |
+
+The previous full-suite/Proposal A evidence is retained; it was not repeated for this documentation-only stop. No new positive/revoked-entitlement/concurrency test can certify an unidentified case policy. GO-2026-6611 and GO-2026-6809 remain OUTSTANDING pending release-build verification.
 
 ## Local signing and remaining live verification
 
