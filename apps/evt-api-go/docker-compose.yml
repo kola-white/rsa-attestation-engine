@@ -64,7 +64,7 @@ services:
       - db
     ports:
       - "4434:4434"
-      - "4435:4435"
+      - "127.0.0.1:4435:4435"
     environment:
       DSN: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/evt_kratos?sslmode=disable"
       KRATOS_SECRET_DEFAULT: "${KRATOS_SECRET_DEFAULT}"
