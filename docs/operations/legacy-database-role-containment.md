@@ -1,6 +1,6 @@
 # Confirmed legacy database credential exposure: proposed containment
 
-Status: **HIGH release blocker; production containment requires a separate owner decision.** The existing credential/configuration approval covered only the two replacement runtime roles and explicitly preserved the legacy role. No legacy role change has been executed.
+Status: **HIGH release blocker; owner approved guarded containment against commit d646f8949a9bcbe6a0fbb47ff0577ac8d296ccdd. Production execution remains pending.** This is a separate approval from the earlier replacement-role preparation. It authorizes only the documented NOLOGIN change after consumer/session checks; it does not authorize session termination, password/data/service changes, merge or deployment.
 
 ## Confirmed evidence
 
@@ -10,7 +10,7 @@ Earlier authoritative metadata establishes that evt-app owns evt_kratos and all 
 
 Replacement cvera_api_runtime/cvera_kratos_runtime credentials and permissions are independently verified, but they do not revoke this still-valid owner credential. Removing the DSN from the current tree does not contain it. The running API/Kratos/Courier still use postgres; their prepared configuration uses the replacement roles. No observed production service depends on evt-app. A fresh consumer/session check is required before changing it.
 
-## Smallest proposed owner-approved action
+## Owner-approved guarded action
 
 Through the existing root console, as postgres:
 
@@ -35,3 +35,13 @@ An uncommitted role transaction rolls back normally. If COMMIT is ambiguous, ins
 ## Local verification
 
 A disposable local PostgreSQL database was owned by a LOGIN legacy role, with a separate restricted runtime grant. Both credentials authenticated over SCRAM before containment. After ALTER ROLE NOLOGIN, the same legacy password was rejected specifically as not permitted to log in; the replacement role still authenticated. Database/table ownership and table ACLs were byte-for-byte unchanged, with zero legacy sessions and no application rows modified. All disposable objects were removed. This verifies the proposed mechanism, not an unexecuted production containment.
+
+## Execution driver and additional regression evidence
+
+`operations/contain-legacy-database-role.py --contain-approved-d646f89` implements the approved phase using the existing owner root console and checksum-pinned operator helper. It inspects configured environments across all known containers, including stopped ones, and the reviewed prepared Compose model; any unknown container or legacy-role consumer stops before mutation. All three production services must be running. The complete runtime preparation record and root-private environment are prerequisites.
+
+Before/after SHA-256 snapshots cover database/schema/table/sequence/function ownership, table/column/function/default ACLs, role memberships and the legacy role's non-LOGIN capability flags. They contain no application records or password verifiers. Metadata/operator SQL uses pg_catalog and pg_temp only: the exposed owner can create functions in the identity database's public schema, so its overloads must not execute in a postgres inspection session. Local injected public-function shadow tests passed.
+
+An exclusive private intent/result record prevents blind retries and records the actual role transaction. The precondition is repeated inside the bounded advisory-locked transaction; only ALTER ROLE evt-app NOLOGIN executes. Fresh checks require zero legacy sessions, unchanged metadata, specific NOLOGIN rejection of the known password and successful authenticated replacement connections. A late session or any failed check stops with NOLOGIN retained, without termination or rollback to the compromised LOGIN state. This is credential-entry containment, not a forensic certification that no prior misuse or persistence occurred.
+
+Additional disposable PostgreSQL tests passed: an active legacy session blocked the guarded transaction without changing LOGIN; the session ended naturally, with no termination. Subsequent containment and specific known-password rejection, replacement role connectivity, unchanged ownership/grants/default ACLs/non-LOGIN flags and exclusion of injected public function overloads all passed. Consumer tests rejected a legacy-role connection and an unknown container before changes. No production role change has yet been claimed successful.
