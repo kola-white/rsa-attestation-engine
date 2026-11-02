@@ -1,5 +1,5 @@
 {
-  "status": "PASS: candidate Docker release binary and production SQL preparation verified; runtime activation, merge and deployment pending",
+  "status": "Candidate build, production SQL and restricted credential preparation PASS; exposed legacy owner credential HIGH BLOCKED; no deployment",
   "toolchain": "go1.26.10",
   "target": {
     "GOOS": "linux",
@@ -142,5 +142,26 @@
     "migration_history_recorded": "000014 only; private external operator record",
     "credentials_configuration_data_services_changed": false,
     "runtime_transition": "pending; active services still postgres"
+  },
+  "production_credential_preparation": {
+    "result": "PASS: owner checkpoint 18",
+    "activation_transaction_id": "2859",
+    "runtime_login_roles": 2,
+    "operator_nologin": true,
+    "scram_correct_and_incorrect_password_checks": "PASS",
+    "privilege_checks": "PASS",
+    "persistent_settings_preserved": true,
+    "live_env_owner_mode": "root:root 0600",
+    "services_restarted": false,
+    "application_data_changed": false,
+    "existing_passwords_changed": false,
+    "merge_or_deployment": false
+  },
+  "legacy_credential_followup": {
+    "result": "BLOCKED HIGH: owner checkpoint 19 confirmed known repository fallback credential accepted as evt-app",
+    "scope": "identity database/table owner and legacy API CRUD",
+    "verification": "SCRAM SELECT current_user only; no application record access/change",
+    "containment": "NOLOGIN proposal pending separate owner authority; no existing-session termination authorized",
+    "known_malicious_use": "not established"
   }
 }
