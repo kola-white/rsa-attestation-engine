@@ -251,6 +251,8 @@ def main():
         baseline={name:{'id':json.loads(run(['docker','inspect','--format','{{json .Id}}','evt-api-go-'+name+'-1'])),
                         'started':info('evt-api-go-'+name+'-1','State.StartedAt')}
                   for name in observed}
+        if not all(info('evt-api-go-'+name+'-1','State.Running') for name in observed):
+            raise RuntimeError('Existing service is not running; preparation refused')
         record={'approved_plan_commit':APPROVED,'started_utc':now(),'state':'intent',
                 'deployment_identity_evidence':identity,'recovery_before':str(BEFORE),
                 'candidate':str(CANDIDATE),'original_env_sha256':hashlib.sha256(before).hexdigest(),
@@ -288,6 +290,7 @@ def main():
             for name,prior in baseline.items():
                 if (json.loads(run(['docker','inspect','--format','{{json .Id}}','evt-api-go-'+name+'-1']))!=prior['id']
                     or info('evt-api-go-'+name+'-1','State.StartedAt')!=prior['started']
+                    or not info('evt-api-go-'+name+'-1','State.Running')
                     or probe.live_env('evt-api-go-'+name+'-1')!=observed[name]):
                     raise RuntimeError('Running service changed unexpectedly')
             if run(['git','-C',str(ROOT),'status','--porcelain']).strip():raise RuntimeError('Git worktree changed')
