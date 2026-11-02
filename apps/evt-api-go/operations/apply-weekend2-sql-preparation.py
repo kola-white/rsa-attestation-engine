@@ -202,8 +202,10 @@ def main():
         raise RuntimeError('Retained recovery image mismatch')
     if info('evt-api-go-api-1','Image')!=image:
         raise RuntimeError('Running API changed since recovery capture')
-    if info(DB,'Image')!=(BACKUP/'postgres-image-before.txt').read_text().strip():
-        raise RuntimeError('Database image changed since restore evidence')
+    postgres_reference=(BACKUP/'postgres-image-before.txt').read_text().strip()
+    postgres_image=json.loads(run(['docker','image','inspect','--format','{{json .Id}}',postgres_reference]))
+    if info(DB,'Image')!=postgres_image or info(CLONE,'Image')!=postgres_image:
+        raise RuntimeError('Database/recovery image changed since restore evidence')
     if info(CLONE,'HostConfig.NetworkMode')!='none' or not info(CLONE,'State.Running'):
         raise RuntimeError('Verified recovery clone unavailable')
     if info(CLONE,'Config.Labels').get('cvera.scope')!='weekend2-rehearsal':
