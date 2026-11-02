@@ -1,5 +1,5 @@
 {
-  "status": "Candidate build, production SQL and restricted credential preparation PASS; exposed legacy owner credential HIGH BLOCKED; no deployment",
+  "status": "Candidate build, production SQL/credential preparation and legacy NOLOGIN containment PASS; rollout pending; Proposal B HIGH remains",
   "toolchain": "go1.26.10",
   "target": {
     "GOOS": "linux",
@@ -158,10 +158,17 @@
     "merge_or_deployment": false
   },
   "legacy_credential_followup": {
-    "result": "BLOCKED HIGH: owner checkpoint 19 confirmed known repository fallback credential accepted as evt-app",
+    "result": "REMEDIATED credential-entry exposure: owner checkpoint 20 PASS",
     "scope": "identity database/table owner and legacy API CRUD",
     "verification": "SCRAM SELECT current_user only; no application record access/change",
-    "containment": "NOLOGIN proposal pending separate owner authority; no existing-session termination authorized",
-    "known_malicious_use": "not established"
+    "containment": "evt-app NOLOGIN committed and freshly verified; no sessions remain",
+    "known_malicious_use": "not established",
+    "transaction_id": "2860",
+    "exposed_credential_rejected": true,
+    "legacy_sessions": 0,
+    "sessions_terminated": 0,
+    "ownership_and_grants_unchanged": true,
+    "replacement_connectivity": true,
+    "passwords_data_services_history_changed": false
   }
 }

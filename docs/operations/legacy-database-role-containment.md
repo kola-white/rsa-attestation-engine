@@ -1,6 +1,6 @@
 # Confirmed legacy database credential exposure: proposed containment
 
-Status: **HIGH release blocker; owner approved guarded containment against commit d646f8949a9bcbe6a0fbb47ff0577ac8d296ccdd. Production execution remains pending.** This is a separate approval from the earlier replacement-role preparation. It authorizes only the documented NOLOGIN change after consumer/session checks; it does not authorize session termination, password/data/service changes, merge or deployment.
+Status: **REMEDIATED for known credential-entry exposure: owner checkpoint 20 passed, transaction 2860.** This is a separate approval from the earlier replacement-role preparation. It authorizes only the documented NOLOGIN change after consumer/session checks; it does not authorize session termination, password/data/service changes, merge or deployment.
 
 ## Confirmed evidence
 
@@ -45,3 +45,7 @@ Before/after SHA-256 snapshots cover database/schema/table/sequence/function own
 An exclusive private intent/result record prevents blind retries and records the actual role transaction. The precondition is repeated inside the bounded advisory-locked transaction; only ALTER ROLE evt-app NOLOGIN executes. Fresh checks require zero legacy sessions, unchanged metadata, specific NOLOGIN rejection of the known password and successful authenticated replacement connections. A late session or any failed check stops with NOLOGIN retained, without termination or rollback to the compromised LOGIN state. This is credential-entry containment, not a forensic certification that no prior misuse or persistence occurred.
 
 Additional disposable PostgreSQL tests passed: an active legacy session blocked the guarded transaction without changing LOGIN; the session ended naturally, with no termination. Subsequent containment and specific known-password rejection, replacement role connectivity, unchanged ownership/grants/default ACLs/non-LOGIN flags and exclusion of injected public function overloads all passed. Consumer tests rejected a legacy-role connection and an unknown container before changes. No production role change has yet been claimed successful.
+
+## Production execution evidence
+
+Owner checkpoint 20 passed the checksum-verified driver from 12a7b36. Transaction 2860 committed only NOLOGIN. Post-commit checks confirmed specific exposed-credential rejection, zero legacy sessions/terminations, unchanged ownership/grants and working replacement credentials. The root-private record is legacy-role-containment-d646f89.json in the existing recovery directory. No password, data, identity, service or migration-history changes occurred; no merge/deployment occurred. Do not rerun the guarded driver or re-enable the compromised login. The proposal/execution sequence above is retained as historical evidence. No prior-use/persistence forensic clearance is claimed.
