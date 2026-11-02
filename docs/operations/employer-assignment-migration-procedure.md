@@ -2,7 +2,7 @@
 
 ## Current next decision: additive live preparation only
 
-This section supersedes older draft/evt-app instructions below. The owner is the responsible human operator, using the established root DigitalOcean console on cvera-api and container-local psql as postgres. PR #130 is ready for review and unmerged. No actual production SQL change is authorized merely by this document.
+This section supersedes older draft/evt-app instructions below. The owner is the responsible human operator, using the established root DigitalOcean console on cvera-api and container-local psql as postgres. PR #130 is ready for review and unmerged. The owner has separately approved the SQL-only phase against reviewed commit 8239937. That approval covers only the bounded preparation below, not credentials, assignments, application data, service restarts, merge or deployment. This document alone grants no further authority.
 
 **Verified prerequisites:** private backups and retained images exist at `/opt/cvera/weekend2-closeout-20261102T004322Z`; both actual dumps restored successfully into the independent network-none, 96 MiB clone. Checkpoints 13–14 passed migration/binding rollback and commit, effective privilege checks, authorization/revocation/current-status checks and both concurrency orderings on that restored schema. Production roles/objects remain absent; the current API and both identity services still connect as postgres. Host-all authentication uses SCRAM.
 
@@ -25,6 +25,16 @@ Reviewed SQL (unchanged since application commit afa946d; staged in reviewed-afa
 | api-runtime-privileges.sql | cb479c4a4a551982a92f16632795d75ae38884d1d83a97ba63827d997067ef7d |
 | hr-assignment-privileges.sql | c9d5efd8220b63a197857b63119fabc3c30cffa4d4edbaeaba8f6578703fe2a2 |
 | kratos-runtime-privileges.sql | c8b6f7715a5d82229de984a66e51e29e85fffd2a2b885bf0ec0978085687160a |
+
+### Approved SQL-only execution checkpoint
+
+The owner explicitly approved the controlled SQL phase at reviewed commit `8239937f789916cf665de66da4275a5af8276d08`. `operations/apply-weekend2-sql-preparation.py` executes exactly that phase through container-local psql, retaining the approved commit and four SQL digests as fixed constants. It requires the owner's root console and explicit `--apply-approved-8239937` argument. It accepts no DSN, password, role override or migration list. It verifies staged bytes against that approved Git commit, private backups/checksums, retained recovery image and independent recovery container, and saves the reviewed recovery document privately before execution. It refuses unexpected objects/roles, changed running images/checkouts or an existing change record.
+
+Roles, API privileges, 000014 and assignment binding share one bounded transaction. Provider privileges use their separate database transaction. Fresh verification asserts all three roles remain restricted NOLOGIN; no assignment exists; fixed ownership/search paths and ACL boundaries hold; all 26 identity tables have provider SELECT, all 25 non-ledger tables have each required data privilege, ledger writes and all API identity-table access are denied. The boolean runtime probe uses a NULL principal and a READ COMMITTED transaction because its locking function cannot run in READ ONLY; it cannot match or mutate an application row. No existing identity/workflow records are fetched or altered.
+
+The exclusive root-private `sql-preparation-8239937.json` stores intent, SQL digests, actual transaction IDs and verified outcomes for only the executed changes. An ambiguous COMMIT or failure stops execution and retains the intent/partial-state record; command diagnostics, if present, stay in a private error file. Do not retry the command blindly or bypass the record guard. No rollback drops, destructive restore, password setting, role LOGIN activation, HR grant seeding, service operation or deployment is included.
+
+Local SQL validation used fresh disposable PostgreSQL fixtures and the exact transaction/verification SQL: role+DDL/grant ROLLBACK, deliberate post-DDL failure rollback, API commit/fresh verification and provider rollback/commit/fresh verification passed. Earlier checkpoints 13–14 additionally establish real-backup schema compatibility and authorization/concurrency behavior. The driver and fresh assertions add no grants beyond the approved scripts. The operator must return its PASS JSON and successful exit before production preparation can be recorded as complete in this report.
 
 ## Historical design and investigation record (superseded where noted)
 
