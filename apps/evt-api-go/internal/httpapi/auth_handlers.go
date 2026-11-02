@@ -19,6 +19,7 @@ import (
 )
 
 var errKratosWhoamiNon200 = errors.New("kratos whoami non-200")
+var errAccountInactive = errors.New("account inactive")
 
 type AuthExchangeRequest struct {
 	KratosSessionToken string `json:"kratos_session_token"`
@@ -79,7 +80,7 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if who == nil || strings.TrimSpace(who.Identity.ID) == "" {
+	if who == nil || !who.Active || strings.TrimSpace(who.Identity.ID) == "" {
 		writeErr(w, http.StatusUnauthorized, "invalid_kratos_session")
 		return
 	}
@@ -92,6 +93,10 @@ func (s *Server) HandleAuthExchange(w http.ResponseWriter, r *http.Request) {
 		req.DeviceID,
 	)
 
+	if errors.Is(err, errAccountInactive) {
+		writeErr(w, http.StatusForbidden, "account_inactive")
+		return
+	}
 	if err != nil {
 		log.Printf("[auth:exchange] issue token pair failed: %v", err)
 		writeErr(w, http.StatusInternalServerError, "server_error")
@@ -127,7 +132,7 @@ func (s *Server) HandleAuthWebExchange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if who == nil || strings.TrimSpace(who.Identity.ID) == "" {
+	if who == nil || !who.Active || strings.TrimSpace(who.Identity.ID) == "" {
 		writeErr(w, http.StatusUnauthorized, "invalid_kratos_session")
 		return
 	}
@@ -140,6 +145,10 @@ func (s *Server) HandleAuthWebExchange(w http.ResponseWriter, r *http.Request) {
 		"web",
 	)
 
+	if errors.Is(err, errAccountInactive) {
+		writeErr(w, http.StatusForbidden, "account_inactive")
+		return
+	}
 	if err != nil {
 		log.Printf("[auth:web-exchange] issue token pair failed: %v", err)
 		writeErr(w, http.StatusInternalServerError, "server_error")
@@ -177,6 +186,7 @@ func (s *Server) issueAuthExchangeResponseForKratosIdentity(
 	var (
 		userID    uuid.UUID
 		dbRoleStr string
+		status    string
 	)
 
 	err = tx.QueryRowContext(ctx, `
@@ -184,11 +194,15 @@ func (s *Server) issueAuthExchangeResponseForKratosIdentity(
 		VALUES ($1,$2,$3,$4,$5)
 		ON CONFLICT (kratos_identity_id)
 		DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, updated_at = now()
-		RETURNING id, role
-	`, kratosIdentityID, email, name, defaultRole.String(), defaultStatus).Scan(&userID, &dbRoleStr)
+		RETURNING id, role, status
+	`, kratosIdentityID, email, name, defaultRole.String(), defaultStatus).Scan(&userID, &dbRoleStr, &status)
 
 	if err != nil {
 		return nil, err
+	}
+
+	if status != "active" {
+		return nil, errAccountInactive
 	}
 
 	userRole, err := auth.ParseRole(dbRoleStr)

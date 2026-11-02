@@ -1,0 +1,3 @@
+# Runtime configuration must never enter the build context or image layers.
+.env
+.env.*

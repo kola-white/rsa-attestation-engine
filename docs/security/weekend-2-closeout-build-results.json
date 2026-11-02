@@ -1,0 +1,191 @@
+{
+  "status": "Candidate build, production SQL/credential preparation and legacy NOLOGIN containment PASS; rollout pending; Proposal B HIGH remains",
+  "toolchain": "go1.26.10",
+  "target": {
+    "GOOS": "linux",
+    "GOARCH": "amd64",
+    "CGO_ENABLED": "0"
+  },
+  "x_net": "v0.60.0",
+  "required_transitive_updates": [
+    "x/crypto v0.57.0",
+    "x/mod v0.41.0",
+    "x/sync v0.23.0",
+    "x/sys v0.48.0",
+    "x/text v0.42.0",
+    "x/tools v0.49.0"
+  ],
+  "candidate_binary_sha256": "a105c12c45d7b48295dda1aac831be713363ed4b91de00d6f3460646d7f8cde9",
+  "build_identity": "closeout-candidate; vcs.modified=true; not an exact committed release or deployed image",
+  "original_findings": "weekend-2-vulnerability-results.json retained without modification",
+  "scans": {
+    "source": {
+      "config": {
+        "protocol_version": "v1.0.0",
+        "scanner_name": "govulncheck",
+        "scanner_version": "v1.9.0",
+        "db": "https://vuln.go.dev",
+        "db_last_modified": "2026-10-27T21:16:18Z",
+        "go_version": "go1.26.10",
+        "scan_level": "symbol",
+        "scan_mode": "source"
+      },
+      "all_finding_ids": [
+        "GO-2025-4017",
+        "GO-2025-4233",
+        "GO-2026-4771",
+        "GO-2026-4772",
+        "GO-2026-5004",
+        "GO-2026-5676",
+        "GO-2026-5764",
+        "GO-2026-5932",
+        "GO-2026-6860",
+        "GO-2026-6866"
+      ],
+      "symbol_finding_ids": [
+        "GO-2025-4233",
+        "GO-2026-5004",
+        "GO-2026-5676",
+        "GO-2026-5764"
+      ],
+      "target_finding_ids": []
+    },
+    "linux_binary": {
+      "config": {
+        "protocol_version": "v1.0.0",
+        "scanner_name": "govulncheck",
+        "scanner_version": "v1.9.0",
+        "db": "https://vuln.go.dev",
+        "db_last_modified": "2026-10-27T21:16:18Z",
+        "scan_level": "symbol",
+        "scan_mode": "binary"
+      },
+      "all_finding_ids": [
+        "GO-2025-4017",
+        "GO-2025-4233",
+        "GO-2026-4771",
+        "GO-2026-4772",
+        "GO-2026-5004",
+        "GO-2026-5676",
+        "GO-2026-5764",
+        "GO-2026-5932",
+        "GO-2026-6860",
+        "GO-2026-6866"
+      ],
+      "symbol_finding_ids": [
+        "GO-2025-4017",
+        "GO-2025-4233",
+        "GO-2026-4771",
+        "GO-2026-5004",
+        "GO-2026-5676",
+        "GO-2026-5764"
+      ],
+      "target_finding_ids": []
+    }
+  },
+  "ci": {
+    "run_url": "https://github.com/kola-white/rsa-attestation-engine/actions/runs/41387933245",
+    "result": "success",
+    "pr_head_sha": "ea3ff2cb7aa3edf07fd7e334552b6f6fc65d2ddf",
+    "tested_synthetic_merge_sha": "a973fd63f640d7f72ce3e4da2cc05fb313e73578",
+    "artifact_id": 13116072911,
+    "artifact_sha256": "e44d91a9be62e503e3c89b80578a446cb6420bd37b561cdd129d7ff7e1d41cd7",
+    "binary_sha256": "1386c53dcf8e01bdaeb520bb914f6c4db646295e32d8908ca4cf5b9f32d14417",
+    "ca_bundle_sha256": "714d457d580922dbf1d0be8bd35ba236a842b50b0072ae791582a19adef772a5",
+    "compiler": "go1.26.10",
+    "GOOS": "linux",
+    "GOARCH": "amd64",
+    "target_finding_ids": [],
+    "database_tests": "passed with disposable PostgreSQL 16 service",
+    "deployment": "skipped"
+  },
+  "ci_history": [
+    {
+      "run_url": "https://github.com/kola-white/rsa-attestation-engine/actions/runs/41363359745",
+      "result": "success",
+      "pr_head_sha": "fe350eda93fa3d1c6bf41b7b6bcc8b0cf6cecfbb",
+      "tested_synthetic_merge_sha": "3a41a5d7eae38a688a18304195f3da5ff05a1b86",
+      "artifact_id": 13105244287,
+      "artifact_sha256": "fa54a19200df0fab21544d3612241f2d15e37a6613bee33704af6148ee677713",
+      "binary_sha256": "76f946bb5684e3ad2de09cb5a187928d1eec9ea40b7d242e8a5b9639b320b477",
+      "ca_bundle_sha256": "714d457d580922dbf1d0be8bd35ba236a842b50b0072ae791582a19adef772a5",
+      "compiler": "go1.26.10",
+      "GOOS": "linux",
+      "GOARCH": "amd64",
+      "target_finding_ids": [],
+      "database_tests": "passed with disposable PostgreSQL 16 service"
+    },
+    {
+      "run_url": "https://github.com/kola-white/rsa-attestation-engine/actions/runs/41384955699",
+      "result": "success",
+      "pr_head_sha": "afa946d3716f9cc7a47a48517967d56a2410bf2b",
+      "tested_synthetic_merge_sha": "60c2e8e32d4cb439406119e87941c796779c57bc",
+      "artifact_id": 13114143922,
+      "artifact_sha256": "feabddfb6ac246cedbd1787d1adfffcbc30847c87208311955933a44d573de1d",
+      "binary_sha256": "0db21486b496502097c95dad0df8d917b5b572e3174f6f628fd9e6bf873f4174",
+      "ca_bundle_sha256": "714d457d580922dbf1d0be8bd35ba236a842b50b0072ae791582a19adef772a5",
+      "compiler": "go1.26.10",
+      "GOOS": "linux",
+      "GOARCH": "amd64",
+      "target_finding_ids": [],
+      "database_tests": "passed with disposable PostgreSQL 16 service",
+      "deployment": "skipped"
+    }
+  ],
+  "production_sql_preparation": {
+    "result": "PASS: owner console checkpoint 15",
+    "approved_sql_commit": "8239937f789916cf665de66da4275a5af8276d08",
+    "driver_commit": "ea3ff2cb7aa3edf07fd7e334552b6f6fc65d2ddf",
+    "api_transaction_id": "2854",
+    "provider_transaction_id": "2855",
+    "roles": "three restricted NOLOGIN roles",
+    "migration_history_recorded": "000014 only; private external operator record",
+    "credentials_configuration_data_services_changed": false,
+    "runtime_transition": "pending; active services still postgres"
+  },
+  "production_credential_preparation": {
+    "result": "PASS: owner checkpoint 18",
+    "activation_transaction_id": "2859",
+    "runtime_login_roles": 2,
+    "operator_nologin": true,
+    "scram_correct_and_incorrect_password_checks": "PASS",
+    "privilege_checks": "PASS",
+    "persistent_settings_preserved": true,
+    "live_env_owner_mode": "root:root 0600",
+    "services_restarted": false,
+    "application_data_changed": false,
+    "existing_passwords_changed": false,
+    "merge_or_deployment": false
+  },
+  "legacy_credential_followup": {
+    "result": "REMEDIATED credential-entry exposure: owner checkpoint 20 PASS",
+    "scope": "identity database/table owner and legacy API CRUD",
+    "verification": "SCRAM SELECT current_user only; no application record access/change",
+    "containment": "evt-app NOLOGIN committed and freshly verified; no sessions remain",
+    "known_malicious_use": "not established",
+    "transaction_id": "2860",
+    "exposed_credential_rejected": true,
+    "legacy_sessions": 0,
+    "sessions_terminated": 0,
+    "ownership_and_grants_unchanged": true,
+    "replacement_connectivity": true,
+    "passwords_data_services_history_changed": false
+  },
+  "rollout_recovery_preparation": {
+    "result": "PASS: owner checkpoint 21",
+    "original_connections_verified": 3,
+    "retained_images_verified": true,
+    "private_compose_model_verified": true,
+    "artifacts": "root 0600 inside existing 0700 private recovery directory",
+    "rollback_or_deployment_executed": false,
+    "emergency_recovery_risk": "captured original image/config returns baseline application weaknesses and postgres service connections; separate authority required"
+  },
+  "baseline_after_containment": {
+    "healthz_status": 200,
+    "healthz_ok": "true",
+    "version_status": 200,
+    "git_sha": "2813e7e513b6afed5cad3b77bee6363e982e21d2",
+    "read_only": true,
+    "post_deployment_acceptance": false
+  }
+}

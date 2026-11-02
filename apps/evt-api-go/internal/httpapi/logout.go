@@ -27,12 +27,12 @@ func (s *Server) HandleAuthLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  hash, err := s.refreshTokenHash(req.RefreshToken)
-  if err != nil {
-    log.Printf("[auth:logout] hash: %v", err)
-    writeErr(w, http.StatusInternalServerError, "server_error")
-    return
-  }
+	hash, err := s.refreshTokenHash(req.RefreshToken)
+	if err != nil {
+		log.Printf("[auth:logout] hash: %v", err)
+		writeErr(w, http.StatusInternalServerError, "server_error")
+		return
+	}
 
 	tx, err := s.db.BeginTx(r.Context(), &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
@@ -45,8 +45,9 @@ func (s *Server) HandleAuthLogout(w http.ResponseWriter, r *http.Request) {
 	var sessionID uuid.UUID
 	err = tx.QueryRowContext(r.Context(), `
     SELECT session_id
-    FROM refresh_tokens
-    WHERE token_hash = $1
+    FROM auth_sessions
+    WHERE session_id = (SELECT session_id FROM refresh_tokens WHERE token_hash = $1)
+    FOR UPDATE
   `, hash).Scan(&sessionID)
 	if errors.Is(err, sql.ErrNoRows) {
 		// Idempotent logout: return 200 even if token not found.
@@ -59,17 +60,25 @@ func (s *Server) HandleAuthLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, _ = tx.ExecContext(r.Context(), `
+	if _, err := tx.ExecContext(r.Context(), `
     UPDATE refresh_tokens
     SET revoked_at = now(), revoke_reason = 'logout', is_current = FALSE
     WHERE session_id = $1 AND revoked_at IS NULL
-  `, sessionID)
+  `, sessionID); err != nil {
+		log.Printf("[auth:logout] revoke: %v", err)
+		writeErr(w, http.StatusInternalServerError, "server_error")
+		return
+	}
 
-	_, _ = tx.ExecContext(r.Context(), `
+	if _, err := tx.ExecContext(r.Context(), `
     UPDATE auth_sessions
     SET revoked_at = now(), revoke_reason = 'logout'
     WHERE session_id = $1 AND revoked_at IS NULL
-  `, sessionID)
+  `, sessionID); err != nil {
+		log.Printf("[auth:logout] revoke: %v", err)
+		writeErr(w, http.StatusInternalServerError, "server_error")
+		return
+	}
 
 	if err := tx.Commit(); err != nil {
 		log.Printf("[auth:logout] commit: %v", err)

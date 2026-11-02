@@ -84,13 +84,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 		s.HandleAuthLogout(w, r)
 	})
 
-	// Evidence contract paths:
-	mux.HandleFunc("POST /v1/cases/{caseId}/checks/{checkId}/evidence:init", s.HandleEvidenceInit)
-	mux.HandleFunc("POST /v1/cases/{caseId}/checks/{checkId}/evidence:complete", s.HandleEvidenceComplete)
-
-	// Optional legacy aliases:
-	mux.HandleFunc("POST /v1/evidence/init", s.HandleEvidenceInit)
-	mux.HandleFunc("POST /v1/evidence/commit", s.HandleEvidenceComplete)
+	s.registerEvidenceRoutes(mux)
 
 	// -----------------------------------------------------------------------
 	// Phase 2 EVT (Gin module mounted into net/http mux)
@@ -126,7 +120,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 
 	mux.Handle("/v1/", evtEngine)
 
-	return withReqLog(withCORS(mux))
+	return withReqLog(withCORS(withRequestLimit(mux)))
 }
 
 func (s *Server) HandleEvidenceComplete(w http.ResponseWriter, r *http.Request) {
@@ -139,4 +133,14 @@ func withReqLog(next http.Handler) http.Handler {
 		log.Printf("[req] %s %s remote=%s", r.Method, r.URL.Path, r.RemoteAddr)
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s *Server) registerEvidenceRoutes(mux *http.ServeMux) {
+	// Evidence contract paths:
+	mux.Handle("POST /v1/cases/{caseId}/checks/{checkId}/evidence:init", RequireAuth(s.cfg.Auth, http.HandlerFunc(s.HandleEvidenceInit)))
+	mux.Handle("POST /v1/cases/{caseId}/checks/{checkId}/evidence:complete", RequireAuth(s.cfg.Auth, http.HandlerFunc(s.HandleEvidenceComplete)))
+
+	// Optional legacy aliases:
+	mux.Handle("POST /v1/evidence/init", RequireAuth(s.cfg.Auth, http.HandlerFunc(s.HandleEvidenceInit)))
+	mux.Handle("POST /v1/evidence/commit", RequireAuth(s.cfg.Auth, http.HandlerFunc(s.HandleEvidenceComplete)))
 }

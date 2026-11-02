@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"github.com/jackc/pgx/v5"
+	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/employeraccess"
 
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db"
 )
@@ -324,6 +325,9 @@ func (r *Repo) EmployerAttestServerSigned(
 	requestID, employerID, employerHRPersonID, responseType string,
 	responseBody json.RawMessage,
 ) (AttestResult, error) {
+	if err := employeraccess.Authorize(ctx, tx, employerHRPersonID, employerID); err != nil {
+		return AttestResult{}, err
+	}
 
 	var curStatus string
 	err := tx.QueryRow(ctx, `
@@ -431,7 +435,10 @@ func (r *Repo) EmployerAttestServerSigned(
 	}, nil
 }
 
-func (r *Repo) EmployerList(ctx context.Context, tx pgx.Tx, employerID string, limit int) ([]HRQueueRow, error) {
+func (r *Repo) EmployerList(ctx context.Context, tx pgx.Tx, employerID, principalID string, limit int) ([]HRQueueRow, error) {
+	if err := employeraccess.Authorize(ctx, tx, principalID, employerID); err != nil {
+		return nil, err
+	}
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
@@ -494,7 +501,10 @@ type EmployerGetRow struct {
 	EmployerResponseType *string
 }
 
-func (r *Repo) EmployerGet(ctx context.Context, tx pgx.Tx, requestID string, employerID string) (EmployerGetRow, error) {
+func (r *Repo) EmployerGet(ctx context.Context, tx pgx.Tx, requestID string, employerID, principalID string) (EmployerGetRow, error) {
+	if err := employeraccess.Authorize(ctx, tx, principalID, employerID); err != nil {
+		return EmployerGetRow{}, err
+	}
 	const q = `
 SELECT
   request_id,

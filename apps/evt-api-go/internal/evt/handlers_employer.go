@@ -169,7 +169,7 @@ func (h *EmployerHandlers) List(c *gin.Context) {
 
 	var items []HRQueueRow
 	err := h.DB.WithTx(c.Request.Context(), func(tx pgx.Tx) error {
-		rows, err := h.Repo.EmployerList(c.Request.Context(), tx, employerID, 100)
+		rows, err := h.Repo.EmployerList(c.Request.Context(), tx, employerID, claims.Sub, 100)
 		if err != nil {
 			return err
 		}
@@ -177,6 +177,10 @@ func (h *EmployerHandlers) List(c *gin.Context) {
 		return nil
 	})
 	if err != nil {
+		if err == db.ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not_found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "list_failed"})
 		return
 	}
@@ -204,7 +208,7 @@ func (h *EmployerHandlers) Get(c *gin.Context) {
 
 	var out HRGetResp
 	err := h.DB.WithTx(c.Request.Context(), func(tx pgx.Tx) error {
-		row, err := h.Repo.EmployerGet(c.Request.Context(), tx, requestID, employerID)
+		row, err := h.Repo.EmployerGet(c.Request.Context(), tx, requestID, employerID, claims.Sub)
 		if err != nil {
 			return err
 		}

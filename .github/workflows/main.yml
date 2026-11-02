@@ -8,6 +8,20 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: cvera_test
+          POSTGRES_PASSWORD: cvera_ci_test_only
+          POSTGRES_DB: cvera_authority_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cvera_test -d cvera_authority_test"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 20
     outputs:
       evidence_date: ${{ steps.ci_evidence_metadata.outputs.evidence_date }}
 
@@ -33,40 +47,92 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: '1.26.10'
           cache-dependency-path: apps/evt-api-go/go.sum
 
       - name: Run Go tests
+        env:
+          CVERA_AUTHORITY_TEST_DATABASE_URL: postgres://cvera_test:cvera_ci_test_only@127.0.0.1:5432/cvera_authority_test?sslmode=disable
+          GOTOOLCHAIN: local
         shell: bash
         working-directory: apps/evt-api-go
         run: |
           set -o pipefail
-          go test ./... 2>&1 | tee ../../.ci-evidence/go-tests.txt
+          go test ./... -count=1 -timeout=120s 2>&1 | tee ../../.ci-evidence/go-tests.txt
 
-      - name: Verify API Docker build identity
+      - name: Verify API release build and targeted vulnerability fixes
         shell: bash
         run: |
           set -euo pipefail
 
+          # Synthetic sentinel: the real production .env contains service
+          # credentials and must be excluded before COPY reaches the builder.
+          test ! -e apps/evt-api-go/.env
+          printf 'CVERA_BUILD_CONTEXT_TEST=synthetic\n' > apps/evt-api-go/.env
+
           docker build \
-            --target build \
             --build-arg BUILD_SHA="${GITHUB_SHA}" \
-            -t cvera-api:ci-builder \
+            -t cvera-api:ci-release \
             apps/evt-api-go
 
-          container_id="$(docker create cvera-api:ci-builder)"
+          container_id="$(docker create cvera-api:ci-release)"
           trap 'docker rm -f "${container_id}" >/dev/null 2>&1 || true' EXIT
 
           docker cp \
-            "${container_id}:/out/evt-api-go" \
+            "${container_id}:/evt-api-go" \
             /tmp/evt-api-go-ci
 
-          if ! strings /tmp/evt-api-go-ci | grep -Fq "${GITHUB_SHA}"; then
-            echo "ERROR: Docker-built API binary does not contain expected Git SHA"
-            exit 1
-          fi
+          python3 - <<'PYIDENTITY'
+          import os
+          from pathlib import Path
+          if os.environ["GITHUB_SHA"].encode() not in Path("/tmp/evt-api-go-ci").read_bytes():
+              raise SystemExit("Docker-built API binary does not contain expected Git SHA")
+          PYIDENTITY
 
           echo "Verified Docker-built API revision identity: ${GITHUB_SHA}"
+
+          go version -m /tmp/evt-api-go-ci | tee .ci-evidence/go-release-build.txt
+          docker cp "${container_id}:/etc/ssl/certs/ca-certificates.crt" /tmp/cvera-release-ca.pem
+          sha256sum /tmp/evt-api-go-ci /tmp/cvera-release-ca.pem | tee .ci-evidence/go-release-hashes.txt
+          go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 \
+            -mode=binary -json /tmp/evt-api-go-ci > .ci-evidence/go-release-vuln.json
+          python3 - <<'PYSCAN'
+          import json
+          from pathlib import Path
+          build = Path(".ci-evidence/go-release-build.txt").read_text()
+          if "go1.26.10" not in build or "GOOS=linux" not in build or "GOARCH=amd64" not in build:
+              raise SystemExit("Unexpected release compiler or target")
+          raw = Path(".ci-evidence/go-release-vuln.json").read_text()
+          decoder = json.JSONDecoder()
+          findings = set()
+          binary_scan = False
+          binary_sbom = False
+          while raw.strip():
+              value, end = decoder.raw_decode(raw.lstrip())
+              raw = raw.lstrip()[end:]
+              if "config" in value:
+                  binary_scan = value["config"].get("scan_mode") == "binary"
+              if "SBOM" in value:
+                  binary_sbom = value["SBOM"].get("go_version") == "go1.26.10"
+              if "finding" in value:
+                  findings.add(value["finding"]["osv"])
+          if not binary_scan or not binary_sbom:
+              raise SystemExit("Missing or unexpected binary scan metadata")
+          blocked = findings & {"GO-2026-6611", "GO-2026-6809"}
+          if blocked:
+              raise SystemExit("Unfixed release findings: " + ", ".join(sorted(blocked)))
+          print("Targeted release fixes verified; remaining advisories require documented dispositions:", sorted(findings))
+          PYSCAN
+
+      - name: Preserve release verification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-release-verification-${{ github.sha }}
+          path: |
+            .ci-evidence/go-release-build.txt
+            .ci-evidence/go-release-hashes.txt
+            .ci-evidence/go-release-vuln.json
+          if-no-files-found: error
 
       - name: Create CI evidence manifest
         id: ci_evidence_metadata
@@ -100,8 +166,8 @@ jobs:
               result: "passed"
             },
             go: {
-              version_contract: "1.25",
-              command: "go test ./...",
+              version_contract: "1.26.10",
+              command: "go test ./... -count=1 -timeout=120s",
               result: "passed"
             },
             overall_result: "passed"
