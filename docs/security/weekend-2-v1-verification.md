@@ -1,6 +1,6 @@
 # Weekend 2: targeted remediation and release verification
 
-**Closeout update:** [current review, patched-build verification and deployment gate](weekend-2-closeout.md) supersedes historical toolchain/dependency and migration-runner uncertainty below. Proposal B remains acknowledged and unresolved.
+**Closeout update:** [current review, patched-build verification and deployment gate](weekend-2-closeout.md) supersedes the historical toolchain/dependency, migration/binding/runtime preparation and credential-exposure status below. Production transactions 2854/2855/2859/2860 and verified private recovery readiness are recorded there; service rollout remains unexecuted and Proposal B remains HIGH. Proposal B remains acknowledged and unresolved.
 
 Date: 2026-11-01. Repository: `kola-white/rsa-attestation-engine`. Base: fetched `origin/main`, `2813e7e` (PR #129). Branch: `security/weekend-2-v1-remediation`.
 

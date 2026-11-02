@@ -170,5 +170,22 @@
     "ownership_and_grants_unchanged": true,
     "replacement_connectivity": true,
     "passwords_data_services_history_changed": false
+  },
+  "rollout_recovery_preparation": {
+    "result": "PASS: owner checkpoint 21",
+    "original_connections_verified": 3,
+    "retained_images_verified": true,
+    "private_compose_model_verified": true,
+    "artifacts": "root 0600 inside existing 0700 private recovery directory",
+    "rollback_or_deployment_executed": false,
+    "emergency_recovery_risk": "captured original image/config returns baseline application weaknesses and postgres service connections; separate authority required"
+  },
+  "baseline_after_containment": {
+    "healthz_status": 200,
+    "healthz_ok": "true",
+    "version_status": 200,
+    "git_sha": "2813e7e513b6afed5cad3b77bee6363e982e21d2",
+    "read_only": true,
+    "post_deployment_acceptance": false
   }
 }
