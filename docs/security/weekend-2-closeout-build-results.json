@@ -1,5 +1,5 @@
 {
-  "status": "PASS: exact Docker release binary verified in GitHub CI; production migration/binding/deployment pending",
+  "status": "PASS: candidate Docker release binary and production SQL preparation verified; runtime activation, merge and deployment pending",
   "toolchain": "go1.26.10",
   "target": {
     "GOOS": "linux",
@@ -84,13 +84,13 @@
     }
   },
   "ci": {
-    "run_url": "https://github.com/kola-white/rsa-attestation-engine/actions/runs/41384955699",
+    "run_url": "https://github.com/kola-white/rsa-attestation-engine/actions/runs/41387933245",
     "result": "success",
-    "pr_head_sha": "afa946d3716f9cc7a47a48517967d56a2410bf2b",
-    "tested_synthetic_merge_sha": "60c2e8e32d4cb439406119e87941c796779c57bc",
-    "artifact_id": 13114143922,
-    "artifact_sha256": "feabddfb6ac246cedbd1787d1adfffcbc30847c87208311955933a44d573de1d",
-    "binary_sha256": "0db21486b496502097c95dad0df8d917b5b572e3174f6f628fd9e6bf873f4174",
+    "pr_head_sha": "ea3ff2cb7aa3edf07fd7e334552b6f6fc65d2ddf",
+    "tested_synthetic_merge_sha": "a973fd63f640d7f72ce3e4da2cc05fb313e73578",
+    "artifact_id": 13116072911,
+    "artifact_sha256": "e44d91a9be62e503e3c89b80578a446cb6420bd37b561cdd129d7ff7e1d41cd7",
+    "binary_sha256": "1386c53dcf8e01bdaeb520bb914f6c4db646295e32d8908ca4cf5b9f32d14417",
     "ca_bundle_sha256": "714d457d580922dbf1d0be8bd35ba236a842b50b0072ae791582a19adef772a5",
     "compiler": "go1.26.10",
     "GOOS": "linux",
@@ -114,6 +114,33 @@
       "GOARCH": "amd64",
       "target_finding_ids": [],
       "database_tests": "passed with disposable PostgreSQL 16 service"
+    },
+    {
+      "run_url": "https://github.com/kola-white/rsa-attestation-engine/actions/runs/41384955699",
+      "result": "success",
+      "pr_head_sha": "afa946d3716f9cc7a47a48517967d56a2410bf2b",
+      "tested_synthetic_merge_sha": "60c2e8e32d4cb439406119e87941c796779c57bc",
+      "artifact_id": 13114143922,
+      "artifact_sha256": "feabddfb6ac246cedbd1787d1adfffcbc30847c87208311955933a44d573de1d",
+      "binary_sha256": "0db21486b496502097c95dad0df8d917b5b572e3174f6f628fd9e6bf873f4174",
+      "ca_bundle_sha256": "714d457d580922dbf1d0be8bd35ba236a842b50b0072ae791582a19adef772a5",
+      "compiler": "go1.26.10",
+      "GOOS": "linux",
+      "GOARCH": "amd64",
+      "target_finding_ids": [],
+      "database_tests": "passed with disposable PostgreSQL 16 service",
+      "deployment": "skipped"
     }
-  ]
+  ],
+  "production_sql_preparation": {
+    "result": "PASS: owner console checkpoint 15",
+    "approved_sql_commit": "8239937f789916cf665de66da4275a5af8276d08",
+    "driver_commit": "ea3ff2cb7aa3edf07fd7e334552b6f6fc65d2ddf",
+    "api_transaction_id": "2854",
+    "provider_transaction_id": "2855",
+    "roles": "three restricted NOLOGIN roles",
+    "migration_history_recorded": "000014 only; private external operator record",
+    "credentials_configuration_data_services_changed": false,
+    "runtime_transition": "pending; active services still postgres"
+  }
 }

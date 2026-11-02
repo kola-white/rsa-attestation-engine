@@ -1,6 +1,21 @@
 # Weekend 2 closeout verification
 
-Owner-authorized closeout follow-up to PR #130 on `security/weekend-2-v1-remediation`, reviewed from `b96988f` against authoritative `origin/main` `2813e7e513b6afed5cad3b77bee6363e982e21d2`. The older reports retain historical evidence; this report records the new build/operational work. **Production migration, merge and deployment remain gated; Weekend 2 is not closed or public-release security-cleared.** Proposal B is deliberately preserved as an acknowledged high-severity gap.
+Owner-authorized closeout follow-up to PR #130 on `security/weekend-2-v1-remediation`, reviewed from `b96988f` against authoritative `origin/main` `2813e7e513b6afed5cad3b77bee6363e982e21d2`. The older reports retain historical evidence; this report records the new build/operational work. **Production SQL preparation is verified; runtime transition, merge and deployment remain gated. Weekend 2 is not closed or public-release security-cleared.** Proposal B is deliberately preserved as an acknowledged high-severity gap.
+
+## Current verified operational state
+
+Owner console checkpoint 15 returned PASS using checksum-verified driver ea3ff2c and approved SQL artifacts from 8239937. API transaction **2854** committed the three restricted NOLOGIN roles, actual migration 000014 and API/assignment privilege bindings. Provider transaction **2855** committed the identity-service privilege profile. Both databases passed fresh post-commit verification. Backups, staged SQL and retained recovery images were checked before execution; the approved recovery procedure was made available privately. The exclusive operator record is `/opt/cvera/weekend2-closeout-20261102T004322Z/sql-preparation-8239937.json`. This records only 000014 and actual service bindings; no earlier history or database ledger was fabricated. No employer assignment, application/identity record, credential, configuration or running service was changed.
+
+| Area | Current disposition |
+| --- | --- |
+| 000014, ownership, fixed function paths and privilege bindings | PASS: committed and freshly verified in production under the owner-approved SQL phase. |
+| Authorization/revocation/concurrency on authoritative schema | PASS: actual backup restore checks and synthetic cleanup completed in the isolated clone; production application requests are not claimed tested. |
+| Effective restricted runtime | BLOCKED: roles are deliberately NOLOGIN; the running API/Kratos/Courier still use postgres. Credential activation/private configuration compatibility and coordinated rollout remain required. |
+| Application fixes and target Go advisories | REMEDIATED in verified candidate builds; production code/build remains unchanged. |
+| Proposal B case-upload entitlement | BLOCKED: acknowledged HIGH, deliberately unchanged. Deployment diff adds no routes/ports or broader evidence exposure; public-release security clearance remains unavailable. |
+| Merge, deployed revision and production authentication/signing acceptance | OUTSTANDING: no merge/deployment, no production attestation created, no new runtime LOGIN or registered-identity change. |
+
+The read-only next checkpoint previews reviewed Compose with synthetic replacement connection URLs and compares persistent configuration to the live service environment in host memory. It reports only booleans/key names and ownership/account metadata. No password/DSN, key, application record or raw authentication log is emitted. It cannot itself activate credentials or restart services. Source/default credential and exposure conclusions below retain their chronological context; this current section supersedes earlier descriptions of the unexecuted migration.
 
 ## Full PR review
 
@@ -117,3 +132,7 @@ A disposable local role separately verified the PostgreSQL 16 `psql \password` c
 The owner approved live restricted NOLOGIN roles, 000014 and reviewed privilege bindings against commit 8239937, with checksum/backup/recovery checks before execution and a stop on unexpected results. Credentials, assignments, application records, services, merge and deployment remain outside that phase. The guarded one-phase operator driver implements the documented transaction order, exclusive private intent/result recording and fresh post-commit assertions. Its exact SQL blocks passed disposable local rollback, injected-failure rollback, commit and fresh verification tests; production execution remains pending the owner's console output. SQL file digests and application behavior are unchanged. No production SQL was executed from this workstation.
 
 CI run [41387049947](https://github.com/kola-white/rsa-attestation-engine/actions/runs/41387049947) subsequently passed for the owner-approved commit 8239937; deployment was skipped. Git diff and repository connectivity checks pass. Publishing the guarded console driver does not itself execute SQL or change the four approved SQL artifacts.
+
+CI run [41387933245](https://github.com/kola-white/rsa-attestation-engine/actions/runs/41387933245) passed for ea3ff2c, including the full Go/database suite and actual Docker release build scan; deployment was skipped. Downloaded artifact 13116072911 (synthetic merge a973fd63f640d7f72ce3e4da2cc05fb313e73578) verified Go 1.26.10 with neither target advisory reported. Archive SHA-256: e44d91a9be62e503e3c89b80578a446cb6420bd37b561cdd129d7ff7e1d41cd7; binary: 1386c53dcf8e01bdaeb520bb914f6c4db646295e32d8908ca4cf5b9f32d14417. Remaining findings stay dispositioned rather than hidden.
+
+The read-only runtime-transition probe passed local synthetic positive/negative configuration comparisons using actual Compose rendering; mismatched JWT configuration is reported by key name only, secret values are not emitted, and the temporary preview is removed. This does not substitute for the owner-run production metadata checkpoint.
