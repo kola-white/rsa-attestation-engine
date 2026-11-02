@@ -34,8 +34,8 @@ services:
       EVT_JWT_ISS: "${EVT_JWT_ISS}"
       EVT_JWT_AUD: "${EVT_JWT_AUD}"
 
-      # DB inside docker network
-      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable"
+      # The server uses EVT_DB_DSN exclusively. Do not inject the database
+      # administrator credential through an unused DATABASE_URL alias.
 
       # Your REAL DigitalOcean Spaces settings:
       DO_ENDPOINT: "${DO_ENDPOINT}"

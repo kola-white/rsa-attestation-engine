@@ -1,5 +1,5 @@
 {
-  "status": "Local Linux target verified; exact Docker/CI release verification required before merge",
+  "status": "PASS: exact Docker release binary verified in GitHub CI; production migration/binding/deployment pending",
   "toolchain": "go1.26.10",
   "target": {
     "GOOS": "linux",
@@ -82,5 +82,20 @@
       ],
       "target_finding_ids": []
     }
+  },
+  "ci": {
+    "run_url": "https://github.com/kola-white/rsa-attestation-engine/actions/runs/41363359745",
+    "result": "success",
+    "pr_head_sha": "fe350eda93fa3d1c6bf41b7b6bcc8b0cf6cecfbb",
+    "tested_synthetic_merge_sha": "3a41a5d7eae38a688a18304195f3da5ff05a1b86",
+    "artifact_id": 13105244287,
+    "artifact_sha256": "fa54a19200df0fab21544d3612241f2d15e37a6613bee33704af6148ee677713",
+    "binary_sha256": "76f946bb5684e3ad2de09cb5a187928d1eec9ea40b7d242e8a5b9639b320b477",
+    "ca_bundle_sha256": "714d457d580922dbf1d0be8bd35ba236a842b50b0072ae791582a19adef772a5",
+    "compiler": "go1.26.10",
+    "GOOS": "linux",
+    "GOARCH": "amd64",
+    "target_finding_ids": [],
+    "database_tests": "passed with disposable PostgreSQL 16 service"
   }
 }
