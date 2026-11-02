@@ -1,14 +1,21 @@
-# Weekend 2: proposed runtime credential preparation
+# Weekend 2: approved runtime credential preparation
 
-Status: **design and local verification only; production execution requires a separate owner decision.** The approved SQL-only phase did not authorize credentials, LOGIN activation, configuration or service changes. This proposed phase ends before any service operation, merge or deployment.
+Status: **owner approved against plan commit 1c228ee; guarded production execution pending.** The owner separately authorized fresh runtime credentials, LOGIN and protected configuration preparation, delegated verification of the established deployment identity and retained the prohibition on service operations, merge and deployment. No additional execution approval is required for this preparation scope.
 
-## Evidence and remaining identity decision
+## Evidence and resolved deployment identity
 
 Production checkpoint 15 committed and freshly verified actual 000014/API bindings in evt transaction 2854 and provider bindings in evt_kratos transaction 2855. The new roles are restricted NOLOGIN. Checkpoint 16 confirmed reviewed Compose preserves every configured non-connection setting for API, Kratos and Courier, including persistent JWT/HMAC, Kratos and SMTP settings. Provider connection routes agree. New connection URLs can preserve the existing host, database and TLS/query settings while changing only username/password.
 
-The live environment file is UID 501/GID 50, mode 0644, with no corresponding OS owner account. Recent successful SSH account metadata lists root; it does **not** prove the username stored in GitHub's CVERA_DEPLOY_USER secret. Do not retrieve that secret or infer a deployment identity from these logins. The owner must confirm the existing deployment account's name before publication. The concrete proposal below uses **root:root / 0600 only if that account is confirmed as root**. A different account requires an explicit reviewed ownership/read-access strategy before execution, not broader file permissions or new memberships.
+The live environment file is UID 501/GID 50, mode 0644, with no corresponding OS owner account. General root logins alone were insufficient. The established deployment account is now verified as **root** through the following combined evidence, so the protected environment uses **root:root / 0600**, without new accounts, SSH keys, memberships or access-control changes:
 
-## Proposed authorized scope
+- Workflow main.yml connects directly as CVERA_DEPLOY_USER and invokes the exact-revision deployment script without sudo.
+- Successful [run 41320539163](https://github.com/kola-white/rsa-attestation-engine/actions/runs/41320539163), job 124890020290, deployed current main 2813e7e; its SSH step ran 2026-11-01 15:20:16–15:28:01 UTC.
+- Owner checkpoint 17 recorded a unique matching root public-key authentication at 15:20:16.772184 UTC and root session-open at 15:20:16.776494, both sshd PID 3015574. The current API started at 15:27:55.696917146, inside that same deployment step.
+- GitHub secret metadata (names/timestamps only) shows CVERA_DEPLOY_USER unchanged since 2026-09-20T21:20:26Z and its SSH key unchanged since 21:20:57Z that day, before the proven deployment. No secret value or private key was retrieved and no SSH attempt was made.
+
+The driver rechecks unique matching authentication/session-open and the current API deployment timestamp before credential operations; ambiguity fails closed.
+
+## Owner-authorized scope
 
 - Provision fresh independent credentials for existing cvera_api_runtime and cvera_kratos_runtime only, then enable LOGIN on those two restricted roles. cvera_hr_operator stays NOLOGIN.
 - Stage and atomically publish protected configuration containing the new EVT_DB_DSN and KRATOS_DB_DSN, preserving all unrelated values and connection-routing/TLS options.
@@ -52,3 +59,11 @@ This pre-rollout recovery is not the post-deployment rollback procedure. Once an
 - PostgreSQL 16 disposable role: client-encrypted private-stdin password preparation while NOLOGIN, SCRAM correct-password acceptance/incorrect-password rejection over the Docker-network address, then NOLOGIN recovery denying further login. No production access.
 - Synthetic environment plus actual reviewed Compose: only both connection values replaced; unrelated bytes/comments/settings preserved, including a literal-dollar secret; parsed non-connection settings unchanged; mode-0600 atomic publication and byte-exact/private rollback passed. This establishes preservation, not an unexecuted production credential transition.
 - Production checkpoint 16: all three persistent-environment comparisons passed; provider routes matched; unused API administrator alias absent from the reviewed rendered configuration. No credential or service state changed.
+
+## Guarded execution and confidentiality verification
+
+`operations/prepare-weekend2-runtime-credentials.py --prepare-approved-1c228ee` implements this approved phase through the existing root console. It uses the checksum-pinned SQL/preview helpers, preserves private current environment/candidate files, records intent before activation, checks configuration before publication and stops on unexpected state. An existing intent/candidate prevents blind retries. Only metadata is returned. The original verified backup/recovery material is retained.
+
+Before setting passwords it refuses unreviewed preload/audit hooks. Each short-lived password-setting owner connection uses SCRAM encryption and session-only controls excluding credential statements/verifiers from statement, duration/sampling and error-statement logs; global/application logging is unchanged. Unknown auditing is not silently disabled. Passwords enter client stdin, never SQL interpolation or arguments. See PostgreSQL 16 [psql password handling](https://www.postgresql.org/docs/16/app-psql.html) and [logging controls](https://www.postgresql.org/docs/16/runtime-config-logging.html). Correct-password and specifically password-authentication-failed negative probes both must succeed as expected; an arbitrary connection error does not count as bad-password rejection.
+
+Local disposable PostgreSQL/Compose regressions passed the actual provisioning, SCRAM, effective-role/ACL/schema checks, private candidate publication/restoration, duplicate-assignment rejection and NOLOGIN recovery. With verbose statement/duration logging enabled in the fixture, neither the generated password nor its SCRAM verifier appeared in server logs. Root chown was asserted/simulated on the unprivileged workstation; the real root console driver must assert UID/GID 0 and mode 0600 after publication before success. Identity tests used the exact owner-observed metadata and actual historical workflow and rejected ambiguous sessions. No production credential preparation has yet been claimed successful.
