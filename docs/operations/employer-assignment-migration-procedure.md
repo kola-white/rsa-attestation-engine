@@ -1,6 +1,34 @@
-# Proposal A: proposed operator procedure (not execution approval)
+# Proposal A: controlled operator procedure (live execution pending approval)
 
-Applies only to draft PR #130, migration 000014 and its separate privilege binding. No production migration, rehearsal, grant, revocation or deployment is authorized by this document. Proposal B remains untouched and a high-severity release blocker.
+## Current next decision: additive live preparation only
+
+This section supersedes older draft/evt-app instructions below. The owner is the responsible human operator, using the established root DigitalOcean console on cvera-api and container-local psql as postgres. PR #130 is ready for review and unmerged. No actual production SQL change is authorized merely by this document.
+
+**Verified prerequisites:** private backups and retained images exist at `/opt/cvera/weekend2-closeout-20261102T004322Z`; both actual dumps restored successfully into the independent network-none, 96 MiB clone. Checkpoints 13–14 passed migration/binding rollback and commit, effective privilege checks, authorization/revocation/current-status checks and both concurrency orderings on that restored schema. Production roles/objects remain absent; the current API and both identity services still connect as postgres. Host-all authentication uses SCRAM.
+
+**Exact proposed live change, requiring the owner's separate execution approval:**
+
+1. Preserve the existing checkout/services/configuration. Verify the four staged file digests below. Create a private exclusive intent record with UTC start, database, owner/executor, reviewed code commit, SQL digests, recovery location and only migration 000014 as planned. Never log credentials or claim 000001–000013 were applied.
+2. In database evt, as postgres, begin one READ COMMITTED transaction with search_path=public,pg_temp, lock_timeout=5s, statement_timeout=60s and idle_in_transaction_session_timeout=60s. Acquire the change-specific transaction advisory lock. Recheck that all three proposed roles and four new assignment objects are absent. Reject ambiguity instead of adopting/replacing existing objects.
+3. Within that same transaction create cvera_api_runtime, cvera_kratos_runtime and cvera_hr_operator, all NOLOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION and NOBYPASSRLS, without memberships. Apply api-runtime-privileges.sql with cvera.service_runtime_role=cvera_api_runtime; then actual migration 000014; then hr-assignment-privileges.sql with cvera.hr_runtime_role=cvera_api_runtime and cvera.hr_operator_role=cvera_hr_operator. Preserve postgres ownership and every legacy evt-app grant/default ACL.
+4. Assert trusted function ownership/fixed paths and effective ACLs as in checkpoint 13: runtime check EXECUTE only; no raw assignment access, runtime admin execution, PUBLIC execution or legacy evt-app assignment access; operator limited to reviewed grant/revocation columns and principal lock. Assert all new roles remain NOLOGIN/unprivileged and no assignment exists. Capture the transaction ID and COMMIT. Verify committed objects/ACLs from a fresh connection before marking only 000014 applied in the private external change record. No public.schema_migrations table or invented history is created.
+5. Separately in evt_kratos, with the same bounded transaction settings and reviewed non-owner role, apply kratos-runtime-privileges.sql with cvera.service_runtime_role=cvera_kratos_runtime. Verify data DML/ledger SELECT, ledger writes denied and API identity-table access denied. Record this as service privilege binding, not a fabricated vendor migration. Existing identity data, ownership and schema_migration records remain unchanged.
+6. Stop after fresh catalog verification and record completion. All services continue on their existing configuration; none of the new roles can log in. Do not seed any HR assignment, activate credentials, alter postgres/evt-app passwords or LOGIN flags, recreate services, merge or deploy in this phase. Credential activation/private configuration staging and service rollout remain subsequent controlled checkpoints.
+
+**Failure and recovery for this additive phase:** psql ON_ERROR_STOP plus pipefail must stop on any error. A disconnected/uncommitted API transaction rolls back roles, grants and new objects together; a provider-transaction failure rolls back only that binding. If the API transaction committed before a later failure, leave the additive objects and NOLOGIN roles intact, record the exact partial state and hold rollout. Existing applications still use unchanged roles/configuration, so no database restore or service rollback is required for this phase. Never automatically retry an ambiguous COMMIT, drop retained grant history or run a destructive restore. Reconcile fresh catalog metadata with the private intent/result record first. The separately verified backups remain the destructive-recovery fallback, requiring separate owner approval and write reconciliation.
+
+Reviewed SQL (unchanged since application commit afa946d; staged in reviewed-afa946d):
+
+| File | SHA-256 |
+| --- | --- |
+| 000014_employer_hr_assignments.sql | 666cdeba3b37a6ac18909cceb0f9d21332c2a2f40dcedaba72b3afbca0adfefb |
+| api-runtime-privileges.sql | cb479c4a4a551982a92f16632795d75ae38884d1d83a97ba63827d997067ef7d |
+| hr-assignment-privileges.sql | c9d5efd8220b63a197857b63119fabc3c30cffa4d4edbaeaba8f6578703fe2a2 |
+| kratos-runtime-privileges.sql | c8b6f7715a5d82229de984a66e51e29e85fffd2a2b885bf0ec0978085687160a |
+
+## Historical design and investigation record (superseded where noted)
+
+The following historical proposal applied only to draft PR #130, migration 000014 and its separate privilege binding. No production migration, rehearsal, grant, revocation or deployment is authorized by this document. Proposal B remains untouched and a high-severity release blocker.
 
 ## Required human decisions
 
