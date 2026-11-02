@@ -65,6 +65,11 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Synthetic sentinel: the real production .env contains service
+          # credentials and must be excluded before COPY reaches the builder.
+          test ! -e apps/evt-api-go/.env
+          printf 'CVERA_BUILD_CONTEXT_TEST=synthetic\n' > apps/evt-api-go/.env
+
           docker build \
             --build-arg BUILD_SHA="${GITHUB_SHA}" \
             -t cvera-api:ci-release \

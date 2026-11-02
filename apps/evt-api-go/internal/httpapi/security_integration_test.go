@@ -249,12 +249,24 @@ func TestEmployerAssignedLocalSigning(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d := &evtdb.DB{Pool: pool}
+	// Exercise real issuance using the proposed non-owner runtime grants, not
+	// the test administrator. This includes the production-required event serial.
+	grantEmployer(t, pool, principal, "employer-b")
+	servicePrivilegeStubs(t, pool)
+	runtime := createEmployerProbeRole(t, pool)
+	operator := createEmployerProbeRole(t, pool)
+	applyServicePrivileges(t, pool, runtime, "api")
+	applyEmployerBindings(t, pool, runtime, operator)
+	restrictedPool, err := pgxpool.New(context.Background(), serviceRoleURL(t, pool, runtime))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(restrictedPool.Close)
+	d := &evtdb.DB{Pool: restrictedPool}
 	m := &evt.Module{Employer: &evt.EmployerHandlers{DB: d, Repo: &evt.Repo{DB: d, Signer: signer}}}
 	engine := gin.New()
 	engine.Use(auth.GinRequireAuth(s.cfg.Auth.JWTSecret, s.cfg.Auth.Issuer, s.cfg.Auth.Audience))
 	m.Register(engine.Group("/v1"))
-	grantEmployer(t, pool, principal, "employer-b")
 	raw, err := auth.MintAccessTokenHS256(s.cfg.Auth.JWTSecret, s.cfg.Auth.Issuer, s.cfg.Auth.Audience, principal, "", []auth.Role{auth.RoleHRReviewer}, time.Minute)
 	if err != nil {
 		t.Fatal(err)
