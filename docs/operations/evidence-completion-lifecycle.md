@@ -126,3 +126,74 @@ both content-length and chunked responses and private sealed PUT metadata.
 An initial full run caught an unescaped `%` in the migration's formatted SQL LIKE
 pattern. It was corrected before the passing full/race runs. No production SQL
 was executed. GitHub CI is tracked on the feature PR separately.
+
+## Consolidated production release
+
+The owner authorized migration, merge, existing-workflow deployment and focused
+synthetic evidence acceptance together on 2026-11-07. No further routine approval
+is needed. Actual console execution is still required because this workstation
+has no authorized production SSH identity. Do not create or retrieve credentials.
+
+`operations/release-evidence-completion-sql.py --approved-release` implements the
+SQL preparation in one invocation from the existing root console. It pins the
+reviewed migration/binding bytes from `f94545f`, checks the live 000015 parent types,
+primary keys, ownership, RLS, checker and runtime boundary, verifies health/revision
+and protected configuration, and creates a current root-private evt backup.
+It restores that exact archive in a separate 96 MiB, network-isolated PostgreSQL
+container, rehearses rollback and commit with privilege checks, then stops the
+clone while preserving its data. The clone never mounts production volumes.
+
+Only after rehearsal passes does it apply 000016 and its bindings in one bounded
+transaction. It verifies exact table/column ACL boundaries, zero implicitly
+created lifecycle records and unchanged existing registry/function/role metadata.
+It records actual SQL checksums and transaction identity privately, without
+inventing migration history. It also retains the current API image, Compose and
+protected environment for application recovery. No roles, credentials, registry
+grants, application records, live configuration or services are changed by this
+SQL invocation. On STOP, do not retry or merge; inspect the recorded phase first.
+
+After the SQL PASS result, verify final-head CI, squash-merge PR #134, and let the
+existing main workflow test/build/deploy its exact main SHA. No Kratos/database
+restart is needed. Run `operations/smoke-evidence-completion.py --expected-main
+<merged SHA>` in the same console with the working account's hidden local prompts.
+The existing login/exchange flow supplies the canonical principal; nothing is
+minted or inserted to bypass authentication.
+
+The acceptance tool creates only one uniquely named release-authorized synthetic
+case/check and its explicit grant. It uploads two copies of a tiny public synthetic
+PNG fixture, verifies both completion routes/retries, unauthenticated and wrong-check
+denial, the independently computed hash, duplicate denial, PENDING metadata,
+anonymous storage denial and staging-overwrite isolation. It then revokes the grant,
+checks completion denial, closes the case and logs out both sessions. Accepted
+synthetic evidence remains private and PENDING; no real user's evidence is read or
+printed. Private result files contain statuses only. Do not rerun an existing test
+merely to obtain its output; retrieve its sanitized result instead.
+
+If application recovery is needed, use the retained image with the saved private
+Compose/environment, recreating **only API** with `--no-deps --no-build --pull never`:
+
+```sh
+# Set to the exact private directory printed by the successful SQL preparation.
+CVERA_RECOVERY=/opt/cvera/evidence-completion-release-TIMESTAMP
+CVERA_API_DIR=/opt/cvera/rsa-attestation-engine/apps/evt-api-go
+docker compose --project-name evt-api-go --project-directory "$CVERA_API_DIR" \
+  --env-file "$CVERA_RECOVERY/api.env.before" \
+  -f "$CVERA_RECOVERY/compose-before.yml" \
+  -f "$CVERA_RECOVERY/api-image-override.json" config --quiet
+docker compose --project-name evt-api-go --project-directory "$CVERA_API_DIR" \
+  --env-file "$CVERA_RECOVERY/api.env.before" \
+  -f "$CVERA_RECOVERY/compose-before.yml" \
+  -f "$CVERA_RECOVERY/api-image-override.json" \
+  up -d --no-deps --no-build --pull never api
+```
+
+Confirm `/healthz` and `/version` match the retained prior API. Preserve 000016 and
+all evidence; do not restore the database or delete accepted records as an automatic
+rollback. The saved backup is recovery material, not permission for destructive restore.
+
+Additional release-tool verification: the exact backup restore, migration rollback,
+commit, narrow ACL checks, unchanged registry/role metadata and repeat prevention
+passed in isolated local PostgreSQL using the production parent definitions and
+hostile default ACLs. Offline smoke-controller tests passed success plus login,
+hash, deduplication, storage and public-object failures with cleanup and private-output
+assertions. These tests verify the tools; they are not production execution evidence.
