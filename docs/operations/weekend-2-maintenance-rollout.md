@@ -1,6 +1,6 @@
 # Weekend 2: maintenance rollout for owner review
 
-Status: **executed after separate owner approval**. PR #130 was squash-merged and deployed as `f52f5bf282735ae24ac91d3b3855e3e5b0d5de13`; the subsequent provider transition and Checkpoint 24 passed. No rollback was executed. The owner reconfirmed the existing Checkpoint 24 evidence on 2026-11-07 without rerunning it. See the [recorded production outcome](../security/weekend-2-closeout.md#recorded-production-outcome) for evidence and remaining acceptance gaps. Proposal B remains HIGH; this is not public-release security clearance.
+Status: **executed after owner approval**. PR #130 was deployed as `f52f5bf282735ae24ac91d3b3855e3e5b0d5de13`; the provider transition and recorded Checkpoint 24 passed. The owner reconfirmed that existing evidence on 2026-11-07 without rerunning it. Subsequently, Proposal B migration 000015/bindings passed the authorized owner-console phase and PR #132 was deployed as **`049893422f96833bec3447fb561ac8ab7c8ff460`**, using the existing API-only workflow. No rollback was executed. Public health/version/authentication-denial/JWKS checks passed; final authenticated resource/session and live attestation results remain outstanding. See the [current recorded outcome](../security/weekend-2-closeout.md#recorded-production-outcome).
 
 The procedure below is retained as the approved rollout/recovery record. It is not an instruction to repeat the completed rollout.
 
