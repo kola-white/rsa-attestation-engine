@@ -4,7 +4,7 @@ import base64,contextlib,hashlib,io,json,runpy,tempfile,uuid
 from pathlib import Path
 from unittest.mock import patch
 spec=runpy.run_path(str(Path(__file__).with_name('smoke-evidence-completion.py')));main=spec['main'];g=main.__globals__
-for scenario in ('success','login_failure','wrong_hash','dedup_failure','public_object','storage_failure'):
+for scenario in ('success','login_failure','wrong_hash','dedup_failure','public_object','storage_failure','sealed_bytes_mismatch'):
  with tempfile.TemporaryDirectory() as folder:
   root=Path(folder)/'repo';root.mkdir();g['ROOT']=root;g['PHASE']='preflight';g['HTTP_DIAGNOSTIC']={};g['COMMAND_DIAGNOSTIC']={};g['FAILURE_DIAGNOSTIC']={}
   sha='a'*40;principal=str(uuid.uuid4());grant=str(uuid.uuid4());native='PRIVATE_NATIVE_TOKEN';access='PRIVATE_ACCESS_TOKEN';refresh='PRIVATE_REFRESH_TOKEN'
@@ -12,7 +12,7 @@ for scenario in ('success','login_failure','wrong_hash','dedup_failure','public_
   data=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5XkAAAAASUVORK5CYII=');digest=hashlib.sha256(data).hexdigest()
   def command(args,data=None):
    if args[0]=='git':return (sha+'\n').encode() if args[-2:]==['rev-parse','HEAD'] else b''
-   if args[:2]==['docker','inspect']:return json.dumps([{'Config':{'Env':['DO_ENDPOINT=https://storage.invalid','EVT_S3_BUCKET=test-bucket']}}]).encode()
+   if args[:2]==['docker','inspect']:return json.dumps([{'Config':{'Env':['DO_ENDPOINT=https://storage.invalid','EVT_S3_BUCKET=test-bucket','DO_REGION=sfo3','DO_SPACES_KEY=PUBLIC_FIXTURE_KEY','DO_SPACES_SECRET=PUBLIC_FIXTURE_SECRET']}}]).encode()
    raise AssertionError('unexpected command')
   def sql(query,variables=None,operator=False):
    if 'provision_evidence_case' in query:
@@ -49,6 +49,7 @@ for scenario in ('success','login_failure','wrong_hash','dedup_failure','public_
    raise AssertionError('unexpected HTTP route')
   def object_request(url,method,body=None,headers=None):
    if method=='PUT':return (500,b'PRIVATE_BODY') if scenario=='storage_failure' else (200,b'')
+   if headers and 'Authorization' in headers:return 200,(data+b'x' if scenario=='sealed_bytes_mismatch' else data)
    return (200,b'PRIVATE_BODY') if scenario=='public_object' else (403,b'PRIVATE_BODY')
   g.update(command=command,sql=sql,http=http,object_request=object_request)
   out=io.StringIO();failed=False
@@ -61,4 +62,8 @@ for scenario in ('success','login_failure','wrong_hash','dedup_failure','public_
   if scenario=='login_failure':assert not state['created']
   for private in ('PRIVATE_EMAIL','PRIVATE_PASSWORD',native,access,refresh,'PRIVATE_BODY','https://storage.invalid','sealed-evidence/'):
    assert private not in out.getvalue(),scenario
-print(json.dumps({'offline_smoke_controller':'PASS','scenarios':6,'failure_cleanup':True,'private_output_absent':True}))
+# Cross-checked against aws/signer/v4.SignHTTP with the same public fixture.
+import datetime
+headers=g['sealed_read_headers']('https://storage.invalid/test-bucket/sealed-evidence/01234567-89ab-cdef-0123-456789abcdef',{'DO_REGION':'sfo3','DO_SPACES_KEY':'PUBLIC_FIXTURE_KEY','DO_SPACES_SECRET':'PUBLIC_FIXTURE_SECRET'},datetime.datetime(2026,11,8,tzinfo=datetime.timezone.utc))
+assert headers['Authorization'].endswith('Signature=c79ddbe66444d82fb1b725756c6dbf9ba484ad3e7752ddb9e5f43109e3c434df')
+print(json.dumps({'offline_smoke_controller':'PASS','scenarios':7,'failure_cleanup':True,'private_output_absent':True,'s3_signing_sdk_parity':True}))

@@ -8,6 +8,8 @@ Evidence remains RECEIVED/PENDING. Secrets, object URLs and contents are never o
 """
 import base64
 import hashlib
+import hmac
+import datetime
 import getpass
 import json
 import os
@@ -114,6 +116,23 @@ def storage_url(url,storage_key,settings):
  if urllib.parse.unquote(actual.path)!=expected:raise RuntimeError('unexpected storage key path')
  return actual
 
+def sealed_read_headers(url,settings,now=None):
+ # Standard S3 SigV4; static existing Spaces credentials stay in memory only.
+ # https://docs.digitalocean.com/reference/api/spaces/#authentication
+ now=now or datetime.datetime.now(datetime.timezone.utc)
+ stamp=now.strftime('%Y%m%dT%H%M%SZ');day=stamp[:8]
+ parsed=urllib.parse.urlsplit(url);region=settings['DO_REGION']
+ empty=hashlib.sha256(b'').hexdigest()
+ names='host;x-amz-content-sha256;x-amz-date'
+ canonical='GET\n'+parsed.path+'\n\nhost:'+parsed.netloc+'\nx-amz-content-sha256:'+empty+'\nx-amz-date:'+stamp+'\n\n'+names+'\n'+empty
+ scope=day+'/'+region+'/s3/aws4_request'
+ message='AWS4-HMAC-SHA256\n'+stamp+'\n'+scope+'\n'+hashlib.sha256(canonical.encode()).hexdigest()
+ def mac(key,value):return hmac.new(key,value.encode(),hashlib.sha256).digest()
+ signing=mac(mac(mac(mac(('AWS4'+settings['DO_SPACES_SECRET']).encode(),day),region),'s3'),'aws4_request')
+ signature=hmac.new(signing,message.encode(),hashlib.sha256).hexdigest()
+ return {'X-Amz-Date':stamp,'X-Amz-Content-Sha256':empty,'Authorization':'AWS4-HMAC-SHA256 Credential='+settings['DO_SPACES_KEY']+'/'+scope+', SignedHeaders='+names+', Signature='+signature}
+
+
 def main():
  global M,PHASE,ACCOUNT_DIAGNOSTIC,HTTP_DIAGNOSTIC,FAILURE_DIAGNOSTIC
  if os.geteuid()!=0 or len(sys.argv)!=3 or sys.argv[1]!='--expected-main' or not re.fullmatch('[0-9a-f]{40}',sys.argv[2]):raise RuntimeError('explicit deployed main required')
@@ -181,6 +200,9 @@ def main():
   endpoint=urllib.parse.urlsplit(settings['DO_ENDPOINT'])
   sealed=urllib.parse.urlunsplit((endpoint.scheme,endpoint.netloc,endpoint.path.rstrip('/')+'/'+urllib.parse.quote(settings['EVT_S3_BUCKET'],safe='')+'/'+urllib.parse.quote(metadata['sealed'],safe='/'),'', ''))
   staging=urllib.parse.urlunsplit((parsed.scheme,parsed.netloc,parsed.path,'',''))
+  signed=sealed_read_headers(sealed,settings)
+  status,sealed_bytes=object_request(sealed,'GET',headers=signed)
+  if status!=200 or sealed_bytes!=data or hashlib.sha256(sealed_bytes).hexdigest()!=digest:raise RuntimeError('sealed stored bytes/hash mismatch')
   for url in (staging,sealed):
    status,_=object_request(url,'GET')
    if status not in (401,403):raise RuntimeError('private object anonymous access not denied conclusively')
@@ -189,10 +211,12 @@ def main():
   if status not in (200,204):raise RuntimeError('staging overwrite test failed')
   received=expect(http(API,completepaths[1],'POST',complete,access),200)['evidence'][0]
   if received.get('evidence_hash')!=digest:raise RuntimeError('accepted digest mutated')
+  status,sealed_bytes=object_request(sealed,'GET',headers=sealed_read_headers(sealed,settings))
+  if status!=200 or sealed_bytes!=data:raise RuntimeError('sealed object mutated after staging overwrite')
   PHASE='revocation_denial'
   sql("SELECT public.revoke_evidence_upload(:'grantid'::uuid,:'principal',:'basis');",variables,True);grant=None
   for path in completepaths:expect(http(API,path,'POST',complete,access),404)
-  result.update({'normal_login_exchange':'PASS','both_init_and_completion_routes':'PASS','unauthorized_and_wrong_check_denied':'PASS','canonical_hash':'PASS','same_check_deduplication':'PASS','private_staging_and_sealed_storage':'PASS','staging_overwrite_isolation':'PASS','revocation':'PASS','scan_status':'PENDING','objects_uploaded':2,'evidence_received':1})
+  result.update({'normal_login_exchange':'PASS','both_init_and_completion_routes':'PASS','unauthorized_and_wrong_check_denied':'PASS','canonical_hash':'PASS','sealed_bytes_read_back':'PASS','same_check_deduplication':'PASS','private_staging_and_sealed_storage':'PASS','staging_overwrite_isolation':'PASS','revocation':'PASS','scan_status':'PENDING','objects_uploaded':2,'evidence_received':1})
  except Exception:
   FAILURE_DIAGNOSTIC={'http':HTTP_DIAGNOSTIC.copy(),'command':COMMAND_DIAGNOSTIC.copy()};raise
  finally:
