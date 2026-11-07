@@ -3,6 +3,14 @@
 API Version: v1
 Spec Version: EVT-API v0.2.0
 
+Implementation status: evidence init and completion (sections 3–4) are implemented
+by the evidence-completion feature, requiring migration 000016 before deployment.
+Other sections describe the intended API and do not imply routes or workers exist.
+See [the implementation and rollout notes](../operations/evidence-completion-lifecycle.md)
+for the actual runtime contract, remaining scanning/retention work and compatibility.
+The released Weekend 2 API continues returning authenticated 501 until this feature
+is migrated and deployed.
+
 ## Conventions
 
 ### Auth
@@ -17,9 +25,9 @@ Authorization: Bearer <access_token>
 - The server treats `sub` as the caller identity for authorization checks and audit logging.
 
 **Authorization rules**
-- On `evidence:init`, the server sets `upload_sessions.uploaded_by = sub`.
-- On `evidence:complete`, the server MUST verify the `uploadSessionId` belongs to the same caller (`upload_sessions.uploaded_by == sub`) and is not expired.
-- All `/v1/cases/...` reads/writes MUST be authorized based on the caller identity and server policy (e.g., membership in the case, reviewer role, or service account).
+- On `evidence:init`, the server sets `upload_sessions.principal_id = sub`.
+- On `evidence:complete`, the server MUST verify the `uploadSessionId` belongs to the same caller (`upload_sessions.principal_id == sub`) and is not expired.
+- All `/v1/cases/...` reads/writes MUST be authorized based on the caller identity and server policy (active canonical principal, explicit unrevoked case upload grant, OPEN case and PENDING/IN_REVIEW check).
 
 **Scopes (optional in V1)**
 If tokens include scopes, the API SHOULD enforce them:
@@ -189,9 +197,9 @@ This separation enforces:
 ### Policy constants (server-enforced)
 
 * `MAX_FILES_PER_CHECK = 3`
-* `MAX_FILE_BYTES = 5_000_000`
+* `MAX_FILE_BYTES = 5_242_880`
 * `PRESIGN_TTL_SECONDS = 600` (10 min)
-* `EVIDENCE_RETENTION_DAYS = 30` (or lower)
+* Retention expiry/deletion worker: planned; not enforced by this slice.
 
 ---
 
@@ -254,141 +262,80 @@ Creates a case for a subject (subject identity can be handled separately; V1 kee
 
 ### `POST /v1/cases/{caseId}/checks/{checkId}/evidence:init`
 
-Creates an upload session and returns presigned PUT URLs for each file.
-Integrity hashes are not supplied during `evidence:init`.  
-Hashes are computed client-side after upload and submitted during
-`evidence:complete` per **Evidence Integrity Representation**.
-
-**Request**
+Creates a persisted upload session and returns PUT URLs. The legacy alias is
+`POST /v1/evidence/init`, with `caseId` and `checkId` in the body. Path-route
+clients may omit those body identifiers; if supplied, they must match the path.
 
 ```json
-{
-  "files": [
-    { "name": "paystub.pdf", "mimeType": "application/pdf", "size": 384112 },
-    { "name": "offer_letter.jpg", "mimeType": "image/jpeg", "size": 812331 }
-  ]
-}
+{"files":[{"name":"paystub.pdf","mimeType":"application/pdf","size":384112}]}
 ```
 
-**Response**
+The response preserves `caseId`, `checkId`, `expiresAt` and each upload's `name`,
+`mimeType`, `size`, `storageKey`, `method`, `url`, `headers`. It adds
+`uploadSessionId` and `uploads[].uploadId` (server-generated UUIDs). Send every
+returned header with the PUT, including `x-amz-acl: private`.
 
-```json
-{
-  "uploadSessionId": "b5b6c2a8-6c5c-4b7a-a1c3-9fe4d6af5c2a",
-  "expiresAt": "2025-12-16T21:20:00Z",
-  "constraints": {
-    "maxFiles": 3,
-    "maxFileBytes": 5000000
-  },
-  "uploads": [
-    {
-      "uploadId": "3f2f7d2c-7e58-42b2-8e76-05b7dc0d4d7e",
-      "storageKey": "cases/EVT-10324/checks/employment.company_and_dates/evidence/3f2f7d2c-7e58-42b2-8e76-05b7dc0d4d7e/paystub.pdf",
-      "putUrl": "https://<space>.<region>.digitaloceanspaces.com/<bucket>/...presigned...",
-      "requiredHeaders": {
-        "Content-Type": "application/pdf"
-      }
-    },
-    {
-      "uploadId": "81c3d5f1-4b86-4c2a-bf20-7b3bcbf8c1c2",
-      "storageKey": "cases/EVT-10324/checks/employment.company_and_dates/evidence/81c3d5f1-4b86-4c2a-bf20-7b3bcbf8c1c2/offer_letter.jpg",
-      "putUrl": "https://...presigned...",
-      "requiredHeaders": {
-        "Content-Type": "image/jpeg"
-      }
-    }
-  ]
-}
-```
-| Field              | Requirement                          | Enforcement           |
-| ------------------ | ------------------------------------ | --------------------- |
-| `files`            | MUST be an array                     | Reject otherwise      |
-| `files.length`     | MUST be `≤ MAX_FILES_PER_CHECK`      | Reject                |
-| `files[].name`     | MUST be non-empty string             | Reject                |
-| `files[].mimeType` | MUST be allow-listed                 | Reject                |
-| `files[].size`     | MUST be `> 0` and `≤ MAX_FILE_BYTES` | Reject                |
-| `storageKey`       | MUST NOT be client-supplied          | Server-generated only |
-| `sha256`           | MUST NOT appear                      | Reject if present     |
-
-
-> **Note:** Evidence integrity hashes are intentionally excluded from
-> `evidence:init`. Hashes are submitted only during `evidence:complete`
-> per **Evidence Integrity Representation**.
-
-
-**Server enforcement**
-
-* Reject if `files.length > 3`
-* Reject any `size > 5MB`
-* Reject disallowed `mimeType`
-* Generate `storageKey` (never accept from client)
-* Record `expected_size`, `expected_mimeType`
-* Presign with TTL (e.g., 10 minutes)
-
----
+The server reserves up to three files per check, including received files and
+unexpired pending uploads. Files must be nonempty, at most 5,242,880 bytes, and
+PDF/JPEG/PNG. URLs last ten minutes. Expired unfinished sessions release their
+reservation. Neither keys nor hashes supplied by the caller establish ownership.
+Clients should not send hashes at init; canonical hashes are computed at completion.
 
 ## 4) Complete Evidence Upload (finalize + scan queue)
 
 ### `POST /v1/cases/{caseId}/checks/{checkId}/evidence:complete`
 
-**Request**
+The legacy alias `POST /v1/evidence/commit` uses the same authorization gate.
 
 ```json
 {
-  "uploadSessionId": "b5b6c2a8-6c5c-4b7a-a1c3-9fe4d6af5c2a",
-  "uploads": [
-    {
-      "uploadId": "3f2f7d2c-7e58-42b2-8e76-05b7dc0d4d7e",
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "size": 384112,
-      "mimeType": "application/pdf"
-    }
-  ]
+  "uploadSessionId":"b5b6c2a8-6c5c-4b7a-a1c3-9fe4d6af5c2a",
+  "uploads":[{
+    "uploadId":"3f2f7d2c-7e58-42b2-8e76-05b7dc0d4d7e",
+    "size":384112,
+    "mimeType":"application/pdf"
+  }]
 }
 ```
-| Field                | Requirement                                           | Enforcement |
-| -------------------- | ----------------------------------------------------- | ----------- |
-| `uploadSessionId`    | MUST exist and not be expired                         | Reject      |
-| `uploadSessionId`    | MUST belong to caller                                 | Reject      |
-| `uploads`            | MUST be non-empty array                               | Reject      |
-| `uploads[].uploadId` | MUST belong to session + case + check                 | Reject      |
-| `uploads[].size`     | MUST equal observed object size                       | Reject      |
-| `uploads[].mimeType` | MUST equal expected mime type                         | Reject      |
-| `uploads[].sha256`   | MUST conform to **Evidence Integrity Representation** | Reject      |
-| `uploads[].sha256`   | MUST decode to 32 bytes                               | Reject      |
-| `uploads[].sha256`   | MUST match object bytes                               | Reject      |
 
-#### `sha256`
+Complete every file in the session together; duplicate/foreign IDs are rejected.
+The session must belong to the active caller, be unexpired, and have a current
+explicit case-upload entitlement and writable case/check state. Authorization is
+rechecked even for retries. The caller cannot nominate a storage key.
 
-- Lowercase hexadecimal SHA-256 digest of the uploaded object
-- MUST conform to **Evidence Integrity Representation**
-- MUST be computed over the exact bytes uploaded via the presigned PUT
-
-
-**Response**
+The server reads each object with a byte limit and checks its actual byte length
+and content-type metadata against the persisted expectations. It computes SHA-256
+itself, deduplicates within the case/check, and writes those exact bytes under a
+fresh private server-only key. The original PUT URL cannot overwrite that key.
+A client `sha256` is optional for compatibility with the earlier draft: if sent,
+it must be lowercase 64-character hex matching the server digest. It is never
+used as the canonical hash or a substitute for reading the bytes. Clients should
+omit it, consistent with the server-hashing contract.
 
 ```json
 {
-  "caseId": "EVT-10324",
-  "checkId": "employment.company_and_dates",
-  "evidence": [
-    {
-      "uploadId": "3f2f7d2c-7e58-42b2-8e76-05b7dc0d4d7e",
-      "status": "RECEIVED",
-      "scanStatus": "PENDING",
-      "evidenceExpiresAt": "2026-01-15T21:10:00Z"
-    }
-  ]
+  "caseId":"EVT-10324",
+  "checkId":"employment.company_and_dates",
+  "evidence":[{
+    "uploadId":"3f2f7d2c-7e58-42b2-8e76-05b7dc0d4d7e",
+    "status":"RECEIVED",
+    "scanStatus":"PENDING",
+    "evidence_hash":"<server-computed lowercase SHA-256 hex>"
+  }]
 }
 ```
 
-**Server enforcement**
+Acceptance, session closure and the pending scan record commit together. A retry
+with the same session/file metadata returns the accepted result without rereading
+the mutable staging object (until session expiry, and only while still authorized).
+Identical evidence within a case/check returns 409. Unknown or unauthorized
+resources return 404; invalid input 400; expired/conflicting uploads 409;
+unavailable persistence/storage 503. No signed URLs or object keys are returned
+by completion.
 
-* Verify session not expired and belongs to caller
-* Verify `uploadId` belongs to this session+case+check
-* (Recommended) `HEAD` object in Spaces; validate size + content-type
-* Set `scan_status = PENDING`, enqueue scan job
-* Set `evidence_expires_at = now + retention`
+A scan record is durable, but this slice does not run a malware scanner, mark
+anything CLEAN/AVAILABLE, expose evidence downloads, or enforce retention deletion.
+No evidence hash is added to human-claims tokens.
 
 ---
 

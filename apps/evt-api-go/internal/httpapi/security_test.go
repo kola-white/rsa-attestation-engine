@@ -100,7 +100,7 @@ func TestEvidenceRoutesRequireAuthentication(t *testing.T) {
 	}
 }
 
-func TestEvidenceCompletionRemainsAuthenticatedAndUnsupported(t *testing.T) {
+func TestEvidenceCompletionRequiresAuthenticatedSessionInput(t *testing.T) {
 	cfg := &config.Config{Auth: config.AuthConfig{JWTSecret: strings.Repeat("s", 32), Issuer: "test-issuer", Audience: "test-audience"}}
 	s := &Server{cfg: cfg}
 	mux := http.NewServeMux()
@@ -114,7 +114,7 @@ func TestEvidenceCompletionRemainsAuthenticatedAndUnsupported(t *testing.T) {
 		r.Header.Set("Authorization", "Bearer "+raw)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, r)
-		if w.Code != http.StatusNotImplemented || !strings.Contains(w.Body.String(), "evidence_complete_requires_persistence") {
+		if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), "invalid_upload_session") {
 			t.Fatalf("%s returned %d: %s", path, w.Code, w.Body.String())
 		}
 	}

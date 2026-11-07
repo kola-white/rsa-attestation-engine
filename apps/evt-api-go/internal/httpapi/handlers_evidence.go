@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -26,13 +27,15 @@ type EvidenceInitFileIn struct {
 }
 
 type EvidenceInitResponse struct {
-	CaseID  string                `json:"caseId"`
-	CheckID string                `json:"checkId"`
-	Expires string                `json:"expiresAt"`
-	Uploads []EvidenceInitFileOut `json:"uploads"`
+	SessionID string                `json:"uploadSessionId"`
+	CaseID    string                `json:"caseId"`
+	CheckID   string                `json:"checkId"`
+	Expires   string                `json:"expiresAt"`
+	Uploads   []EvidenceInitFileOut `json:"uploads"`
 }
 
 type EvidenceInitFileOut struct {
+	UploadID   string            `json:"uploadId"`
 	Name       string            `json:"name"`
 	MimeType   string            `json:"mimeType"`
 	Size       int64             `json:"size"`
@@ -55,6 +58,12 @@ func (s *Server) HandleEvidenceInit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.CaseID == "" {
+		req.CaseID = r.PathValue("caseId")
+	}
+	if req.CheckID == "" {
+		req.CheckID = r.PathValue("checkId")
+	}
 	// 2) Normalize + validate case/check IDs
 	req.CaseID = strings.TrimSpace(req.CaseID)
 	req.CheckID = strings.TrimSpace(req.CheckID)
@@ -87,6 +96,24 @@ func (s *Server) HandleEvidenceInit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	for _, f := range req.Files {
+		if strings.TrimSpace(f.Name) == "" || len(strings.TrimSpace(f.Name)) > 200 {
+			writeErr(w, 400, "invalid_file_name")
+			return
+		}
+		if f.Size <= 0 || f.Size > s.policy.MaxBytes {
+			writeErr(w, 400, "invalid_file_size")
+			return
+		}
+		if !s.policy.AllowedMimeType[strings.TrimSpace(f.MimeType)] {
+			writeErr(w, 400, "invalid_mimeType")
+			return
+		}
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 45*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
+
 	// Authorization uses only the signed canonical principal and persisted IDs.
 	// Hold the database row locks through presigning and commit before exposing
 	// URLs. Revocation/state changes block on these locks, or win first and deny.
@@ -109,6 +136,14 @@ func (s *Server) HandleEvidenceInit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
+	if err = pinEvidenceSchema(r.Context(), tx); err != nil {
+		writeErr(w, 503, "persistence_unavailable")
+		return
+	}
+	if err := lockEvidenceScope(r.Context(), tx, req.CaseID, req.CheckID); err != nil {
+		writeErr(w, 503, "persistence_unavailable")
+		return
+	}
 	var allowed bool
 	if err := tx.QueryRowContext(r.Context(), `SELECT check_evidence_upload($1,$2,$3)`, claims.Sub, req.CaseID, req.CheckID).Scan(&allowed); err != nil {
 		writeErr(w, http.StatusServiceUnavailable, "authorization_unavailable")
@@ -131,11 +166,26 @@ func (s *Server) HandleEvidenceInit(w http.ResponseWriter, r *http.Request) {
 	expiresIn := 10 * time.Minute
 	expiresAt := time.Now().UTC().Add(expiresIn)
 
+	sessionID := uuid.NewString()
+	var reserved int
+	if err := tx.QueryRowContext(r.Context(), `SELECT count(*) FROM evidence_uploads u JOIN upload_sessions s USING(upload_session_id) WHERE s.case_id=$1 AND s.check_id=$2 AND (u.status='RECEIVED' OR s.expires_at>clock_timestamp())`, req.CaseID, req.CheckID).Scan(&reserved); err != nil {
+		writeErr(w, 503, "persistence_unavailable")
+		return
+	}
+	if reserved+len(req.Files) > s.policy.MaxFiles {
+		writeErr(w, 409, "evidence_limit_reached")
+		return
+	}
+	if _, err := tx.ExecContext(r.Context(), `INSERT INTO upload_sessions(upload_session_id,principal_id,case_id,check_id,expires_at) VALUES($1,$2,$3,$4,$5)`, sessionID, claims.Sub, req.CaseID, req.CheckID, expiresAt); err != nil {
+		writeErr(w, 503, "persistence_unavailable")
+		return
+	}
 	resp := EvidenceInitResponse{
-		CaseID:  req.CaseID,
-		CheckID: req.CheckID,
-		Expires: expiresAt.Format(time.RFC3339),
-		Uploads: make([]EvidenceInitFileOut, 0, len(req.Files)),
+		SessionID: sessionID,
+		CaseID:    req.CaseID,
+		CheckID:   req.CheckID,
+		Expires:   expiresAt.Format(time.RFC3339),
+		Uploads:   make([]EvidenceInitFileOut, 0, len(req.Files)),
 	}
 
 	// 7) For each requested file: validate → build key → presign PUT
@@ -143,20 +193,7 @@ func (s *Server) HandleEvidenceInit(w http.ResponseWriter, r *http.Request) {
 		name := strings.TrimSpace(f.Name)
 		mime := strings.TrimSpace(f.MimeType)
 
-		if name == "" || len(name) > 200 {
-			writeErr(w, http.StatusBadRequest, "invalid_file_name")
-			return
-		}
-		if f.Size <= 0 || f.Size > s.policy.MaxBytes {
-			writeErr(w, http.StatusBadRequest, "invalid_file_size")
-			return
-		}
-		if !s.policy.AllowedMimeType[mime] {
-			writeErr(w, http.StatusBadRequest, "invalid_mimeType")
-			return
-		}
-
-		// IMPORTANT: this must match the prefix policy you’ll enforce in /commit
+		// Completion resolves this persisted key; callers cannot choose a source key.
 		uploadID := uuid.NewString()
 		storageKey := storage.BuildStorageKey(req.CaseID, req.CheckID, uploadID, name)
 
@@ -166,7 +203,12 @@ func (s *Server) HandleEvidenceInit(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if _, err := tx.ExecContext(r.Context(), `INSERT INTO evidence_uploads(upload_id,upload_session_id,staging_key,file_name,expected_mime_type,expected_size,case_id,check_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`, uploadID, sessionID, storageKey, name, mime, f.Size, req.CaseID, req.CheckID); err != nil {
+			writeErr(w, 503, "persistence_unavailable")
+			return
+		}
 		resp.Uploads = append(resp.Uploads, EvidenceInitFileOut{
+			UploadID:   uploadID,
 			Name:       name,
 			MimeType:   mime,
 			Size:       f.Size,
