@@ -142,7 +142,7 @@ def restore_rehearsal(backup,dump,sources):
  PHASE='isolated_backup_restore_and_migration_rehearsal'
  name='cvera-completion-restore-'+backup.name.rsplit('-',1)[-1].lower()
  image=info(DB,'Image')
- run(['docker','run','-d','--pull','never','--name',name,'--network','none','--memory','96m','--memory-swap','96m','--cpus','0.5','--shm-size','16m',
+ run(['docker','run','-d','--pull','never','--name',name,'--network','none','--memory','64m','--memory-swap','64m','--cpus','0.5','--shm-size','16m',
   '--label','cvera.scope=evidence-completion-rehearsal','-e','POSTGRES_HOST_AUTH_METHOD=trust','-e','POSTGRES_INITDB_ARGS=-c shared_buffers=8MB -c max_connections=10 -c work_mem=512kB -c maintenance_work_mem=4MB -c autovacuum=off',image,
   '-c','shared_buffers=8MB','-c','max_connections=10','-c','work_mem=512kB','-c','maintenance_work_mem=4MB','-c','autovacuum=off','-c','max_worker_processes=0','-c','max_parallel_workers=0'])
  def clone_sql(body):
@@ -166,7 +166,10 @@ def restore_rehearsal(backup,dump,sources):
   clone_sql(transaction(sources,'COMMIT'))
   clone_sql('BEGIN;'+SETTINGS+VERIFY+'ROLLBACK;')
   if clone_sql('BEGIN READ ONLY;'+FINGERPRINT+'ROLLBACK;')!=before:raise RuntimeError('rehearsal modified registry/roles')
-  private(backup/'restore-rehearsal.json',json.dumps({'restore':'PASS','migration_rollback':'PASS','migration_commit':'PASS','privileges':'PASS','clone':name}).encode())
+  if info(name,'State.OOMKilled') or info(name,'HostConfig.Memory')!=64*1024**2:raise RuntimeError('restore memory boundary failed')
+  peak_result=subprocess.run(['docker','exec',name,'cat','/sys/fs/cgroup/memory.peak'],capture_output=True,timeout=10)
+  peak=int(peak_result.stdout.strip()) if peak_result.returncode==0 and peak_result.stdout.strip().isdigit() else None
+  private(backup/'restore-rehearsal.json',json.dumps({'memory_limit_mib':64,'memory_peak_bytes':peak,'restore':'PASS','migration_rollback':'PASS','migration_commit':'PASS','privileges':'PASS','clone':name}).encode())
  finally:
   # Preserve the restored clone/volume for inspection; release its scarce RAM.
   run(['docker','stop','--time','10',name],timeout=30)
@@ -200,10 +203,13 @@ def main():
  PHASE='production_schema_preflight'
  sql('BEGIN READ ONLY;'+SETTINGS+PREFLIGHT+'ROLLBACK;')
  fingerprint=sql('BEGIN READ ONLY;'+FINGERPRINT+'ROLLBACK;')
+ PHASE='restore_capacity_preflight'
  size=int(sql('BEGIN READ ONLY;SELECT pg_catalog.pg_database_size(current_database());ROLLBACK;'))
  if shutil.disk_usage('/opt/cvera').free<size*4+1024**3:raise RuntimeError('insufficient backup capacity')
  mem=dict((line.split(':',1)[0],int(line.split()[1])) for line in Path('/proc/meminfo').read_text().splitlines() if line.startswith('MemAvailable:'))
- if mem['MemAvailable']<160*1024:raise RuntimeError('insufficient restore-test memory')
+ # 64 MiB hard cap for the isolated clone plus 64 MiB host headroom.
+ # A failed/OOM rehearsal aborts before any production migration.
+ if mem['MemAvailable']<128*1024:raise RuntimeError('insufficient restore-test memory')
  stamp=datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
  backup=Path('/opt/cvera/evidence-completion-release-'+stamp);backup.mkdir(mode=0o700)
  private(backup/'release-intent.json',json.dumps({'sql_source':SOURCE,'base':BASE,'state':'started; inspect before any retry'}).encode())

@@ -139,7 +139,7 @@ SQL preparation in one invocation from the existing root console. It pins the
 reviewed migration/binding bytes from `f94545f`, checks the live 000015 parent types,
 primary keys, ownership, RLS, checker and runtime boundary, verifies health/revision
 and protected configuration, and creates a current root-private evt backup.
-It restores that exact archive in a separate 96 MiB, network-isolated PostgreSQL
+It restores that exact archive in a separate 64 MiB, network-isolated PostgreSQL
 container, rehearses rollback and commit with privilege checks, then stops the
 clone while preserving its data. The clone never mounts production volumes.
 
@@ -197,3 +197,13 @@ passed in isolated local PostgreSQL using the production parent definitions and
 hostile default ACLs. Offline smoke-controller tests passed success plus login,
 hash, deduplication, storage and public-object failures with cleanup and private-output
 assertions. These tests verify the tools; they are not production execution evidence.
+
+
+Production preflight initially stopped before any change because the original
+96 MiB rehearsal reserved 160 MiB of host memory and only 156,768 KiB was available.
+The separate read-only diagnostic confirmed schema/checker/runtime prerequisites,
+metadata queries and backup disk capacity all passed. The rehearsal was reduced to
+a tested 64 MiB hard memory cap with 64 MiB additional host headroom (128 MiB
+minimum available). Swap remains disabled for the clone, and any restore/OOM or
+migration verification failure stops before production SQL. This changes only the
+rehearsal resource budget; it does not relax schema, backup or privilege checks.

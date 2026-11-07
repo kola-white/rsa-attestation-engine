@@ -27,7 +27,7 @@ try:
   backup=Path(folder)/('test-'+uuid.uuid4().hex[:12]);backup.mkdir()
   m.restore_rehearsal(backup,dump,sources)
   record=json.loads((backup/'restore-rehearsal.json').read_text())
-  print(json.dumps({'backup_restore':record['restore'],'rollback':record['migration_rollback'],'migration_commit':record['migration_commit'],'runtime_privileges':record['privileges'],'hostile_default_acl_stripped':True}))
+  print(json.dumps({'backup_restore':record['restore'],'rollback':record['migration_rollback'],'migration_commit':record['migration_commit'],'runtime_privileges':record['privileges'],'hostile_default_acl_stripped':True,'restore_memory_limit_mib':record['memory_limit_mib'],'restore_peak_bytes':record['memory_peak_bytes']}))
   m.run(['docker','rm','-v',record['clone']])
  # Test the live sequence and repeat prevention on a separate isolated database.
  m.sql(m.transaction(sources,'ROLLBACK'))
