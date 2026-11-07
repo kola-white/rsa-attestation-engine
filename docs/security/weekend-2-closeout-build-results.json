@@ -1,5 +1,5 @@
 {
-  "status": "proposal_a_and_b_integrated_and_deployed; positive_authenticated_and_attestation_acceptance_outstanding",
+  "status": "CLOSED: owner-accepted Weekend 2 security baseline; live-attestation proof explicitly deferred",
   "toolchain": "go1.26.10",
   "target": {
     "GOOS": "linux",
@@ -230,11 +230,11 @@
     "scope": "historical f52f5bf executable, CA and service/log evidence; not current 0498934 artifact hashes or fresh sampling"
   },
   "remaining_acceptance": {
-    "proposal_b": "REMEDIATED in deployed application/database combination; positive granted/revoked production smoke remains outstanding",
-    "positive_production_login_exchange_logout": "OUTSTANDING: owner result not reported",
-    "live_production_attestation": "OUTSTANDING: no reported existing current-key attestation verification; no new attestation created",
-    "legacy_http_boundary": "LEGACY_VERIFIER_NOT_CONFIGURED; do not claim full trust/status/expiry verification",
-    "weekend_2_security_acceptance": "OPEN pending live verification; not formally closed",
+    "proposal_b": "REMEDIATED and production verified: both init aliases allow/deny/revoke correctly",
+    "positive_production_login_exchange_logout": "PASS: fresh password login, API exchange, rotation/logout and post-logout denial; native Kratos logout",
+    "live_production_attestation": "OUTSTANDING / OWNER-DEFERRED: exhaustive header search found zero current-key RS256 attestations; no new attestation created",
+    "legacy_http_boundary": "LEGACY_VERIFIER_NOT_CONFIGURED; no claim of full trust/status/expiry verification",
+    "weekend_2_security_acceptance": "CLOSED by owner decision 2026-11-07, with explicit live-attestation deferral under original scope",
     "target_dependency_advisories": "GO-2026-6611 and GO-2026-6809 resolved in patched release scans; other findings retain scoped dispositions"
   },
   "production_proposal_b": {
@@ -255,13 +255,55 @@
     "public_version_matches_deployed_main": true,
     "all_four_unauthenticated_evidence_routes_http": 401,
     "published_jwks_continuity": "PASS",
-    "positive_authenticated_smoke": "OUTSTANDING: owner console result not reported",
-    "current_executable_sha256": "not independently sampled; do not reuse Checkpoint 24 hash"
+    "positive_authenticated_smoke": "PASS: owner-console result from checksum-verified tool 2c93df4",
+    "current_executable_sha256": "not independently sampled; do not reuse Checkpoint 24 hash",
+    "authenticated_smoke": {
+      "tool_commit": "2c93df4014626ed8697fbd421988bc51450f22fc",
+      "tool_sha256": "b494e47bfc594e3aa62013b53dfa8cc741f91e8dca21e8f61c602ebfb7915385",
+      "kratos_session_check": "PASS",
+      "normal_login_exchange": "PASS",
+      "both_init_routes_authorized_and_denied": "PASS",
+      "revocation": "PASS",
+      "authenticated_completion_501": "PASS",
+      "refresh_logout_and_post_logout_denial": "PASS",
+      "kratos_session_logout": "PASS",
+      "smoke_grant_revoked_case_closed": true,
+      "credentials_or_urls_printed": false,
+      "new_identities_created": 0,
+      "objects_uploaded": 0,
+      "new_attestations_created": 0,
+      "account_email_verification": "metadata not returned; scoped store diagnostic found no associated record; no verified-email claim or runtime-policy change"
+    }
   },
   "documentation_merge_policy": {
     "scope": "documentation only; no application/schema/configuration/workflow changes",
     "pr_ci_required": "successful final reviewed head",
     "squash_message_instruction": "[skip ci]",
     "reason": "prevent unnecessary push-triggered production deployment; deployed API remains 0498934"
+  },
+  "live_attestation_deferral": {
+    "owner_decision_date": "2026-11-07",
+    "decision": "Close Weekend 2 security baseline with live-attestation proof explicitly deferred",
+    "exhaustive_header_search": true,
+    "current_key_rs256_attestations": 0,
+    "current_key_other_algorithm": 0,
+    "private_key_accessed": false,
+    "records_changed": false,
+    "new_attestations_created": 0,
+    "positive_live_signature_result": "NOT PERFORMED",
+    "new_issuance_authorized_by_deferral": false,
+    "public_jwks_continuity": "PASS",
+    "local_temporary_key_signing_verification": "PASS",
+    "full_public_release_security_clearance_claimed": false,
+    "search_basis": "protected-header kid and alg; no signatures under malformed/other-key headers were accepted as current-key proof"
+  },
+  "scope_closure": {
+    "confirmed_critical_or_high_findings_unresolved_in_assessed_scope": 0,
+    "mvp_api_feature_development": "may resume within frozen plan",
+    "evidence_completion": "authenticated 501; lifecycle not implemented",
+    "access_jwt_logout_lag": "up to natural 15-minute expiry",
+    "issued_upload_url_revocation_lag": "ten minutes; in-flight transfers may complete later",
+    "historical_demonstration_keys": "remain untrusted",
+    "production_changes_in_this_update": false
   }
 }
