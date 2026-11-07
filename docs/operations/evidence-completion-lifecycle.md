@@ -2,7 +2,12 @@
 
 This feature continues MVP API development after the accepted Weekend 2 baseline.
 It does not change the historical production smoke evidence or the explicit live
-attestation deferral. Production changes have not been executed for this feature.
+attestation deferral. Production release completed on 2026-11-07 at API commit
+`c5fdb5a3f190e348bdd0832f2e3e0ca7e78c8d40` through
+[PR #134](https://github.com/kola-white/rsa-attestation-engine/pull/134).
+Migration 000016, backup restore rehearsal, deployment and focused acceptance passed.
+The rollout instructions below remain reference procedures, not a request to rerun
+completed production operations.
 
 ## Runtime contract
 
@@ -207,3 +212,31 @@ a tested 64 MiB hard memory cap with 64 MiB additional host headroom (128 MiB
 minimum available). Swap remains disabled for the clone, and any restore/OOM or
 migration verification failure stops before production SQL. This changes only the
 rehearsal resource budget; it does not relax schema, backup or privilege checks.
+
+
+## Production acceptance — 2026-11-07
+
+- SQL: owner-console PASS for exact reviewed `f94545f` migration/binding bytes using
+  release helper `f9d5634`. Fresh private backup restored, rollback/commit rehearsal
+  passed, recovery image retained, runtime column bindings verified, existing roles
+  and registry unchanged. No lifecycle records/grants were created by SQL preparation.
+- Integration/deployment: [CI run 42424681783](https://github.com/kola-white/rsa-attestation-engine/actions/runs/42424681783)
+  passed main tests, release-build verification and exact-revision deployment.
+  Public `/healthz` succeeded and `/version` independently returned `c5fdb5a`.
+  Publish workflow succeeded; the published current-key JWKS identifier remained
+  `issuer-prod-2026-10`.
+- Authenticated acceptance: owner ran integrity-checked tool `a2702a1` with hidden
+  normal-login prompts. Both init/completion aliases, unauthorized/wrong-check
+  denial, canonical hashing, actual sealed-byte read-back, same-check deduplication,
+  private staging/sealed access, staging-overwrite isolation and revocation passed.
+  The authenticated read-back used existing Spaces credentials only in memory on
+  the Droplet and matched the synthetic fixture's exact bytes and SHA-256.
+- Cleanup: synthetic grant revoked, synthetic case closed, sessions logged out.
+  Two staging upload objects and one accepted synthetic evidence record were tested.
+  Accepted evidence remains RECEIVED/PENDING; no real evidence contents, credentials,
+  tokens or object URLs were printed. No identities or attestations were created.
+
+Evidence sources are the owner's sanitized console results plus independent GitHub
+and public health/version observations. This is not a claim that scanning, retention
+cleanup, client integration or live-current-key attestation verification passed.
+Do not rerun this accepted smoke merely to reproduce its output.
