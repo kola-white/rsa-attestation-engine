@@ -4,7 +4,7 @@ import base64,contextlib,hashlib,io,json,runpy,tempfile,uuid
 from pathlib import Path
 from unittest.mock import patch
 spec=runpy.run_path(str(Path(__file__).with_name('smoke-evidence-completion.py')));main=spec['main'];g=main.__globals__
-for scenario in ('success','login_failure','wrong_hash','dedup_failure','public_object','storage_failure','sealed_bytes_mismatch'):
+for scenario in ('success','login_failure','wrong_hash','dedup_failure','public_object','storage_failure','sealed_bytes_mismatch','dedup_other_conflict'):
  with tempfile.TemporaryDirectory() as folder:
   root=Path(folder)/'repo';root.mkdir();g['ROOT']=root;g['PHASE']='preflight';g['HTTP_DIAGNOSTIC']={};g['COMMAND_DIAGNOSTIC']={};g['FAILURE_DIAGNOSTIC']={}
   sha='a'*40;principal=str(uuid.uuid4());grant=str(uuid.uuid4());native='PRIVATE_NATIVE_TOKEN';access='PRIVATE_ACCESS_TOKEN';refresh='PRIVATE_REFRESH_TOKEN'
@@ -43,7 +43,7 @@ for scenario in ('success','login_failure','wrong_hash','dedup_failure','public_
    if path.endswith('evidence:complete') or path.endswith('/commit'):
     if not token:return 401,None
     if 'not-the-check' in path or not state['grant']:return 404,{}
-    if body['uploadSessionId']==state['sessions'][1]['uploadSessionId']:return (200,{}) if scenario=='dedup_failure' else (409,{})
+    if body['uploadSessionId']==state['sessions'][1]['uploadSessionId']:return (200,{}) if scenario=='dedup_failure' else (409,{'error':'upload_session_expired' if scenario=='dedup_other_conflict' else 'duplicate_evidence'})
     state['accepted']=True
     return 200,{'evidence':[{'status':'RECEIVED','scanStatus':'PENDING','evidence_hash':('0'*64 if scenario=='wrong_hash' else digest)}]}
    raise AssertionError('unexpected HTTP route')
@@ -66,4 +66,4 @@ for scenario in ('success','login_failure','wrong_hash','dedup_failure','public_
 import datetime
 headers=g['sealed_read_headers']('https://storage.invalid/test-bucket/sealed-evidence/01234567-89ab-cdef-0123-456789abcdef',{'DO_REGION':'sfo3','DO_SPACES_KEY':'PUBLIC_FIXTURE_KEY','DO_SPACES_SECRET':'PUBLIC_FIXTURE_SECRET'},datetime.datetime(2026,11,8,tzinfo=datetime.timezone.utc))
 assert headers['Authorization'].endswith('Signature=c79ddbe66444d82fb1b725756c6dbf9ba484ad3e7752ddb9e5f43109e3c434df')
-print(json.dumps({'offline_smoke_controller':'PASS','scenarios':7,'failure_cleanup':True,'private_output_absent':True,'s3_signing_sdk_parity':True}))
+print(json.dumps({'offline_smoke_controller':'PASS','scenarios':8,'failure_cleanup':True,'private_output_absent':True,'s3_signing_sdk_parity':True}))
