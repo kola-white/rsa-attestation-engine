@@ -1,5 +1,5 @@
 {
-  "status": "Candidate build, production SQL/credential preparation and legacy NOLOGIN containment PASS; rollout pending; Proposal B HIGH remains",
+  "status": "maintenance_rollout_verified; independent_security_acceptance_blocked_by_proposal_b",
   "toolchain": "go1.26.10",
   "target": {
     "GOOS": "linux",
@@ -187,5 +187,52 @@
     "git_sha": "2813e7e513b6afed5cad3b77bee6363e982e21d2",
     "read_only": true,
     "post_deployment_acceptance": false
+  },
+  "production_rollout": {
+    "reviewed_head": "cc852010a8cc348c29526c1eea0cd44161d92714",
+    "merged_and_deployed_main": "f52f5bf282735ae24ac91d3b3855e3e5b0d5de13",
+    "reviewed_and_main_tree": "22d30363b4a5f49b5d163c880c7f300076781926",
+    "pr": 130,
+    "merge_method": "squash",
+    "main_ci_deploy_run": 41397241618,
+    "spaces_publish_run": 41397241714,
+    "ci_outcome": "success",
+    "provider_transition": "PASS",
+    "runtime_roles": {
+      "api": "cvera_api_runtime",
+      "kratos": "cvera_kratos_runtime",
+      "kratos-courier": "cvera_kratos_runtime"
+    },
+    "rollback_executed": false
+  },
+  "production_checkpoint_24": {
+    "status": "PASS",
+    "owner_reconfirmed_existing_record_on": "2026-11-07",
+    "verification_rerun": false,
+    "fresh_runtime_sample_on_confirmation_date": false,
+    "ci_artifact_id": 13120016815,
+    "binary_sha256": "374db8b4df8a8bfbec94479de885be123d32b9ffb6f6221b799cb5f93bff7f9f",
+    "binary_matches_scanned_main": true,
+    "ca_sha256": "714d457d580922dbf1d0be8bd35ba236a842b50b0072ae791582a19adef772a5",
+    "ca_matches_ci": true,
+    "api_nonroot": true,
+    "signer_mount_read_only": true,
+    "private_key_contents_accessed": false,
+    "services_running": [
+      "api",
+      "kratos",
+      "kratos-courier"
+    ],
+    "all_service_restart_counts": 0,
+    "all_service_oom_kills": 0,
+    "all_inspected_error_categories": 0,
+    "services_or_application_records_changed": false
+  },
+  "remaining_acceptance": {
+    "proposal_b": "BLOCKED: HIGH; authoritative principal-to-case upload entitlement absent; unchanged",
+    "positive_production_login_exchange_logout": "OUTSTANDING: owner result not reported",
+    "live_production_attestation": "OUTSTANDING: not executed; local temporary-key verification only",
+    "weekend_2_security_acceptance": "BLOCKED",
+    "target_dependency_advisories": "GO-2026-6611 and GO-2026-6809 resolved for exact deployed build; other findings retain scoped dispositions"
   }
 }

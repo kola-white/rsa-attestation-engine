@@ -1,6 +1,8 @@
 # Weekend 2: maintenance rollout for owner review
 
-Status: **prepared, not authorized by SQL/credential/containment approvals. No merge, deployment or service restart has occurred.** This plan integrates the reviewed fixes into the existing development deployment. It is not a public-release security clearance or a claim that Proposal B is fixed.
+Status: **executed after separate owner approval**. PR #130 was squash-merged and deployed as `f52f5bf282735ae24ac91d3b3855e3e5b0d5de13`; the subsequent provider transition and Checkpoint 24 passed. No rollback was executed. The owner reconfirmed the existing Checkpoint 24 evidence on 2026-11-07 without rerunning it. See the [recorded production outcome](../security/weekend-2-closeout.md#recorded-production-outcome) for evidence and remaining acceptance gaps. Proposal B remains HIGH; this is not public-release security clearance.
+
+The procedure below is retained as the approved rollout/recovery record. It is not an instruction to repeat the completed rollout.
 
 ## Verified prerequisites
 
