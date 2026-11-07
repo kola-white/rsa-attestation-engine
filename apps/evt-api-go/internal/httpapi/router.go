@@ -22,7 +22,7 @@ import (
 type Server struct {
 	cfg     *config.Config
 	db      *sql.DB
-	s3      *storage.S3Store
+	s3      evidenceStore
 	policy  storage.EvidencePolicy
 	hmacKey []byte
 }
@@ -121,11 +121,6 @@ func NewRouter(cfg *config.Config) http.Handler {
 	mux.Handle("/v1/", evtEngine)
 
 	return withReqLog(withCORS(withRequestLimit(mux)))
-}
-
-func (s *Server) HandleEvidenceComplete(w http.ResponseWriter, r *http.Request) {
-	log.Printf("[evidence:complete] called path=%s", r.URL.Path)
-	writeErr(w, http.StatusNotImplemented, "evidence_complete_requires_persistence")
 }
 
 func withReqLog(next http.Handler) http.Handler {

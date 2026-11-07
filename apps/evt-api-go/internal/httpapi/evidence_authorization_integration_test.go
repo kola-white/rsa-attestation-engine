@@ -56,6 +56,22 @@ func evidenceSetup(t *testing.T) evidenceFixture {
 	if err = tx.Commit(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+
+	evidenceExec(t, pool, employerSQL(t, "../../migrations/000016_evidence_completion.sql"))
+	completionTx, err := pool.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer completionTx.Rollback(context.Background())
+	if _, err = completionTx.Exec(context.Background(), `SELECT set_config('cvera.evidence_runtime_role',$1,true)`, runtime); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = completionTx.Exec(context.Background(), employerSQL(t, "../../operations/evidence-completion-privileges.sql")); err != nil {
+		t.Fatal(err)
+	}
+	if err = completionTx.Commit(context.Background()); err != nil {
+		t.Fatal(err)
+	}
 	a, b := uuid.NewString(), uuid.NewString()
 	evidenceExec(t, pool, `INSERT INTO domain_users(id,kratos_identity_id,role,status) VALUES($1::uuid,$1::uuid::text,'candidate','active'),($2::uuid,$2::uuid::text,'hr_reviewer','active')`, a, b)
 	f := evidenceFixture{s: s, pool: pool, runtime: runtime, operator: operator, principal: a, other: b}
@@ -209,6 +225,7 @@ func TestEvidenceRevocationStatesAndFilePolicy(t *testing.T) {
 	for _, legacy := range []bool{false, true} {
 		evidenceStatus(t, f.request(f.principal, "case-a", "employment.company_and_dates", legacy, evidenceFile), 404)
 	}
+	evidenceExec(t, f.pool, `UPDATE upload_sessions SET created_at=clock_timestamp()-interval '1 hour',expires_at=clock_timestamp()-interval '1 minute'`)
 	// Regrant is a new attributable record, never reactivation of the revoked row.
 	newGrant := f.adminString(t, `SELECT grant_evidence_upload($1,'case-a','fixture','new approval')`, f.principal)
 	if newGrant == f.grant {

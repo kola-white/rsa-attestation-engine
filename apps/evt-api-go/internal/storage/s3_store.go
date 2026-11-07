@@ -1,7 +1,10 @@
 package storage
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"io"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -64,4 +67,30 @@ func (s *S3Store) Head(ctx context.Context, key string) (HeadMeta, error) {
 		ContentType: aws.ToString(out.ContentType),
 		ETag:        aws.ToString(out.ETag),
 	}, nil
+}
+
+// ReadEvidence bounds memory and verifies actual bytes rather than trusting HEAD or ETag.
+func (s *S3Store) ReadEvidence(ctx context.Context, key string, limit int64) ([]byte, string, error) {
+	out, err := s.client.GetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key)})
+	if err != nil {
+		return nil, "", err
+	}
+	defer out.Body.Close()
+	if aws.ToInt64(out.ContentLength) > limit {
+		return nil, "", fmt.Errorf("evidence exceeds limit")
+	}
+	data, err := io.ReadAll(io.LimitReader(out.Body, limit+1))
+	if err != nil {
+		return nil, "", err
+	}
+	if int64(len(data)) > limit {
+		return nil, "", fmt.Errorf("evidence exceeds limit")
+	}
+	return data, aws.ToString(out.ContentType), nil
+}
+
+// SealEvidence writes to a fresh server-only key: presigned staging PUTs cannot mutate it.
+func (s *S3Store) SealEvidence(ctx context.Context, key, mime string, data []byte) error {
+	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key), ContentType: aws.String(mime), ACL: s3types.ObjectCannedACLPrivate, Body: bytes.NewReader(data)})
+	return err
 }
