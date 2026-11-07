@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"regexp"
@@ -8,7 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
+	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/auth"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/storage"
 )
 
@@ -25,9 +26,9 @@ type EvidenceInitFileIn struct {
 }
 
 type EvidenceInitResponse struct {
-	CaseID  string               `json:"caseId"`
-	CheckID string               `json:"checkId"`
-	Expires string               `json:"expiresAt"`
+	CaseID  string                `json:"caseId"`
+	CheckID string                `json:"checkId"`
+	Expires string                `json:"expiresAt"`
 	Uploads []EvidenceInitFileOut `json:"uploads"`
 }
 
@@ -72,18 +73,49 @@ func (s *Server) HandleEvidenceInit(w http.ResponseWriter, r *http.Request) {
 	pathCheckID := r.PathValue("checkId")
 
 	if pathCaseID != "" && pathCaseID != req.CaseID {
-	writeErr(w, http.StatusBadRequest, "caseId_mismatch")
-	return
+		writeErr(w, http.StatusBadRequest, "caseId_mismatch")
+		return
 	}
 	if pathCheckID != "" && pathCheckID != req.CheckID {
-	writeErr(w, http.StatusBadRequest, "checkId_mismatch")
-	return
+		writeErr(w, http.StatusBadRequest, "checkId_mismatch")
+		return
 	}
-
 
 	// 4) Validate files array
 	if len(req.Files) == 0 || len(req.Files) > s.policy.MaxFiles {
 		writeErr(w, http.StatusBadRequest, "invalid_file_count")
+		return
+	}
+
+	// Authorization uses only the signed canonical principal and persisted IDs.
+	// Hold the database row locks through presigning and commit before exposing
+	// URLs. Revocation/state changes block on these locks, or win first and deny.
+	claims, ok := auth.ClaimsFromContext(r.Context())
+	if !ok || claims == nil {
+		writeErr(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if _, err := uuid.Parse(claims.Sub); err != nil {
+		writeErr(w, http.StatusNotFound, "not_found")
+		return
+	}
+	if s.db == nil {
+		writeErr(w, http.StatusServiceUnavailable, "authorization_unavailable")
+		return
+	}
+	tx, err := s.db.BeginTx(r.Context(), &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	if err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "authorization_unavailable")
+		return
+	}
+	defer tx.Rollback()
+	var allowed bool
+	if err := tx.QueryRowContext(r.Context(), `SELECT check_evidence_upload($1,$2,$3)`, claims.Sub, req.CaseID, req.CheckID).Scan(&allowed); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "authorization_unavailable")
+		return
+	}
+	if !allowed {
+		writeErr(w, http.StatusNotFound, "not_found")
 		return
 	}
 
@@ -114,7 +146,7 @@ func (s *Server) HandleEvidenceInit(w http.ResponseWriter, r *http.Request) {
 		if name == "" || len(name) > 200 {
 			writeErr(w, http.StatusBadRequest, "invalid_file_name")
 			return
-			}
+		}
 		if f.Size <= 0 || f.Size > s.policy.MaxBytes {
 			writeErr(w, http.StatusBadRequest, "invalid_file_size")
 			return
@@ -145,5 +177,9 @@ func (s *Server) HandleEvidenceInit(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	if err := tx.Commit(); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "authorization_unavailable")
+		return
+	}
 	writeJSON(w, http.StatusOK, resp)
 }
