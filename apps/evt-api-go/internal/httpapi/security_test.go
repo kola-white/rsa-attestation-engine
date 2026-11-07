@@ -120,9 +120,9 @@ func TestEvidenceCompletionRemainsAuthenticatedAndUnsupported(t *testing.T) {
 	}
 }
 
-// Authentication is fixed, but case authorization/persistence remains an OPEN
-// release blocker. Offline presigning uses synthetic credentials and no upload.
-func TestReleaseBlockerEvidenceCaseScope(t *testing.T) {
+// Missing canonical principal/authorization infrastructure must never yield a URL.
+// Integration tests exercise valid principals against the actual new migration.
+func TestEvidenceArbitraryCaseDeniedWithoutAuthorization(t *testing.T) {
 	cfg := &config.Config{Auth: config.AuthConfig{JWTSecret: strings.Repeat("s", 32), Issuer: "test-issuer", Audience: "test-audience"}}
 	store, err := storage.NewS3Store(context.Background(), config.SpacesConfig{AccessKey: "synthetic-test-key", SecretKey: "synthetic-test-secret", Region: "sfo3", Endpoint: "https://storage.example.invalid", Bucket: "synthetic-test-bucket"})
 	if err != nil {
@@ -139,10 +139,9 @@ func TestReleaseBlockerEvidenceCaseScope(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "/v1/cases/case-b/checks/check-b/evidence:init", strings.NewReader(`{"caseId":"case-b","checkId":"check-b","files":[{"name":"synthetic.pdf","mimeType":"application/pdf","size":1}]}`))
 	r.Header.Set("Authorization", "Bearer "+raw)
 	mux.ServeHTTP(w, r)
-	if w.Code != 200 {
-		t.Fatalf("scope-gap reproduction: %d %s", w.Code, w.Body.String())
+	if w.Code != http.StatusNotFound || strings.Contains(w.Body.String(), "uploads") {
+		t.Fatalf("arbitrary-case authorization: %d %s", w.Code, w.Body.String())
 	}
-	t.Log("RELEASE BLOCKER reproduced: unrelated authenticated user obtained an offline synthetic upload URL for arbitrary case-b/check-b; no storage request was made")
 }
 
 func TestRequestBodyLimit(t *testing.T) {

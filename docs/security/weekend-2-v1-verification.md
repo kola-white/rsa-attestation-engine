@@ -1,3 +1,5 @@
+**Proposal B implementation update:** the owner approved a new operator-provisioned registry and explicit case-upload grants. See [implementation, migration boundary and local regression evidence](weekend-2-case-upload-authorization.md). The historical missing-model investigation below is retained as context; it is no longer an unresolved architectural decision. Production installation/deployment remain separately unauthorized, and the production HIGH finding remains open. Positive live authentication/attestation checks are tracked separately.
+
 # Weekend 2: targeted remediation and release verification
 
 **Closeout update:** [current review, patched-build verification and deployment gate](weekend-2-closeout.md) supersedes the historical toolchain/dependency, migration/binding/runtime preparation and credential-exposure status below. Production transactions 2854/2855/2859/2860 and verified private recovery readiness are recorded there; service rollout remains unexecuted and Proposal B remains HIGH. Proposal B remains acknowledged and unresolved.
