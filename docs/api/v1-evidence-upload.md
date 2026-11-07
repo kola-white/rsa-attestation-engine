@@ -8,8 +8,9 @@ by the evidence-completion feature, requiring migration 000016 before deployment
 Other sections describe the intended API and do not imply routes or workers exist.
 See [the implementation and rollout notes](../operations/evidence-completion-lifecycle.md)
 for the actual runtime contract, remaining scanning/retention work and compatibility.
-The released Weekend 2 API continues returning authenticated 501 until this feature
-is migrated and deployed.
+Production evidence completion at `c5fdb5a` replaces the earlier Weekend 2
+API's authenticated 501 response. Migration/deployment and synthetic acceptance
+passed; accepted evidence stays RECEIVED/PENDING.
 
 ## Conventions
 
