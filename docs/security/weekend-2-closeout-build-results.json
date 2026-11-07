@@ -1,5 +1,5 @@
 {
-  "status": "Candidate build, production SQL/credential preparation and legacy NOLOGIN containment PASS; rollout pending; Proposal B HIGH remains",
+  "status": "proposal_a_and_b_integrated_and_deployed; positive_authenticated_and_attestation_acceptance_outstanding",
   "toolchain": "go1.26.10",
   "target": {
     "GOOS": "linux",
@@ -187,5 +187,81 @@
     "git_sha": "2813e7e513b6afed5cad3b77bee6363e982e21d2",
     "read_only": true,
     "post_deployment_acceptance": false
+  },
+  "production_rollout": {
+    "reviewed_head": "cc852010a8cc348c29526c1eea0cd44161d92714",
+    "merged_and_deployed_main": "f52f5bf282735ae24ac91d3b3855e3e5b0d5de13",
+    "reviewed_and_main_tree": "22d30363b4a5f49b5d163c880c7f300076781926",
+    "pr": 130,
+    "merge_method": "squash",
+    "main_ci_deploy_run": 41397241618,
+    "spaces_publish_run": 41397241714,
+    "ci_outcome": "success",
+    "provider_transition": "PASS",
+    "runtime_roles": {
+      "api": "cvera_api_runtime",
+      "kratos": "cvera_kratos_runtime",
+      "kratos-courier": "cvera_kratos_runtime"
+    },
+    "rollback_executed": false
+  },
+  "production_checkpoint_24": {
+    "status": "PASS",
+    "owner_reconfirmed_existing_record_on": "2026-11-07",
+    "verification_rerun": false,
+    "fresh_runtime_sample_on_confirmation_date": false,
+    "ci_artifact_id": 13120016815,
+    "binary_sha256": "374db8b4df8a8bfbec94479de885be123d32b9ffb6f6221b799cb5f93bff7f9f",
+    "binary_matches_scanned_main": true,
+    "ca_sha256": "714d457d580922dbf1d0be8bd35ba236a842b50b0072ae791582a19adef772a5",
+    "ca_matches_ci": true,
+    "api_nonroot": true,
+    "signer_mount_read_only": true,
+    "private_key_contents_accessed": false,
+    "services_running": [
+      "api",
+      "kratos",
+      "kratos-courier"
+    ],
+    "all_service_restart_counts": 0,
+    "all_service_oom_kills": 0,
+    "all_inspected_error_categories": 0,
+    "services_or_application_records_changed": false,
+    "scope": "historical f52f5bf executable, CA and service/log evidence; not current 0498934 artifact hashes or fresh sampling"
+  },
+  "remaining_acceptance": {
+    "proposal_b": "REMEDIATED in deployed application/database combination; positive granted/revoked production smoke remains outstanding",
+    "positive_production_login_exchange_logout": "OUTSTANDING: owner result not reported",
+    "live_production_attestation": "OUTSTANDING: no reported existing current-key attestation verification; no new attestation created",
+    "legacy_http_boundary": "LEGACY_VERIFIER_NOT_CONFIGURED; do not claim full trust/status/expiry verification",
+    "weekend_2_security_acceptance": "OPEN pending live verification; not formally closed",
+    "target_dependency_advisories": "GO-2026-6611 and GO-2026-6809 resolved in patched release scans; other findings retain scoped dispositions"
+  },
+  "production_proposal_b": {
+    "pr": 132,
+    "reviewed_head": "b15d8b38e5a491745ccb0a3d39aec5b1dda43df9",
+    "merged_and_deployed_main": "049893422f96833bec3447fb561ac8ab7c8ff460",
+    "reviewed_and_merged_tree_identical": true,
+    "main_ci_deploy_run": 42387821489,
+    "spaces_publish_run": 42387821495,
+    "outcome": "success",
+    "migration": "000015 only",
+    "sql_verification": "owner-reported PASS; current private backup/archive validated; recovery image retained",
+    "operator": "cvera_evidence_operator NOLOGIN",
+    "runtime": "cvera_api_runtime checker EXECUTE only; no registry DML or operator EXECUTE",
+    "resources_or_grants_seeded_by_sql_phase": 0,
+    "sql_phase_credentials_configuration_services_changed": false,
+    "public_health_http": 200,
+    "public_version_matches_deployed_main": true,
+    "all_four_unauthenticated_evidence_routes_http": 401,
+    "published_jwks_continuity": "PASS",
+    "positive_authenticated_smoke": "OUTSTANDING: owner console result not reported",
+    "current_executable_sha256": "not independently sampled; do not reuse Checkpoint 24 hash"
+  },
+  "documentation_merge_policy": {
+    "scope": "documentation only; no application/schema/configuration/workflow changes",
+    "pr_ci_required": "successful final reviewed head",
+    "squash_message_instruction": "[skip ci]",
+    "reason": "prevent unnecessary push-triggered production deployment; deployed API remains 0498934"
   }
 }
