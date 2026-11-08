@@ -163,7 +163,21 @@ case selection and awaiting-review display. This establishes code delivery, not
 authenticated picker/native-device acceptance. No new mobile credentials/build or
 infrastructure were created. PR #131 remains untouched.
 
-Two-account authenticated review acceptance remains pending the existing console
-smoke result. No positive HTTP access/review result is inferred from anonymous
-401s, local tests or successful deployment. No signing, credential change or
-production destructive case deletion was performed by this release.
+The separate authenticated console smoke returned **PASS** on deployed 6e7293e:
+
+- Two different existing accounts completed normal login/exchange.
+- Explicit grant separation and unauthorized/wrong case/check denials passed.
+- Self-review was denied even with a separate review grant.
+- Private attachment bytes matched the canonical uploaded synthetic bytes.
+- Independent APPROVED review recorded canonical attribution; exact retry was
+  idempotent and conflicting final review was denied.
+- Committed review revocation denied subsequent access/decisions.
+- Scan status remained **PENDING** after manual approval.
+- One synthetic object was uploaded; fixture grants were revoked and case closed.
+  No new identities/attestations, credential changes, real-user evidence access or
+  destructive deletion occurred. No credentials, signed URLs or contents printed.
+
+The exact fixture/result record remains private on the Droplet. This positive
+HTTP acceptance is distinct from local tests, anonymous denials and deployment
+readiness. Actual authenticated browser/native file-picker acceptance remains
+outstanding. The owner-deferred live-signing decision is unchanged.

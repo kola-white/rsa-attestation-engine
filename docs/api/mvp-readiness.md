@@ -11,7 +11,7 @@ positive authenticated acceptance; it is not a new security audit.
 
 | Slice | Verified evidence | Remaining gate |
 |---|---|---|
-| Explicit reviewer grants, private listing/download, attributable manual APPROVED/REJECTED, no self-review | Full PostgreSQL authorization/locking/ACL regressions; owner-confirmed 000017 and narrow existing-role bindings after fresh actual backup restore/rehearsal | API deployed/healthy at 6e7293e; four anonymous denials passed; two-account HTTP acceptance pending |
+| Explicit reviewer grants, private listing/download, attributable manual APPROVED/REJECTED, no self-review | Full PostgreSQL authorization/locking/ACL regressions; owner-confirmed 000017 and narrow existing-role bindings after fresh actual backup restore/rehearsal | API deployed/healthy at 6e7293e; anonymous denial and positive two-account HTTP acceptance PASS |
 | Expo real assigned case/check selection, PUT followed by completion, safe same-session retry, awaiting-review display | Seven transport test groups, full Node CI, Expo typecheck/web export; existing Production web deployment for 6e7293e and public client markers confirmed | Actual authenticated file-picker and native device acceptance |
 | Bounded owner-run case deletion | Local owner-only freeze/revoke/expiry/manifest/redaction and offline partial-failure/resume/storage tests; runbook and dry-run-default tool committed | No production deletion performed; each destructive run needs separate per-case authority |
 | Live issuance acceptance preparation | Existing authorized candidate/assigned-employer path and exact legacy public-key/tamper proof documented | Production signing remains owner-deferred, not passed |
@@ -29,10 +29,12 @@ See [review contract](evidence-review.md), [client integration](evidence-client.
 
 ## Minimum remaining acceptance and product decisions
 
-1. Complete the approved two-principal synthetic production review acceptance:
-   normal independent accounts, explicit grants, private canonical-byte download,
-   no self-review, exact retry/conflict, revocation, PENDING preservation and cleanup.
-   Never bypass independent review if only one usable account is available.
+1. **API review acceptance is complete.** Two normal independent accounts passed
+   explicit grant separation, private canonical-byte download, unauthorized/wrong
+   case/check denial, no self-review, attributable exact retry/conflict, revocation
+   and cleanup on deployed 6e7293e. Manual approval left scan status PENDING. One
+   synthetic object was uploaded; fixture grants were revoked and case closed.
+   No new identity, attestation, credential change or destructive deletion occurred.
 2. Exercise a harmless synthetic file through the actual client picker with an
    explicitly assigned case/check, receipt, retry and revoked access. Web asset
    delivery/export is not proof of a native file upload. Existing EAS metadata

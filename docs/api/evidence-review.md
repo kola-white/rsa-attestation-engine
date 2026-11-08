@@ -4,8 +4,8 @@ The owner approved this policy on 2026-11-07: case review grants are separate fr
 upload grants, operator-provisioned, attributable and revocable; active granted
 reviewers can list/download/review received evidence; no self-review; manual decisions
 are distinct from scan status. This document describes the implementation. The owner-approved production SQL
-phase for 000017/bindings passed on 2026-11-08 UTC; the API is deployed at 6e7293e. Positive two-account HTTP acceptance remains
-separate from the successful deployment. See the operations release evidence.
+phase for 000017/bindings passed on 2026-11-08 UTC; the API is deployed at 6e7293e. Positive two-account HTTP acceptance also passed, including independent
+review, revocation and unchanged PENDING scans. See the operations release evidence.
 
 ## Authorization and trust
 
@@ -123,6 +123,8 @@ both revocation orders and competing final decisions, plus atomic rollback on a
 failed binding with existing upload initialization remaining operational.
 
 The approved migration and exact-main API deployment passed on 2026-11-08 UTC
-at 6e7293e; public health/version/JWKS and anonymous denial probes passed. Positive
-two-principal HTTP acceptance remains pending; local tests are not relabelled as
-that acceptance. See the operations release evidence for current results.
+at 6e7293e; public health/version/JWKS and anonymous denial probes passed. The separate owner-run two-principal HTTP acceptance also passed at that exact
+revision: grant separation, wrong case/check denial, no self-review, private
+canonical bytes, attribution/idempotency/conflict, revocation and cleanup. Manual
+approval left scans PENDING. No real-user evidence or signing was involved. See
+the operations release evidence for current results.
