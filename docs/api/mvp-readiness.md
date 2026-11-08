@@ -139,14 +139,19 @@ NorStar's prepared new registration now uses MANUAL rather than AUTO. Source and
 local regression confirm MANUAL normal submission remains SUBMITTED, preserves
 the mode and creates no HR/review/upload grants, authority or credential. A later
 AUTO dispatch window requires explicit approval; there is no existing manual
-dispatch route and direct status patching is excluded. Production INSERT side
-effects and actual-schema/backup compatibility remain unverified until the
+dispatch route and direct status patching is excluded. The owner-executed registry preflight and fresh actual-backup restore/rehearsal
+subsequently passed for the pinned registry operation; this does not establish
+authority-schema or live-issuance acceptance. See the
 [reviewed preflight/restore sequence](../operations/norstar-schema-backup-review.md).
 
 The owner has authorized the consolidated read-only NorStar preflight/mapping
-searches and fresh private backup/isolated same-image rehearsal. The guarded
-preparation driver is locally validated and ready for execution through the existing
-owner console; no production result is claimed before its actual PASS/STOP output.
+searches and fresh private backup/isolated same-image rehearsal. The owner executed driver d1c48d0 through the existing root console and returned
+PASS: registry schema/collision checks, fresh private backup, isolated same-image
+restore, and clone-only MANUAL rollback/commit rehearsal. Zero candidate mappings
+were found; no verified existing legal mapping was discovered. Production SQL was
+read-only and registry/privileges/services remained unchanged. The private receipt
+is /opt/cvera/norstar-preparation-20261108T220104Z-9065a0/preparation-result.json.
+Registration and authority recording were explicitly NOT executed.
 Production registration remains separately gated, independent of the still-blocked
 signed authority paperwork and case reviewer. No ACTIVE authority or signing is
 included in the prerequisite authorization.

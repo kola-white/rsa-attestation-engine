@@ -192,3 +192,22 @@ production result must still come from its execution in the actual owner console
 Return only the final JSON; do not send backup, inventory, dump listing or private
 files. Registration/delegation/reviewer readiness does not gate this prerequisite
 operation; actual registration still needs its separate explicit authorization.
+
+## Actual production prerequisite result
+
+Owner returned **PASS** from pinned driver d1c48d0 (reviewed SQL 8e1add1): registry
+schema/collision checks, zero candidate mappings, fresh private archive, isolated
+same-image restore, and registry rollback/commit rehearsal only in that clone.
+Source registry/privileges were unchanged; no service restarted, no production
+registration/authority recording occurred, and no credential/signing was used.
+The root-private receipt is
+`/opt/cvera/norstar-preparation-20261108T220104Z-9065a0/preparation-result.json`.
+
+The next decision is only whether to establish the owner-approved legal mapping
+NorStar Systems LLC / California B20250427754 to the new internal ID
+`norstar-systems-llc` and insert ONE MANUAL registry row using pinned
+`register-norstar-employer.sql` (8e1add1; SHA-256
+`0c693f55f3752da59726833ffe5673ba150b7f16f8d1ccb4b5b163d3fbd0eb1b`).
+Any newly found authoritative existing mapping/collision stops creation. That
+registration does not require the separate signed delegation, first-party authority
+decision or case reviewer, and authorizes none of those later operations.
