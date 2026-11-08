@@ -220,4 +220,8 @@ the owner-approved legal mapping and transaction receipt private. A verified pri
 receipt returns PASS without inserting; an unexplained existing row or unresolved
 intent returns STOP rather than adopting a mapping or repeating a possible COMMIT.
 No authority, credential, migration, grant, dispatch or service operation is included.
-Production registration remains unconfirmed until its console result is returned.
+Production registration **PASS**, returned by the owner from the pinned a33f7ba
+executor: transaction `3007`, employer `norstar-systems-llc`, MANUAL, California
+B20250427754. The private mapping/approval and success receipt are retained beside
+the verified backup. This was the first insertion, not a replay. No authority or
+credentials were created or used, and no services restarted. Do not repeat insertion.
