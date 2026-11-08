@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Local-only, network-none SQL regression; never opens a production connection."""
-import datetime,hashlib,json,subprocess,tempfile,time,uuid
+import datetime,hashlib,importlib.util,json,subprocess,tempfile,time,uuid
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 NAME='cvera-norstar-local-'+uuid.uuid4().hex[:12]
@@ -32,6 +32,24 @@ def main():
   assert metadata['user_insert_trigger_count']==0 and metadata['rewrite_rule_count']==0
   register=(ROOT/'operations/register-norstar-employer.sql').read_text()
   record=(ROOT/'operations/record-norstar-authority-approved.sql').read_text()
+  spec=importlib.util.spec_from_file_location('norstar_preparation_driver',ROOT/'operations/prepare-norstar-production.py')
+  driver=importlib.util.module_from_spec(spec);spec.loader.exec_module(driver);driver.DB=NAME
+  for filename,expected in driver.FILES.items():assert hashlib.sha256((ROOT/'operations'/filename).read_bytes()).hexdigest()==expected
+  driver.validate(metadata)
+  try:driver.source_read("INSERT INTO public.evt_employer_config(employer_id) VALUES('must-not-be-inserted')")
+  except RuntimeError:pass
+  else:raise AssertionError('source SQL was not read-only')
+  assert sql('SELECT count(*) FROM evt_employer_config;').stdout.strip()=='0'
+  with tempfile.TemporaryDirectory(prefix='norstar-driver-local-') as folder:
+   backup=Path(folder)
+   run(['docker','exec',NAME,'pg_dump','-U','postgres','-d','evt','-Fc','-f','/tmp/norstar-driver-local.dump'])
+   run(['docker','cp',NAME+':/tmp/norstar-driver-local.dump',str(backup/'evt.dump')])
+   image=json.loads(run(['docker','inspect',NAME]).stdout)[0]['Image']
+   stubs=sql("SELECT format('CREATE ROLE %I NOLOGIN;',rolname) FROM pg_catalog.pg_roles WHERE rolname<>'postgres' AND rolname !~ '^pg_' ORDER BY rolname;").stdout.encode()
+   rehearsal=driver.rehearse(backup,image,stubs,register,NAME+'-driver-rehearsal')
+   assert rehearsal['restore']=='PASS' and rehearsal['rollback']=='PASS' and rehearsal['commit']=='PASS' and rehearsal['unrelated_data_and_privileges_preserved']
+  assert sql('SELECT count(*) FROM evt_employer_config;').stdout.strip()=='0'
+
   # Explicit LOCAL fixtures. These are not evidence or decisions about real NorStar.
   values={'employer_id':'norstar-systems-llc','mapping_ref':'urn:local-only:entity-mapping','approval_ref':'urn:local-only:sql-approval',
    'authorization_id':str(uuid.uuid4()),'decision_id':str(uuid.uuid4()),'actor_id':'local-only-operator',
@@ -87,12 +105,12 @@ def main():
    assert sql('SELECT committed_position FROM authority_recording_boundary;',name=clone).stdout.strip()=='4'
    assert sql("SELECT count(*) FROM authority_journal_events WHERE event_type='ACTIVATE';",name=clone).stdout.strip()=='0'
   print(json.dumps({'norstar_preparation_local':'PASS','missing_inputs_denied':True,'duplicate_and_blind_resume_denied':True,
-   'real_local_archive_restore':True,'metadata_preflight_read_only':True,'manual_non_dispatching_registration':True,'unreviewed_insert_trigger_denied':True,'four_recording_transactions':True,'stops_approved_not_active':True,'runtime_denied':True,'production_accessed':False,'signing_or_credentials_used':False}))
+   'production_preparation_driver_rehearsal':True,'source_read_only_enforced':True,'real_local_archive_restore':True,'metadata_preflight_read_only':True,'manual_non_dispatching_registration':True,'unreviewed_insert_trigger_denied':True,'four_recording_transactions':True,'stops_approved_not_active':True,'runtime_denied':True,'production_accessed':False,'signing_or_credentials_used':False}))
  finally:
-  for name in [NAME+'-restore',NAME]:
+  for name in [NAME+'-driver-rehearsal',NAME+'-restore',NAME]:
    r=run(['docker','inspect',name],check=False)
    if r.returncode==0:
     item=json.loads(r.stdout)[0]
-    assert item['HostConfig']['NetworkMode']=='none' and item['Config']['Labels'].get('cvera.scope')==LABEL
+    assert item['HostConfig']['NetworkMode']=='none' and item['Config']['Labels'].get('cvera.scope') in (LABEL,'norstar-production-backup-rehearsal')
     run(['docker','rm','-f','-v',name])
 if __name__=='__main__':main()

@@ -142,3 +142,11 @@ AUTO dispatch window requires explicit approval; there is no existing manual
 dispatch route and direct status patching is excluded. Production INSERT side
 effects and actual-schema/backup compatibility remain unverified until the
 [reviewed preflight/restore sequence](../operations/norstar-schema-backup-review.md).
+
+The owner has authorized the consolidated read-only NorStar preflight/mapping
+searches and fresh private backup/isolated same-image rehearsal. The guarded
+preparation driver is locally validated and ready for execution through the existing
+owner console; no production result is claimed before its actual PASS/STOP output.
+Production registration remains separately gated, independent of the still-blocked
+signed authority paperwork and case reviewer. No ACTIVE authority or signing is
+included in the prerequisite authorization.

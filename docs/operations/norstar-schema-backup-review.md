@@ -1,9 +1,13 @@
 # NorStar production preparation commands: review only
 
-**Not authorized for execution.** These commands are for owner review. No production
-write, dispatch change, authority activation, signing credential or live signing
-was performed. Unsigned/unverified paperwork is not completed evidence. Use the
-existing Droplet root console; no new SSH account, password or service restart.
+**Owner authorization now covers read-only production preflight/mapping searches,
+fresh private backup and isolated same-image restore/registry rehearsal only.**
+Use the pinned `prepare-norstar-production.py --approved-preparation` wrapper for
+that scope through the existing root console. Registration and authority recording
+remain unapproved production writes. No dispatch change, ACTIVE authority,
+credential activation or live signing is included. Unsigned/unverified paperwork
+is not completed evidence; it is not required to run these operational prerequisites.
+No new SSH account, password or service restart is needed.
 
 ## Dispatch and registry decision
 
@@ -162,3 +166,29 @@ inspect exact recorded IDs, never delete audit, blindly rerun or force activatio
 Recovery at this stage is to stop, roll back any uncommitted transaction and leave
 additive committed records/history intact pending reviewed correction. No service
 or password changed, so no application rollback/credential restoration is implied.
+
+## Consolidated authorized prerequisite operation
+
+`operations/prepare-norstar-production.py --approved-preparation` automates the
+already authorized read-only preflight, candidate/legal-number search, private
+registry/privilege inventory, capacity checks, fresh backup, same-image network-none
+restore, and registry rollback/commit rehearsal **only in the clone**. It pins the
+reviewed SQL at 8e1add1, verifies source registry/privileges and running services
+remain unchanged, stops the clone to release RAM, retains recovery material root-
+private, and returns only PASS/STOP JSON. It never invokes the authority recording
+script, a production registry INSERT, a signer or a credential operation.
+
+Candidate absence is not fabricated legal proof: existing registry data has no
+legal-entity-number mapping. A PASS records no verified existing mapping discovered;
+the next bounded registration approval must explicitly establish the proposed
+legal mapping, subject to any authoritative owner records. If a candidate or exact
+ID is found, STOP for reconciliation rather than create a duplicate. This is not
+another approval cycle for preflight or backup; they are already authorized.
+
+The consolidated driver passed the existing isolated local regression, including
+source READ ONLY enforcement, actual fixture archive restore, both registry
+transaction outcomes, unchanged unrelated data/ACLs and no source insertion. The
+production result must still come from its execution in the actual owner console.
+Return only the final JSON; do not send backup, inventory, dump listing or private
+files. Registration/delegation/reviewer readiness does not gate this prerequisite
+operation; actual registration still needs its separate explicit authorization.
