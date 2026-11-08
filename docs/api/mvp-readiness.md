@@ -125,3 +125,12 @@ mapping confirmation, signed delegation and a documented attributable
 adjudication remain the actionable prerequisites. Third-party authority adjudication is optional; the
 mandatory no-self-review policy for uploaded case evidence remains unchanged.
 No authority or signing activation follows from nomination or from the filing number alone.
+
+The [NorStar preactivation sequence](../operations/norstar-preactivation-sequence.md)
+now includes executable owner-guarded employer registration and authority recording
+that stops at APPROVED_NOT_ACTIVE. Local isolated PostgreSQL regression passed;
+no production write occurred. Owner still needs to confirm the legal/internal ID
+mapping, finish the authentic signed delegation and separate first-party decision,
+nominate an eligible non-uploader case reviewer, and explicitly authorize any future
+schema/recording/activation/credential/signing operations. First-party authority
+adjudication does not satisfy or waive no-self-review of uploaded evidence.

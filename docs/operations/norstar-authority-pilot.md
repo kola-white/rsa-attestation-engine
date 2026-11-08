@@ -199,3 +199,9 @@ Official reference sources for the adjudicator: California Secretary of State
 and [LLC entity/governance records](https://www.sos.ca.gov/business-programs/business-entities/starting-business/types).
 The company's private operating agreement is not itself a filed Secretary of State
 record. These general sources are not verification of the supplied specific filing.
+
+Executable preparation now lives in [minimum preactivation sequence](norstar-preactivation-sequence.md)
+and the [blank private paperwork templates](norstar-delegation-and-decision-templates.md).
+The guarded registration and four-transaction recording scripts were tested only
+in isolated local PostgreSQL; they stop at APPROVED and are not production execution
+authorization. The independent case-evidence reviewer remains a separate requirement.
