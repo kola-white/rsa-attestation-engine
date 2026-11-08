@@ -126,7 +126,7 @@ BEGIN
   PERFORM 1 FROM %1$I.evidence_uploads WHERE case_id=b.case_id ORDER BY upload_id FOR UPDATE;
   PERFORM 1 FROM %1$I.evidence_scan_jobs j JOIN %1$I.evidence_uploads u USING(upload_id) WHERE u.case_id=b.case_id ORDER BY j.upload_id FOR SHARE OF j;
   valid:=b.revoked_at IS NULL AND r.status::text IN ('ATTESTED','VERIFIED','CLOSED') AND r.candidate_personid=b.subject_id AND r.employer_id=b.employer_id AND r.version::bigint>=b.request_version+1
-   AND r.claim_snapshot::text=receipt.claim_snapshot_text 
+   AND r.claim_snapshot::text=receipt.claim_snapshot_text
    AND encode(sha256(convert_to(coalesce(r.attestation_jws,''),'UTF8')),'hex')=receipt.token_sha256
    AND (receipt.manifest_text::jsonb->'requiredChecks') IS NOT DISTINCT FROM (SELECT jsonb_agg(check_id ORDER BY check_id) FROM %1$I.request_binding_checks WHERE binding_id=b.binding_id)
    AND EXISTS(SELECT 1 FROM %1$I.cases WHERE case_id=b.case_id AND status='OPEN')
