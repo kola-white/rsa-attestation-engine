@@ -1,7 +1,9 @@
 # Controlled evidence-backed issuance release: preparation only
 
-**BLOCKED: real employer delegation is not available.** The owner confirmed no
-verified real-employer identifier or attributable delegation reference exists.
+**BLOCKED: real employer delegation is not yet accepted.** The owner has supplied
+NorStar Systems LLC, California B20250427754, as the candidate; internal employer
+reconciliation, representative evidence, signed delegation and independent
+adjudication remain outstanding. See [NorStar pilot preparation](norstar-authority-pilot.md).
 Do not create a demonstration authorization, activate a production credential,
 perform live signing, or claim production acceptance. No production operation is
 authorized by this document. Continue code/tests/CI independently.

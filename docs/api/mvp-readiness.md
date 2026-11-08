@@ -108,3 +108,19 @@ verification/revocation concurrency regressions. CI is recorded separately in th
 production issuance/independent-verification acceptance is claimed. Baseline #140
 acceptance, native picker/device validation and real production acceptance remain
 separate gates; Weekend 2's earlier deferral is not silently changed.
+
+NorStar Systems LLC (owner-supplied California entity B20250427754) is the proposed
+first-party pilot authority subject for the qualified Managing Member — owner
+role. Its internal employer ID, representative's power, signed delegation and
+independent adjudication have not been verified or registered. See the
+[NorStar preparation and approval gates](../operations/norstar-authority-pilot.md).
+PR #141 engineering checks passed at c7e5239; this candidate nomination does not
+activate authority or change production acceptance status.
+
+The owner's read-only NorStar reconciliation returned 12 employer registry entries
+and no matching candidates, with no data/configuration change. An internal ID is
+still unconfirmed because the registry lacks a legal-entity mapping field; a
+no-match search is not proof that no opaque existing ID was assigned. Owner
+mapping confirmation, signed delegation and a named independent adjudicator remain
+the actionable prerequisites. No authority or signing activation follows from
+nomination or from the filing number alone.
