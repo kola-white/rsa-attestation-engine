@@ -47,17 +47,20 @@ See [review contract](evidence-review.md), [client integration](evidence-client.
    request/case, explicit required checks, canonical request subject/employer and
    frozen claim context; independent contextual approval; no adoption/reuse; current
    ACTIVE authority for issuer **https://cvera.app**, employer and employment.role.
-   [Binding implementation](request-evidence-binding.md) is locally verified on its
-   feature branch, not yet deployed. Production authority is intentionally
+   [Binding implementation](request-evidence-binding.md) is deployed at e84b9a6
+   (PR #140); migration 000018 and final CI/deployment passed. Its separate
+   two-account/two-request smoke remains **pending/unconfirmed** and must not be
+   rerun or represented as accepted. Production authority is intentionally
    unconfigured and eligibility therefore fails closed; no authority privileges
    or live signing are enabled. Bound requests cannot bypass this through legacy
    attestation. Upload, review, employer access, issuer authority and final verifier
    reliance remain separate. The linked document lists the exact next issuance/
    independent-verification work rather than treating a preparation receipt as a
    signed, trusted claim.
-4. Before advertising working real-user current-key attestations, obtain the
-   separately deferred issuance authorization and perform the prepared normal-API
-   signature/tamper acceptance. Signature validity must remain distinct from
+4. Before advertising working real-user current-key attestations, establish the
+   real employer delegation and obtain separately scoped authorization for the
+   [integrated issuance acceptance](../operations/evidence-backed-issuance-release.md).
+   The older legacy signature/tamper preparation is not evidence-backed issuance. Signature validity must remain distinct from
    unsupported/unconfigured legacy trust, status and expiry outcomes. Existing
    internal trust-recording and recruiter-consumption routes are not independent
    cryptographic verification. This does not reopen Weekend 2 closure.
@@ -79,3 +82,117 @@ pilot; blanket permissions and self-service administration are unnecessary.
   volume justifies them; the bounded API records one final decision per upload.
 - Self-service administration, additional credential formats/providers, HSMs,
   dashboards and nonessential infrastructure remain outside this MVP slice.
+
+## Integrated issuance milestone: objectives 2–5
+
+[Evidence-backed issuance and independent verification](evidence-backed-issuance.md)
+is implemented on `feature/evidence-backed-issuance`, **not deployed or accepted**.
+It connects the existing complete authority projector/evaluator to current locked
+eligibility, adds canonical issuer/subject/request/snapshot and manifest commitments,
+and returns a portable SD-JWT VC only after issuance persistence commits. A
+separate verifier without a private key checks trusted issuer/credential binding,
+current authority, exact issuance/manifest/context, revocation and explicit manual
+pilot policy. The subject can retrieve only its own committed credential.
+Signature validity alone never produces a trusted result.
+
+Migration 000019 and five bounded runtime EXECUTEs are prepared; no production SQL,
+authority establishment, credential activation or signing has occurred. Authority
+000002–000013 are not presumed deployed or version-recorded. Empty/unavailable
+sources and absent/inactive issuer credential registration fail closed. Real
+employer delegation evidence and exact bounded owner authorization remain production
+prerequisites. See the [controlled release plan](../operations/evidence-backed-issuance-release.md).
+
+Local full Go/PostgreSQL tests, relevant race tests and vet passed, including
+normal request-to-portable-claim, retrieval, transaction rollback and current-fact
+verification/revocation concurrency regressions. CI is recorded separately in the PR. Local RSA/authority fixtures prove engineering behavior only. No live
+production issuance/independent-verification acceptance is claimed. Baseline #140
+acceptance, native picker/device validation and real production acceptance remain
+separate gates; Weekend 2's earlier deferral is not silently changed.
+
+NorStar Systems LLC (owner-supplied California entity B20250427754) is the proposed
+first-party pilot authority subject for the qualified Managing Member — owner
+role. Its internal employer ID, representative's power, signed delegation and
+attributable adjudication have not been verified or registered. See the
+[NorStar preparation and approval gates](../operations/norstar-authority-pilot.md).
+PR #141 engineering checks passed at c7e5239; this candidate nomination does not
+activate authority or change production acceptance status.
+
+The owner's read-only NorStar reconciliation returned 12 employer registry entries
+and no matching candidates, with no data/configuration change. An internal ID is
+still unconfirmed because the registry lacks a legal-entity mapping field; a
+no-match search is not proof that no opaque existing ID was assigned. Owner
+mapping confirmation, signed delegation and a documented attributable
+adjudication remain the actionable prerequisites. Third-party authority adjudication is optional; the
+mandatory no-self-review policy for uploaded case evidence remains unchanged.
+No authority or signing activation follows from nomination or from the filing number alone.
+
+The [NorStar preactivation sequence](../operations/norstar-preactivation-sequence.md)
+now includes executable owner-guarded employer registration and authority recording
+that stops at APPROVED_NOT_ACTIVE. Local isolated PostgreSQL regression passed;
+no production write occurred. Owner still needs to confirm the legal/internal ID
+mapping, finish the authentic signed delegation and separate first-party decision,
+nominate an eligible non-uploader case reviewer, and explicitly authorize any future
+schema/recording/activation/credential/signing operations. First-party authority
+adjudication does not satisfy or waive no-self-review of uploaded evidence.
+
+NorStar's prepared new registration now uses MANUAL rather than AUTO. Source and
+local regression confirm MANUAL normal submission remains SUBMITTED, preserves
+the mode and creates no HR/review/upload grants, authority or credential. A later
+AUTO dispatch window requires explicit approval; there is no existing manual
+dispatch route and direct status patching is excluded. The owner-executed registry preflight and fresh actual-backup restore/rehearsal
+subsequently passed for the pinned registry operation; this does not establish
+authority-schema or live-issuance acceptance. See the
+[reviewed preflight/restore sequence](../operations/norstar-schema-backup-review.md).
+
+The owner has authorized the consolidated read-only NorStar preflight/mapping
+searches and fresh private backup/isolated same-image rehearsal. The owner executed driver d1c48d0 through the existing root console and returned
+PASS: registry schema/collision checks, fresh private backup, isolated same-image
+restore, and clone-only MANUAL rollback/commit rehearsal. Zero candidate mappings
+were found; no verified existing legal mapping was discovered. Production SQL was
+read-only and registry/privileges/services remained unchanged. The private receipt
+is /opt/cvera/norstar-preparation-20261108T220104Z-9065a0/preparation-result.json.
+Registration and authority recording were explicitly NOT executed.
+The owner has since authorized completion of the one-row MANUAL registration.
+Its guarded executor and replay/ambiguous-commit regressions are implemented.
+Production registration **PASS**: owner-console result for pinned a33f7ba reports
+transaction `3007`, `norstar-systems-llc`, MANUAL, California B20250427754, first
+insertion with no authority/credential operations or service restarts. Do not
+repeat insertion. Signed
+delegation, attributable first-party adjudication and a separate case reviewer
+remain outstanding. Registration authorizes none of the reserved authority,
+credential, migration, deployment or live-signing operations.
+Production registration remains separately gated, independent of the still-blocked
+signed authority paperwork and case reviewer. No ACTIVE authority or signing is
+included in the prerequisite authorization.
+
+### Executable integrated issuance release/acceptance preparation
+
+PR #141 now includes a read-only production preparation / isolated archive-restore
+rehearsal and a separately approved atomic authority bootstrap (existing 000002–
+000013) plus 000019/five-EXECUTE apply phase. Empty registries fail closed and no
+migration history, role, authority or credential is invented. Prepared owner-only
+activation/containment SQL and public-credential registration retain the accepted
+contracts. The genuine acceptance client uses normal request/evidence/issuance
+APIs, another human's explicit contextual review, one durable signing attempt,
+portable artifact retrieval, separate public-key signature checking and current
+trusted verifier facts. It preserves genuine evidence and PENDING scans.
+
+Local operations regressions pass for rollback/commit/failure, same-image isolated
+archive restore, hostile table/sequence ACL stripping, actual workflow/receipt SQL,
+activation/containment denials and independent local RSA-3072 verification. These
+are not production acceptance. Production authority schema/000019 apply, real
+recording/activation, credential registration, deployment and live signing remain
+unexecuted without their separate owner approvals. Signed NorStar packet and a
+separate human reviewer remain external inputs; they do not block an authorized
+non-signing implementation release. See the existing
+[executable release procedure](../operations/evidence-backed-issuance-release.md).
+
+Production issuance-schema preparation **PASS**, returned from the existing owner
+console using pinned executor d3ee63c and SQL source ab0c0f6: fresh private evt
+archive restored on the same PostgreSQL image; rollback/commit, actual normal
+request/review/receipt probe and five-EXECUTE privileges passed in the isolated
+clone. Production SQL was read-only; no schema was applied and no authority,
+credential or service changed. This resolves production schema/default/type
+compatibility for the proposed atomic release; it does not activate trust or prove
+a production signature. The private preparation receipt is retained on the Droplet
+under `issuance-release-20261108T224912Z-02ce57` for the separately approved apply.

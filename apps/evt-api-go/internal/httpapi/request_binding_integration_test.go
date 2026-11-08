@@ -25,7 +25,7 @@ import (
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/requestbinding"
 )
 
-func bindingSetup(t *testing.T) (evidenceFixture, string, string) {
+func bindingSetup(t *testing.T, snapshots ...string) (evidenceFixture, string, string) {
 	t.Helper()
 	f := evidenceSetup(t)
 	ctx := context.Background()
@@ -57,7 +57,11 @@ func bindingSetup(t *testing.T) (evidenceFixture, string, string) {
 	applyEmployerBindings(t, f.pool, f.runtime, f.operator)
 	evidenceExec(t, f.pool, `INSERT INTO evt_employer_config(employer_id) VALUES('binding-employer')`)
 	request := uuid.NewString()
-	evidenceExec(t, f.pool, `INSERT INTO evt_requests(request_id,candidate_personid,employer_id,status,claim_snapshot) VALUES($1,$2,'binding-employer','ATTESTATION_PENDING','{"title":"Engineer"}')`, request, f.principal)
+	snapshot := `{"title":"Engineer"}`
+	if len(snapshots) > 0 {
+		snapshot = snapshots[0]
+	}
+	evidenceExec(t, f.pool, `INSERT INTO evt_requests(request_id,candidate_personid,employer_id,status,claim_snapshot) VALUES($1,$2,'binding-employer','ATTESTATION_PENDING',$3::jsonb)`, request, f.principal, snapshot)
 	grantEmployer(t, f.pool, f.other, "binding-employer")
 	evidenceExec(t, f.pool, `GRANT SELECT,UPDATE ON evt_requests TO `+pgx.Identifier{f.runtime}.Sanitize())
 	binding := f.adminString(t, `SELECT bind_request_evidence($1,'case-a',ARRAY['employment.company_and_dates'],'fixture','approved bound request')`, request)
