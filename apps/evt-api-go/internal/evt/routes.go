@@ -74,6 +74,7 @@ func (m *Module) Register(v1 *gin.RouterGroup) {
 		hr.GET("/requests/:request_id", m.Employer.Get)
 
 		hr.POST("/requests/:request_id/attest", m.Employer.Attest)
+ hr.POST("/requests/:request_id/evidence-eligibility", m.Employer.EvidenceEligibility)
 	}
 
 	// -----------------------------

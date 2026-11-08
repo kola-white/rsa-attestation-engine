@@ -100,6 +100,21 @@ func (s *Server) HandleEvidenceChecks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "private, no-store")
 	writeJSON(w, 200, map[string]any{"items": data})
 }
+
+// Only schemas with 000018 have request-bound contexts. A pre-000018 schema
+// contains no adoptable bindings; existing standalone review remains supported.
+func bindingContext(ctx context.Context, tx *sql.Tx, principal, caseID, checkID string) (json.RawMessage, error) {
+	var present bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE c.relname='request_case_bindings' AND n.nspname=ANY(pg_catalog.current_schemas(false)) AND n.nspname<>'pg_catalog' AND n.nspname NOT LIKE 'pg_temp%')`).Scan(&present); err != nil {
+		return nil, err
+	}
+	if !present {
+		return nil, nil
+	}
+	var raw []byte
+	err := tx.QueryRowContext(ctx, `SELECT request_evidence_context($1,$2,$3)`, principal, caseID, checkID).Scan(&raw)
+	return raw, err
+}
 func (s *Server) HandleEvidenceList(w http.ResponseWriter, r *http.Request) {
 	if !evidenceReviewScope(w, r) {
 		return
@@ -115,12 +130,47 @@ func (s *Server) HandleEvidenceList(w http.ResponseWriter, r *http.Request) {
 		evidenceReviewError(w, err)
 		return
 	}
+	context, err := bindingContext(ctx, tx, principal, r.PathValue("caseId"), r.PathValue("checkId"))
+	if err != nil {
+		evidenceReviewError(w, err)
+		return
+	}
+	if len(context) > 0 {
+		var policy struct {
+			ContextValid  bool `json:"contextValid"`
+			RequiredCheck bool `json:"requiredCheck"`
+		}
+		if err = json.Unmarshal(context, &policy); err != nil {
+			evidenceReviewError(w, err)
+			return
+		}
+		if !policy.ContextValid || !policy.RequiredCheck {
+			var rows []map[string]any
+			if err = json.Unmarshal(data, &rows); err != nil {
+				evidenceReviewError(w, err)
+				return
+			}
+			for _, row := range rows {
+				row["canReview"] = false
+				row["canApprove"] = false
+			}
+			data, err = json.Marshal(rows)
+			if err != nil {
+				evidenceReviewError(w, err)
+				return
+			}
+		}
+	}
 	if err := tx.Commit(); err != nil {
 		evidenceReviewError(w, err)
 		return
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
-	writeJSON(w, 200, map[string]any{"caseId": r.PathValue("caseId"), "checkId": r.PathValue("checkId"), "evidence": data})
+	response := map[string]any{"caseId": r.PathValue("caseId"), "checkId": r.PathValue("checkId"), "evidence": data}
+	if len(context) > 0 {
+		response["binding"] = context
+	}
+	writeJSON(w, 200, response)
 }
 func (s *Server) HandleEvidenceDownload(w http.ResponseWriter, r *http.Request) {
 	if !evidenceReviewScope(w, r) {
@@ -180,8 +230,10 @@ func (s *Server) HandleEvidenceReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input struct {
-		Decision string `json:"decision"`
-		Reason   string `json:"reason"`
+		Decision    string `json:"decision"`
+		Reason      string `json:"reason"`
+		BindingID   string `json:"bindingId"`
+		ClaimDigest string `json:"claimDigest"`
 	}
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeErr(w, 400, "invalid_review")
@@ -199,7 +251,16 @@ func (s *Server) HandleEvidenceReview(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	defer tx.Rollback()
 	var result json.RawMessage
-	err = tx.QueryRowContext(ctx, `SELECT record_evidence_review($1,$2,$3,$4,$5,$6)`, principal, r.PathValue("caseId"), r.PathValue("checkId"), id.String(), input.Decision, input.Reason).Scan(&result)
+	if input.BindingID != "" || input.ClaimDigest != "" {
+		bindingID, parseErr := uuid.Parse(input.BindingID)
+		if parseErr != nil || len(input.ClaimDigest) != 64 {
+			writeErr(w, 400, "invalid_review")
+			return
+		}
+		err = tx.QueryRowContext(ctx, `SELECT record_request_evidence_review($1,$2,$3,$4,$5,$6,$7,$8)`, principal, r.PathValue("caseId"), r.PathValue("checkId"), id.String(), input.Decision, input.Reason, bindingID.String(), input.ClaimDigest).Scan(&result)
+	} else {
+		err = tx.QueryRowContext(ctx, `SELECT record_evidence_review($1,$2,$3,$4,$5,$6)`, principal, r.PathValue("caseId"), r.PathValue("checkId"), id.String(), input.Decision, input.Reason).Scan(&result)
+	}
 	if err != nil {
 		evidenceReviewError(w, err)
 		return
