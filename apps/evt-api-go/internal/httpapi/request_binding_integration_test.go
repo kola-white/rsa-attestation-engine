@@ -2,12 +2,18 @@ package httpapi
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/auth"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/authority"
 	evtdb "github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db"
+	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/evt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -121,6 +127,15 @@ func TestRequestBindingManifestAndUnavailableAuthority(t *testing.T) {
 	var scan string
 	if err := f.pool.QueryRow(context.Background(), `SELECT scan_status FROM evidence_scan_jobs`).Scan(&scan); err != nil || scan != "PENDING" {
 		t.Fatal(scan, err)
+	}
+	var historicalGrant string
+	if err := f.pool.QueryRow(context.Background(), `SELECT grant_id FROM case_evidence_review_grants WHERE principal_id=$1 AND case_id='case-a' AND revoked_at IS NULL`, f.other).Scan(&historicalGrant); err != nil {
+		t.Fatal(err)
+	}
+	f.admin(t, `SELECT revoke_evidence_review($1,'fixture','access ended; history retained')`, historicalGrant)
+	historical := prepareBinding(t, f, request, nil)
+	if !historical.EvidenceReady || historical.ManifestID != result.ManifestID {
+		t.Fatal("access revocation erased historical approval", historical)
 	}
 	f.admin(t, `SELECT revoke_request_evidence_binding($1,'fixture','withdrawn')`, binding)
 	if r := prepareBinding(t, f, request, nil); r.EvidenceReady || r.Eligible || r.Reason != "BINDING_REVOKED" {
@@ -622,4 +637,42 @@ func TestRequestBindingMigrationAtomicFailure(t *testing.T) {
 	f.adminString(t, `SELECT grant_evidence_review($1,'case-a','fixture','standalone')`, f.other)
 	_, _, path := reviewPaths(init)
 	evidenceStatus(t, reviewRequest(f, f.other, "POST", path, `{"decision":"APPROVED","reason":"still standalone"}`), 200)
+}
+
+func TestRequestBindingUnboundLegacyRemainsFunctional(t *testing.T) {
+	f, _, _ := bindingSetup(t)
+	ctx := context.Background()
+	key, err := rsa.GenerateKey(rand.Reader, 3072)
+	if err != nil {
+		t.Fatal(err)
+	}
+	filename := filepath.Join(t.TempDir(), "binding-unbound-fixture.pem")
+	if err = os.WriteFile(filename, pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}), 0600); err != nil {
+		t.Fatal(err)
+	}
+	signer, err := evt.NewAttestationSignerFromPEMPath(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := uuid.NewString()
+	evidenceExec(t, f.pool, `INSERT INTO evt_requests(request_id,candidate_personid,employer_id,status) VALUES($1,$2,'binding-employer','ATTESTATION_PENDING')`, request, f.principal)
+	evidenceExec(t, f.pool, `GRANT INSERT ON evt_request_events TO `+pgx.Identifier{f.runtime}.Sanitize())
+	pool := bindingRuntimePool(t, f)
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	repo := &evt.Repo{Signer: signer}
+	result, err := repo.EmployerAttestServerSigned(ctx, tx, request, "binding-employer", f.other, "FULL_MATCH", json.RawMessage(`{"synthetic":true}`))
+	if err != nil || !result.AttestationPresent || result.Status != "ATTESTED" {
+		t.Fatal(result, err)
+	}
+	if err = tx.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var bound bool
+	if err = f.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM request_case_bindings WHERE request_id=$1)`, request).Scan(&bound); err != nil || bound {
+		t.Fatal("legacy path invented a binding", err)
+	}
 }
