@@ -25,6 +25,16 @@ BEGIN
  FOR item IN EXECUTE pg_catalog.format('SELECT grant_id FROM %I.case_evidence_review_grants WHERE case_id=$1 AND revoked_at IS NULL FOR UPDATE',s) USING p_case LOOP
   EXECUTE pg_catalog.format('SELECT %I.revoke_evidence_review($1,$2,$3)',s) USING item.grant_id,p_actor,marker;
  END LOOP;
+ -- A bound case must never become eligible again after destructive deletion.
+ IF pg_catalog.to_regclass(pg_catalog.format('%I.request_case_bindings',s)) IS NOT NULL THEN
+  SELECT * INTO item FROM pg_catalog.pg_class WHERE oid=pg_catalog.to_regclass(pg_catalog.format('%I.request_case_bindings',s));
+  IF item.relowner<>current_user::regrole OR item.relrowsecurity OR item.relforcerowsecurity THEN
+   RAISE EXCEPTION 'trusted binding owner required' USING ERRCODE='42501';
+  END IF;
+  FOR item IN EXECUTE pg_catalog.format('SELECT binding_id FROM %I.request_case_bindings WHERE case_id=$1 AND revoked_at IS NULL FOR UPDATE',s) USING p_case LOOP
+   EXECUTE pg_catalog.format('SELECT %I.revoke_request_evidence_binding($1,$2,$3)',s) USING item.binding_id,p_actor,marker;
+  END LOOP;
+ END IF;
  EXECUTE pg_catalog.format('SELECT %I.set_evidence_resource_state($1,NULL,$2,$3,$4)',s) USING p_case,'DELETION_SCHEDULED',p_actor,marker;
 END
 $freeze$;

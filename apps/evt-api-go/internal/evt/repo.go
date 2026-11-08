@@ -10,6 +10,7 @@ import (
 	"log"
 	"github.com/jackc/pgx/v5"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/employeraccess"
+"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/requestbinding"
 
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db"
 )
@@ -370,6 +371,13 @@ func (r *Repo) EmployerAttestServerSigned(
 		if responseType != "FULL_MATCH" && responseType != "PARTIAL_MATCH" {
 			// Anything else trying to become ATTESTED is invalid
 			return AttestResult{}, db.ErrConflict
+		}
+		bound, err := requestbinding.IsBound(ctx, tx, employerHRPersonID, requestID, employerID)
+		if err != nil {
+			return AttestResult{}, err
+		}
+		if bound {
+			return AttestResult{}, requestbinding.ErrSigningDeferred
 		}
 		if r.Signer == nil {
 			return AttestResult{}, errSignerNotConfigured()

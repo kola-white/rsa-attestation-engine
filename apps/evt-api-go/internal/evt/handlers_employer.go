@@ -2,6 +2,7 @@ package evt
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/auth"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db"
+	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/requestbinding"
 )
 
 type EmployerHandlers struct {
@@ -124,6 +126,10 @@ func (h *EmployerHandlers) Attest(c *gin.Context) {
 			requestID, req.EmployerID, hrPersonID, req.ResponseType, err, err,
 		)
 
+		if errors.Is(err, requestbinding.ErrSigningDeferred) {
+			c.JSON(http.StatusConflict, gin.H{"error": "evidence_backed_signing_not_enabled"})
+			return
+		}
 		if err == db.ErrNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not_found"})
 			return

@@ -43,12 +43,18 @@ See [review contract](evidence-review.md), [client integration](evidence-client.
    employer selector (`emp_demo_001`) for its separate employment queue; evidence
    selection is independent. A real employer queue/attestation client must use
    authoritative employer assignments before that separate workflow is offered.
-3. Before advertising **evidence-backed issued claims**, decide the explicit
-   persisted case/check-to-employment-request relationship and which independently
-   reviewed outcomes permit issuance. No such relationship is established in this
-   slice. Upload permission, reviewer approval and HR/employer assignments are
-   separate permissions. Do not infer a link or advertise received evidence as a
-   verified claim. Private collection and manual review can be piloted separately.
+3. **The binding/eligibility policy is owner-approved.** One immutable operator-bound
+   request/case, explicit required checks, canonical request subject/employer and
+   frozen claim context; independent contextual approval; no adoption/reuse; current
+   ACTIVE authority for issuer **https://cvera.app**, employer and employment.role.
+   [Binding implementation](request-evidence-binding.md) is locally verified on its
+   feature branch, not yet deployed. Production authority is intentionally
+   unconfigured and eligibility therefore fails closed; no authority privileges
+   or live signing are enabled. Bound requests cannot bypass this through legacy
+   attestation. Upload, review, employer access, issuer authority and final verifier
+   reliance remain separate. The linked document lists the exact next issuance/
+   independent-verification work rather than treating a preparation receipt as a
+   signed, trusted claim.
 4. Before advertising working real-user current-key attestations, obtain the
    separately deferred issuance authorization and perform the prepared normal-API
    signature/tamper acceptance. Signature validity must remain distinct from
