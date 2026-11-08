@@ -1,86 +1,75 @@
-# First usable Cvera MVP: minimum remaining API work
+# First usable Cvera MVP: current readiness
 
-Assessment based on the routes and clients at the accepted PR #134 release, not
-a new repository-wide security audit. Weekend 2 remains closed with its explicit
-live-current-key attestation proof deferral. Evidence completion is released at `c5fdb5a`: migration 000016, fresh backup restore,
-CI/deployment and authenticated synthetic hashing/deduplication/private-storage
-acceptance passed. See [release evidence](../operations/evidence-completion-lifecycle.md#production-acceptance--2026-11-07).
+Weekend 2 remains closed with the owner's explicit live-current-key attestation
+proof deferral. Completion at c5fdb5a passed production hashing, deduplication,
+private storage and revocation acceptance. The next evidence pilot is integrated
+and deployed as **6e7293e75bf0577c1ce9105744249c718fe65361** (PR #136, including focused
+PRs #137 and #138). This assessment distinguishes implementation/delivery from
+positive authenticated acceptance; it is not a new security audit.
 
-## Implementation progress after the accepted completion release
+## Implemented evidence pilot
 
-The following are implemented on focused branches, **not deployed or accepted in
-production**:
-
-| Slice | Review | Remaining gate |
+| Slice | Verified evidence | Remaining gate |
 |---|---|---|
-| Separate reviewer grants, private listing/download, attributable manual decisions, no self-review; scan remains PENDING | [PR #136](https://github.com/kola-white/rsa-attestation-engine/pull/136), `docs/api/evidence-review.md` | Operator-approved 000017/bindings and two-principal synthetic acceptance |
-| Expo real assigned case/check selection, PUT followed by completion, safe same-session retry, explicit pending display | [PR #137](https://github.com/kola-white/rsa-attestation-engine/pull/137), `docs/api/evidence-client.md` | Backend discovery release, normal client distribution and device acceptance |
-| Owner-run scoped deletion, grant freeze/revocation, URL-expiry wait, confirmed object absence and metadata redaction | [PR #138](https://github.com/kola-white/rsa-attestation-engine/pull/138), `docs/operations/evidence-retention.md` | Review/release; any production deletion needs separate per-case authority |
+| Explicit reviewer grants, private listing/download, attributable manual APPROVED/REJECTED, no self-review | Full PostgreSQL authorization/locking/ACL regressions; owner-confirmed 000017 and narrow existing-role bindings after fresh actual backup restore/rehearsal | API deployed/healthy at 6e7293e; anonymous denial and positive two-account HTTP acceptance PASS |
+| Expo real assigned case/check selection, PUT followed by completion, safe same-session retry, awaiting-review display | Seven transport test groups, full Node CI, Expo typecheck/web export; existing Production web deployment for 6e7293e and public client markers confirmed | Actual authenticated file-picker and native device acceptance |
+| Bounded owner-run case deletion | Local owner-only freeze/revoke/expiry/manifest/redaction and offline partial-failure/resume/storage tests; runbook and dry-run-default tool committed | No production deletion performed; each destructive run needs separate per-case authority |
+| Live issuance acceptance preparation | Existing authorized candidate/assigned-employer path and exact legacy public-key/tamper proof documented | Production signing remains owner-deferred, not passed |
 
-Full local Go tests/race/vet and client tests/typecheck/web export pass. Local
-verification does not stand in for the above production/device gates. New schema,
-credentials, production deletion and signing have not been executed by this work.
+Manual review does **not** mark scans CLEAN: received evidence remains PENDING
+until an explicit trusted scanning process exists. Review grants are independent
+of upload grants, HR roles and uploader ownership. No implicit assignment or
+case/employer/request association is created. Automatic scanning, cleanup workers
+and self-service administration are not required for a small manually operated pilot.
 
-[Live issuance acceptance preparation](../operations/live-issuance-acceptance.md)
-identifies the normal authorized request path and public-key proof; it preserves
-the owner's live-signing deferral. One product decision remains for a genuinely
-evidence-backed issuance workflow: the explicit persisted case/check-to-request
-relationship and the review outcome that permits issuance. It is **not** implied
-by separate upload/review or employer grants. Private evidence collection and
-bounded manual review can be piloted independently; issued claims must not be
-advertised as evidence-backed before that decision and enforcement exist.
+See [review contract](evidence-review.md), [client integration](evidence-client.md),
+[release evidence](../operations/evidence-review-release.md),
+[retention procedure](../operations/evidence-retention.md) and
+[deferred issuance preparation](../operations/live-issuance-acceptance.md).
 
-The original accepted-release gap assessment below remains the launch checklist;
-its statements about the client/API describe production c5fdb5a, not these branches.
+## Minimum remaining acceptance and product decisions
 
-## Required for a usable evidence-backed verification pilot
+1. **API review acceptance is complete.** Two normal independent accounts passed
+   explicit grant separation, private canonical-byte download, unauthorized/wrong
+   case/check denial, no self-review, attributable exact retry/conflict, revocation
+   and cleanup on deployed 6e7293e. Manual approval left scan status PENDING. One
+   synthetic object was uploaded; fixture grants were revoked and case closed.
+   No new identity, attestation, credential change or destructive deletion occurred.
+2. Exercise a harmless synthetic file through the actual client picker with an
+   explicitly assigned case/check, receipt, retry and revoked access. Web asset
+   delivery/export is not proof of a native file upload. Existing EAS metadata
+   defines a development client only; no production mobile distribution or new
+   signing credential is assumed. The existing HR screen still has a demonstration
+   employer selector (`emp_demo_001`) for its separate employment queue; evidence
+   selection is independent. A real employer queue/attestation client must use
+   authoritative employer assignments before that separate workflow is offered.
+3. Before advertising **evidence-backed issued claims**, decide the explicit
+   persisted case/check-to-employment-request relationship and which independently
+   reviewed outcomes permit issuance. No such relationship is established in this
+   slice. Upload permission, reviewer approval and HR/employer assignments are
+   separate permissions. Do not infer a link or advertise received evidence as a
+   verified claim. Private collection and manual review can be piloted separately.
+4. Before advertising working real-user current-key attestations, obtain the
+   separately deferred issuance authorization and perform the prepared normal-API
+   signature/tamper acceptance. Signature validity must remain distinct from
+   unsupported/unconfigured legacy trust, status and expiry outcomes. Existing
+   internal trust-recording and recruiter-consumption routes are not independent
+   cryptographic verification. This does not reopen Weekend 2 closure.
+5. For sensitive pilot documents, assign the owner-operated deletion request path
+   and communicate the actual request-driven retention policy. The bounded tool
+   verifies registered and case-prefixed current-object deletion, not historical
+   versions/backups or unregistered legacy flat-key orphans. Do not promise an
+   automatic retention duration or comprehensive erasure that is not enforced.
 
-1. **Connect the existing client to completion.** The HR upload helper in
-   `apps/evt-ui-expo/screens/HRReviewScreen.SettingsStyle.tsx` still intentionally
-   stops after PUT, describes completion as 501, and uses placeholder case/check
-   identifiers. It must use the real operator-provisioned pair and returned session/
-   upload IDs, call completion after PUT, and display pending/failure/retry state.
-   An API endpoint alone does not make the current client finish an upload.
-2. **Provide one trusted evidence review path.** The API currently has no authorized
-   evidence listing/download or bounded review transition; scan jobs remain pending.
-   For a small pilot, explicit operator-controlled manual review is a smaller next
-   step than a new scanner platform. Choose a reviewed status policy and access
-   boundary before allowing review/download or treating evidence as verified.
-   Do not let uploaders or the runtime mark arbitrary evidence CLEAN, and do not
-   expose pending files publicly. Keep the existing employment attestation workflow
-   separate until an explicit product relationship is designed; no case-to-request
-   association may be inferred.
-3. **Prove the product's issuance-to-verification path once.** Candidate request
-   create/submit, employer-assigned review/attest and recruiter consumption routes
-   already exist in `internal/evt/routes.go`. Positive production current-key signing
-   and verification was deliberately deferred because no current-key attestation
-   existed and new issuance was not authorized. Before advertising working real-user
-   attestations, run one specifically authorized controlled issuance/verification
-   acceptance and state the existing legacy verifier's trust/status/expiry limits.
-   This does not retroactively reopen or mislabel the Weekend 2 acceptance decision.
-4. **Define a workable evidence retention/deletion operation before collecting real
-   sensitive documents.** Completion currently retains private staging, accepted and
-   potentially orphaned objects without an implemented deletion worker. A small,
-   bounded operator procedure can be enough for a pilot; a distributed cleanup
-   platform is unnecessary. Record what is retained, how deletion is requested and
-   confirmed, and avoid claiming a retention SLA the code does not enforce.
-
-Normal password login/exchange and logout have already passed production acceptance.
-Explicit HR/employer and principal/case grants can be provisioned by the owner for a
-small pilot using the existing bounded functions. Self-service administration is
-not required to prove the first workflow. Each real user's access still needs an
-explicit, attributable assignment; never grant blanket access to ease onboarding.
+Normal password login/exchange/logout and completion already passed production
+acceptance. Explicit principal/case and HR/employer grants can support a small
+pilot; blanket permissions and self-service administration are unnecessary.
 
 ## Follow-on improvements
 
-- Automatic malware-scan consumption and retries after a trusted worker policy is
-  chosen; preserve PENDING until that process exists.
-- Automated expiry/orphan cleanup after the initial retention operation is defined.
-- Self-service case/grant administration, pagination and richer evidence lifecycle UX
-  once pilot volume justifies them.
-- Further credential formats, providers, HSMs, dashboards or infrastructure expansion
-  are outside the minimum MVP and are not prerequisites for this slice.
-
-If the initial launch is only private evidence collection, rather than evidence-backed
-claims issuance, review/issuance can remain explicitly unavailable. Real-user claims
-must not be advertised as verified based only on RECEIVED/PENDING uploads.
+- Trusted automated malware-scan consumption/retries after its policy is chosen.
+- Scheduled expiry/orphan cleanup after the manual retention policy is exercised.
+- Review correction workflows, pagination and richer client review UX when pilot
+  volume justifies them; the bounded API records one final decision per upload.
+- Self-service administration, additional credential formats/providers, HSMs,
+  dashboards and nonessential infrastructure remain outside this MVP slice.

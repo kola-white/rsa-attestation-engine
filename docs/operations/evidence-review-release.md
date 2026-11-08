@@ -141,3 +141,43 @@ corrupt completion stopping before review. It revokes fixture grants, closes the
 case and attempts both API and Kratos logout for each account. It does not create
 identities, delete evidence, sign claims or change scan status. STOP retains a
 private exact-fixture intent for inspection; do not blindly rerun or print it.
+
+## Deployment evidence — 2026-11-08 UTC
+
+PRs #137 and #138 were squash-integrated into the feature branch first, without
+main deployments. PR #136 was then squash-merged as
+**6e7293e75bf0577c1ce9105744249c718fe65361** after final head CI passed and the
+owner-confirmed 000017 production compatibility gate. The merged main tree was
+compared with the reviewed integrated tree and matched exactly.
+
+[Main CI/deployment run 42455187085](https://github.com/kola-white/rsa-attestation-engine/actions/runs/42455187085)
+passed, including Go/PostgreSQL/Node tests, release build/vulnerability checks and
+exact-revision API deployment. Publish run 42455186874 also passed. Public health
+returned 200, `/version` reported 6e7293e, and JWKS retained the single expected
+issuer-prod-2026-10 RS256 key. All four new evidence routes returned 401 without
+credentials. These probes changed no application records or grants.
+
+The existing Expo Production deployment for this same commit succeeded. Public
+mvp.cvera.app assets contain real assignment discovery, completion retry, assigned
+case selection and awaiting-review display. This establishes code delivery, not
+authenticated picker/native-device acceptance. No new mobile credentials/build or
+infrastructure were created. PR #131 remains untouched.
+
+The separate authenticated console smoke returned **PASS** on deployed 6e7293e:
+
+- Two different existing accounts completed normal login/exchange.
+- Explicit grant separation and unauthorized/wrong case/check denials passed.
+- Self-review was denied even with a separate review grant.
+- Private attachment bytes matched the canonical uploaded synthetic bytes.
+- Independent APPROVED review recorded canonical attribution; exact retry was
+  idempotent and conflicting final review was denied.
+- Committed review revocation denied subsequent access/decisions.
+- Scan status remained **PENDING** after manual approval.
+- One synthetic object was uploaded; fixture grants were revoked and case closed.
+  No new identities/attestations, credential changes, real-user evidence access or
+  destructive deletion occurred. No credentials, signed URLs or contents printed.
+
+The exact fixture/result record remains private on the Droplet. This positive
+HTTP acceptance is distinct from local tests, anonymous denials and deployment
+readiness. Actual authenticated browser/native file-picker acceptance remains
+outstanding. The owner-deferred live-signing decision is unchanged.
