@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/auth"
+	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/storage"
 )
 
 type evidenceStore interface {
@@ -236,7 +237,7 @@ func (s *Server) HandleEvidenceComplete(w http.ResponseWriter, r *http.Request) 
 		}
 		for i := range files {
 			f := &files[i]
-			f.sealed = "sealed-evidence/" + uuid.NewString()
+			f.sealed = storage.BuildSealedEvidenceKey(c, check, f.id, uuid.NewString())
 			if err = s.s3.SealEvidence(ctx, f.sealed, f.mime, f.data); err != nil {
 				writeErr(w, 503, "storage_unavailable")
 				return

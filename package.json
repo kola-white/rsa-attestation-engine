@@ -13,7 +13,8 @@
     "typecheck:expo": "tsc -p apps/evt-ui-expo/tsconfig.json --noEmit",
     "sign-file": "node dist/pkg/issuer/sign-file.js",
     "verify": "node dist/pkg/verification/run-verify.js",
-    "test:ci": "npm run validate:evt:schema && npm run validate:evt:vectors:valid && npm run validate:evt:vectors:invalid"
+    "test:ci": "npm run validate:evt:schema && npm run validate:evt:vectors:valid && npm run validate:evt:vectors:invalid && npm run test:evidence-client",
+    "test:evidence-client": "tsx --test tests/evidence-upload-lifecycle.test.ts"
   },
   "keywords": [],
   "author": "Nicholas Whitehouse",

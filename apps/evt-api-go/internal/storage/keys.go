@@ -15,7 +15,6 @@ func BuildStorageKey(caseID, checkID, uploadID, originalName string) string {
 	return path.Join("cases", caseID, "checks", checkID, "evidence", uploadID, base)
 }
 
-
 func sanitizeFileName(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -28,4 +27,9 @@ func sanitizeFileName(s string) string {
 	return s
 }
 
-
+// BuildSealedEvidenceKey keeps failed-write objects attributable to their case.
+// The nonce is server-generated and this namespace is never presigned for PUT.
+// Inputs come from the persisted validated case/check and UUID upload identity.
+func BuildSealedEvidenceKey(caseID, checkID, uploadID, nonce string) string {
+	return path.Join("sealed-evidence", caseID, checkID, uploadID, nonce)
+}

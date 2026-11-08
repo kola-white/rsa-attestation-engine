@@ -1,11 +1,18 @@
 import { RefreshControl, useColorScheme } from "react-native";
 import React, { useLayoutEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/auth/AuthContext";
+import {
+  uploadEvidence, completeEvidence, listEvidenceChecks,
+  EvidenceCompletionPending, EvidenceRequestError,
+  MAX_EVIDENCE_BYTES, EVIDENCE_MIME_TYPES,
+  type EvidenceScope, type EvidenceCheck, type EvidenceReceipt, type CompletionTicket,
+} from "@/src/api/evidence";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { AppStackParamList } from "@/src/navigation/MainAppNavigator";
 import {
   View,
+  Modal,
   Text,
   ScrollView,
   Pressable,
@@ -95,27 +102,10 @@ function formatRelativeOrDate(iso: string): string {
   return d.toLocaleString();
 }
 
-type EvidenceInitResponse = {
-  caseId: string;
-  checkId: string;
-  expiresAt: string;
-  uploads: Array<{
-    name: string;
-    mimeType: string;
-    size: number;
-    storageKey: string;
-    method: "PUT";
-    url: string;
-    headers: Record<string, string>;
-  }>;
-};
-
 type UploadState =
-  | { status: "idle" }
-  | { status: "picking" }
-  | { status: "initing" }
-  | { status: "uploading" }
-  | { status: "done"; storageKey: string }
+  | { status: "idle" | "picking" | "initing" | "uploading" | "completing" }
+  | { status: "done"; receipt: EvidenceReceipt }
+  | { status: "completion_pending"; ticket: CompletionTicket; digest: string; ownerId: string }
   | { status: "error"; message: string };
 
 type EvidenceFile = {
@@ -125,31 +115,9 @@ type EvidenceFile = {
   size: number; // bytes
 };
 
-// Demo constants
-const CASE_ID = "EVT-10324";
-const CHECK_ID = "employment.company_and_dates";
-
-// Must be reachable from your phone (NOT 127.0.0.1).
 const API_BASE_URL = process.env.EXPO_PUBLIC_EVT_API_BASE_URL;
-console.log("API_BASE_URL runtime =", process.env.EXPO_PUBLIC_EVT_API_BASE_URL);
-
-// Policy (client-enforced to avoid wasted init/presign)
-const MAX_FILE_BYTES = 5_000_000 as const;
-const ALLOWED_MIME_TYPES = [
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-] as const;
-
-function displayFileNameFromKey(key: string): string {
-  const parts = key.split("/");
-  return parts[parts.length - 1] ?? key;
-}
-
-function shortKey(key: string, head = 22, tail = 10): string {
-  if (key.length <= head + tail + 3) return key;
-  return `${key.slice(0, head)}…${key.slice(-tail)}`;
-}
+const MAX_FILE_BYTES = MAX_EVIDENCE_BYTES;
+const ALLOWED_MIME_TYPES = EVIDENCE_MIME_TYPES;
 
 function inferExtensionFromMime(
   mimeType: EvidenceFile["mimeType"]
@@ -197,6 +165,11 @@ function ensureFileUri(uri: string): string {
 }
 
 async function getFileSizeBytes(uri: string): Promise<number> {
+  if (Platform.OS === "web") {
+    const blob = await (await fetch(uri)).blob();
+    if (!blob.size) throw new Error("Missing or invalid file size.");
+    return blob.size;
+  }
   const info = await FileSystem.getInfoAsync(uri);
   if (!info.exists) throw new Error("File does not exist at provided URI.");
   const size = (info as any).size;
@@ -274,12 +247,9 @@ function arrayBufferToHex(buffer: ArrayBuffer): string {
  * - Used strictly for UX hard dedupe per Evidence Hashing Contract.
  */
 async function computeEvidenceDigestHex(uri: string): Promise<string> {
-  const base64 = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-
-  // TypedArray that native expo-crypto expects
-  const bytes = base64ToUint8Array(base64);
+  const bytes = Platform.OS === "web"
+    ? new Uint8Array(await (await fetch(uri)).arrayBuffer())
+    : base64ToUint8Array(await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 }));
 
   // Runtime needs a TypedArray; TS types are too picky about BufferSource,
   // so we bypass them with a cast on Crypto and leave `bytes` as-is.
@@ -355,7 +325,7 @@ async function normalizeEvidenceFile(input: {
   // ImagePicker generally gives file:// as well. If we ever see non-file://,
   // we copy it deterministically into cache.
   let uploadUri = rawUri;
-  if (!uploadUri.startsWith("file://")) {
+  if (Platform.OS !== "web" && !uploadUri.startsWith("file://")) {
     const dest = `${FileSystem.cacheDirectory}evidence-${Date.now()}-${finalName}`;
     await FileSystem.copyAsync({ from: uploadUri, to: dest });
     uploadUri = dest;
@@ -462,77 +432,18 @@ async function pickDocumentEvidence(): Promise<EvidenceFile | null> {
   return normalized;
 }
 
-/**
- * Reuses your current init+PUT logic exactly:
- * - POST evidence:init with {files:[{name,mimeType,size}]}
- * - PUT to initJson.uploads[0].url with initJson.uploads[0].headers EXACTLY
- * - DOES NOT call evidence:complete (server returns 501 today)
- */
-async function uploadViaInitAndPut(
-  evidence: EvidenceFile
-): Promise<{ storageKey: string }> {
-  if (!API_BASE_URL) {
-    throw new Error(
-      "Missing EXPO_PUBLIC_EVT_API_BASE_URL (device cannot reach 127.0.0.1)."
-    );
+// This storage request uses only the server-required headers, never the API token.
+async function putEvidenceFile(url: string, uri: string, headers: Record<string, string>): Promise<{ status: number }> {
+  if (Platform.OS === "web") {
+    const blob = await (await fetch(uri)).blob();
+    const response = await fetch(url, { method: "PUT", headers, body: blob });
+    return { status: response.status };
   }
-
-  // Extra defensive checks (deterministic policy)
-  if (!ALLOWED_MIME_TYPES.includes(evidence.mimeType as any)) {
-    throw new Error("Unsupported file type. Use PDF, JPG, or PNG.");
-  }
-  if (!evidence.size || evidence.size <= 0)
-    throw new Error("Missing or invalid file size.");
-  if (evidence.size > MAX_FILE_BYTES) {
-    throw new Error(
-      `File is too large. Max is ${Math.floor(MAX_FILE_BYTES / 1_000_000)}MB.`
-    );
-  }
-
-  const initUrl = `${API_BASE_URL}/v1/cases/${encodeURIComponent(
-    CASE_ID
-  )}/checks/${encodeURIComponent(CHECK_ID)}/evidence:init`;
-
-  const initRes = await fetch(initUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      caseId: CASE_ID, // keep as-is (your server ignores/accepts)
-      checkId: CHECK_ID, // keep as-is (your server ignores/accepts)
-      files: [
-        { name: evidence.name, mimeType: evidence.mimeType, size: evidence.size },
-      ],
-    }),
-  });
-
-  if (!initRes.ok) {
-    const text = await initRes.text();
-    throw new Error(`Init failed (${initRes.status}): ${text}`);
-  }
-
-  const initJson = (await initRes.json()) as EvidenceInitResponse;
-  console.log("evidence:init response =", JSON.stringify(initJson, null, 2));
-
-  const upload = initJson.uploads?.[0];
-  if (!upload?.url || !upload?.headers || !upload.storageKey) {
-    throw new Error("Init response missing upload url/headers/storageKey.");
-  }
-
-  // IMPORTANT CONTRACT ENFORCEMENT:
-  // PUT must set required headers EXACTLY.
-  // Your legacy response uses `headers` (not `requiredHeaders`).
-  const putRes = await FileSystem.uploadAsync(upload.url, evidence.uri, {
-    httpMethod: "PUT",
-    headers: upload.headers,
+  const response = await FileSystem.uploadAsync(url, uri, {
+    httpMethod: "PUT", headers,
     uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
   });
-
-  if (putRes.status !== 200 && putRes.status !== 204) {
-    throw new Error(`PUT failed (${putRes.status}). Body: ${putRes.body ?? ""}`);
-  }
-
-  // evidence:complete intentionally disabled until server implemented.
-  return { storageKey: upload.storageKey };
+  return { status: response.status };
 }
 
 export const HRReviewScreenSettingsStyle = () => {
@@ -540,144 +451,118 @@ export const HRReviewScreenSettingsStyle = () => {
   const isDark = scheme === "dark";
   console.log("[HRReview] render");
   const insets = useSafeAreaInsets();
+  const { logout, accessToken, user } = useAuth();
+  const navigation = useNavigation<HRNav>();
 
   const [uploadState, setUploadState] = useState<UploadState>({
     status: "idle",
   });
 
-  // Session-local set of evidence digests (lowercase hex).
-  // Populated ONLY after a successful upload to avoid blocking retries.
-  const [evidenceDigests, setEvidenceDigests] = useState<string[]>([]);
+  // In-memory UX dedupe is scoped to the chosen case/check and current account.
+  // These digests are never transmitted or used as canonical evidence hashes.
+  const [evidenceDigests, setEvidenceDigests] = useState<Record<string, string[]>>({});
+  const [evidenceScopes, setEvidenceScopes] = useState<EvidenceCheck[]>([]);
+  const [evidenceScope, setEvidenceScope] = useState<EvidenceScope | null>(null);
+  const [scopeLoading, setScopeLoading] = useState(false);
+  const [scopeError, setScopeError] = useState<string | null>(null);
+  const [scopeRefresh, setScopeRefresh] = useState(0);
+  const [scopePickerOpen, setScopePickerOpen] = useState(false);
+  const actorRef = React.useRef(user?.id);
 
-  const canUpload = useMemo(() => {
-    return (
-      uploadState.status !== "picking" &&
-      uploadState.status !== "initing" &&
-      uploadState.status !== "uploading"
-    );
-  }, [uploadState.status]);
+  useLayoutEffect(() => {
+    actorRef.current = user?.id;
+    setEvidenceScopes([]);setEvidenceScope(null);setEvidenceDigests({});
+    setUploadState({ status: "idle" });setScopePickerOpen(false);
+    return () => { actorRef.current = undefined; };
+  }, [user?.id]);
 
-  async function pickAndUploadDocument() {
-    try {
-      if (!API_BASE_URL) {
-        setUploadState({
-          status: "error",
-          message:
-            "Missing EXPO_PUBLIC_EVT_API_BASE_URL (device cannot reach 127.0.0.1).",
-        });
-        return;
-      }
-
-      setUploadState({ status: "picking" });
-
-      const evidence = await pickDocumentEvidence();
-      if (!evidence) {
-        setUploadState({ status: "idle" });
-        return;
-      }
-
-      // Compute client-side digest for hard dedupe (session-local only).
-      setUploadState({ status: "initing" });
-      const digestHex = await computeEvidenceDigestHex(evidence.uri);
-
-      if (evidenceDigests.includes(digestHex)) {
-        // Hard dedupe: do NOT upload, do NOT add second copy.
-        setUploadState({ status: "idle" });
-        Alert.alert(
-          "Already attached",
-          "This file is already attached as evidence. No additional upload needed."
-        );
-        return;
-      }
-
-      const { storageKey } = await uploadViaInitAndPut(evidence);
-
-      // Only record digest after successful upload, so failed uploads can be retried.
-      setEvidenceDigests((prev) => [...prev, digestHex]);
-      setUploadState({ status: "done", storageKey });
-    } catch (err: any) {
-      const msg = String(err?.message ?? err ?? "");
-      const friendly = msg.includes("Network request failed")
-        ? "Cannot reach server. Check Wi-Fi/LAN URL."
-        : msg.toLowerCase().includes("timed out")
-        ? "Request timed out. Check server reachability or try again."
-        : msg;
-
-      setUploadState({ status: "error", message: friendly });
+  useFocusEffect(React.useCallback(() => {
+    let active = true;
+    const owner = user?.id;
+    if (!API_BASE_URL || !accessToken || !owner) {
+      setScopeError("Sign in to load assigned evidence cases.");setScopeLoading(false);
+      return () => { active = false; };
     }
+    setScopeLoading(true);setScopeError(null);
+    void listEvidenceChecks(API_BASE_URL, accessToken).then(rows => {
+      if (!active || actorRef.current !== owner) return;
+      const allowed = rows.filter(row => row.canUpload);
+      setEvidenceScopes(allowed);
+      setEvidenceScope(previous => previous && allowed.some(row => row.caseId === previous.caseId && row.checkId === previous.checkId) ? previous : null);
+    }).catch(() => {
+      if (!active || actorRef.current !== owner) return;
+      setEvidenceScopes([]);setEvidenceScope(null);
+      setScopeError("Assigned evidence cases could not be loaded. Try refreshing.");
+    }).finally(() => {
+      if (active && actorRef.current === owner) setScopeLoading(false);
+    });
+    return () => { active = false; };
+  }, [accessToken, user?.id, scopeRefresh]));
+
+  const uploadBusy = ["picking", "initing", "uploading", "completing", "completion_pending"].includes(uploadState.status);
+  const canUpload = !!accessToken && !!user?.id && !!evidenceScope && !scopeLoading && !uploadBusy;
+
+  function markReceived(receipt: EvidenceReceipt, digest: string, scope: EvidenceScope, owner: string) {
+    if (actorRef.current !== owner) return;
+    const key = JSON.stringify([scope.caseId, scope.checkId]);
+    setEvidenceDigests(previous => ({ ...previous, [key]: [...(previous[key] ?? []), digest] }));
+    setUploadState({ status: "done", receipt });
   }
 
-  async function pickAndUploadPhoto() {
+  async function pickAndReceive(pick: () => Promise<EvidenceFile | null>) {
+    const owner = user?.id, scope = evidenceScope;
+    if (!API_BASE_URL || !accessToken || !owner || !scope) {
+      setUploadState({ status: "error", message: "Choose an assigned evidence case and check first." });return;
+    }
+    let digest: string | null = null;
     try {
-      if (!API_BASE_URL) {
-        setUploadState({
-          status: "error",
-          message:
-            "Missing EXPO_PUBLIC_EVT_API_BASE_URL (device cannot reach 127.0.0.1).",
-        });
-        return;
-      }
-
       setUploadState({ status: "picking" });
-
-      const evidence = await pickPhotoEvidence();
-      if (!evidence) {
-        setUploadState({ status: "idle" });
-        return;
-      }
-
-      // Compute client-side digest for hard dedupe (session-local only).
+      const file = await pick();
+      if (actorRef.current !== owner) return;
+      if (!file) { setUploadState({ status: "idle" });return; }
       setUploadState({ status: "initing" });
-      const digestHex = await computeEvidenceDigestHex(evidence.uri);
-
-      if (evidenceDigests.includes(digestHex)) {
-        // Hard dedupe: do NOT upload, do NOT add second copy.
+      digest = await computeEvidenceDigestHex(file.uri);
+      if (actorRef.current !== owner) return;
+      const key = JSON.stringify([scope.caseId, scope.checkId]);
+      if (evidenceDigests[key]?.includes(digest)) {
         setUploadState({ status: "idle" });
-        Alert.alert(
-          "Already attached",
-          "This file is already attached as evidence. No additional upload needed."
-        );
-        return;
+        Alert.alert("Already received", "This file was already received for this case/check.");return;
       }
+      const receipt = await uploadEvidence({ apiBase: API_BASE_URL, accessToken, scope, file,
+        put: putEvidenceFile,
+        onProgress: status => { if (actorRef.current === owner) setUploadState({ status }); },
+      });
+      markReceived(receipt, digest, scope, owner);
+    } catch (error) {
+      if (actorRef.current !== owner) return;
+      if (error instanceof EvidenceCompletionPending && digest) {
+        setUploadState({ status: "completion_pending", ticket: error.ticket, digest, ownerId: owner });return;
+      }
+      const message = error instanceof EvidenceRequestError ? error.message
+        : error instanceof Error && /^(Unsupported file type|File is too large|Photo access denied)/.test(error.message) ? error.message
+        : "The file could not be uploaded. Check access and try again.";
+      setUploadState({ status: "error", message });
+    }
+  }
+  const pickAndUploadDocument = () => pickAndReceive(pickDocumentEvidence);
+  const pickAndUploadPhoto = () => pickAndReceive(pickPhotoEvidence);
 
-      const { storageKey } = await uploadViaInitAndPut(evidence);
-
-      // Only record digest after successful upload, so failed uploads can be retried.
-      setEvidenceDigests((prev) => [...prev, digestHex]);
-      setUploadState({ status: "done", storageKey });
-    } catch (err: any) {
-      const msg = String(err?.message ?? err ?? "");
-      const friendly = msg.includes("Photo access denied")
-        ? msg
-        : msg.includes("Network request failed")
-        ? "Cannot reach server. Check Wi-Fi/LAN URL."
-        : msg.toLowerCase().includes("timed out")
-        ? "Request timed out. Check server reachability or try again."
-        : msg;
-
-      setUploadState({ status: "error", message: friendly });
+  async function retryEvidenceCompletion() {
+    if (uploadState.status !== "completion_pending" || !API_BASE_URL || !accessToken || !user?.id || uploadState.ownerId !== user.id) return;
+    const pending = uploadState, owner = user.id;
+    setUploadState({ status: "completing" });
+    try {
+      const receipt = await completeEvidence(API_BASE_URL, accessToken, pending.ticket);
+      markReceived(receipt, pending.digest, pending.ticket, owner);
+    } catch (error) {
+      if (actorRef.current !== owner) return;
+      if (error instanceof EvidenceCompletionPending) setUploadState(pending);
+      else setUploadState({ status: "error", message: error instanceof EvidenceRequestError ? error.message : "Receipt could not be confirmed. Try again." });
     }
   }
 
   const handleUploadEvidencePress = () => {
-    console.log("[HRReview][upload] pressed");
-    console.log("[HRReview][upload] API_BASE_URL present?", !!API_BASE_URL);
-    console.log("[HRReview][upload] canUpload", canUpload);
-    console.log("[HRReview][upload] uploadState", uploadState.status);
-    console.log("[HRReview][upload] selected", selected?.request_id ?? null);
-    if (!API_BASE_URL) {
-      setUploadState({
-        status: "error",
-        message:
-          "Missing EXPO_PUBLIC_EVT_API_BASE_URL (device cannot reach 127.0.0.1).",
-      });
-      return;
-    }
-
-    if (!canUpload) {
-     Alert.alert("Upload in progress", "Please wait for the current upload step to finish.");
-       return;
-     }
+    if (!canUpload) return;
 
      if (Platform.OS === "web") {
       void pickAndUploadDocument();
@@ -718,9 +603,7 @@ export const HRReviewScreenSettingsStyle = () => {
     }
   };
 
-  // Auth + Navigation setup logic simple login/logout + header
-  const { logout, accessToken } = useAuth();
-  const navigation = useNavigation<HRNav>();
+
 
   const [loading, setLoading] = useState(true);
   const [queue, setQueue] = useState<HRQueueRow[]>([]);
@@ -1235,7 +1118,34 @@ function handleReject() {
           {/* EVIDENCE UPLOAD */}
           <SectionHeader title="Evidence" />
           <SettingsSection>
+            <Modal visible={scopePickerOpen} transparent animationType="fade" onRequestClose={() => setScopePickerOpen(false)}>
+              <View style={{ flex: 1, justifyContent: "center", padding: 24, backgroundColor: "rgba(0,0,0,0.5)" }}>
+                <View className="rounded-2xl bg-white dark:bg-zinc-900 p-4" style={{ maxHeight: "75%" }}>
+                  <Text className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Choose evidence destination</Text>
+                  <ScrollView style={{ flexShrink: 1 }}>
+                    {evidenceScopes.map(scope => <Pressable key={JSON.stringify([scope.caseId, scope.checkId])} accessibilityRole="button" className="py-3"
+                      onPress={() => { setEvidenceScope({ caseId: scope.caseId, checkId: scope.checkId });setUploadState({ status: "idle" });setScopePickerOpen(false); }}>
+                      <Text className="text-base text-sky-600">{scope.caseId}</Text>
+                      <Text className="text-sm text-zinc-600 dark:text-zinc-300">{scope.checkId}</Text>
+                    </Pressable>)}
+                  </ScrollView>
+                  <Pressable accessibilityRole="button" className="pt-4 pb-2" onPress={() => setScopePickerOpen(false)}><Text className="text-base text-sky-600">Cancel</Text></Pressable>
+                </View>
+              </View>
+            </Modal>
+
             <SettingsRow>
+              <Text className="text-xs text-zinc-500 dark:text-zinc-400">Evidence destination</Text>
+              <Pressable accessibilityRole="button" disabled={uploadBusy || scopeLoading || !evidenceScopes.length}
+                onPress={() => setScopePickerOpen(true)} className="py-3">
+                <Text className="text-base text-sky-600">{scopeLoading ? "Loading assigned cases…" : evidenceScope ? `${evidenceScope.caseId} / ${evidenceScope.checkId}` : "Choose an assigned case and check"}</Text>
+              </Pressable>
+              <Text className="text-xs text-zinc-500 dark:text-zinc-400">This destination is separate from the selected employment request.</Text>
+              {!scopeLoading && !scopeError && evidenceScopes.length === 0 ? <Text className="text-sm text-zinc-600 dark:text-zinc-300 mt-2">No evidence upload assignments are available for this account.</Text> : null}
+              {scopeError ? <Text className="text-sm text-rose-600 mt-2">{scopeError}</Text> : null}
+              <Pressable disabled={uploadBusy || scopeLoading} accessibilityRole="button" onPress={() => setScopeRefresh(value => value + 1)} className="py-2">
+                <Text className="text-sm text-sky-600">Refresh assignments</Text>
+              </Pressable>
               <Text className="text-xs text-zinc-500 dark:text-zinc-400">
                 Upload evidence
               </Text>
@@ -1246,7 +1156,7 @@ function handleReject() {
                 </Text>
                 <View className="mt-3">
                   <Pressable
-                    disabled={false}
+                    disabled={!canUpload}
                     onPress={handleUploadEvidencePress}
                     accessibilityRole="button"
                     accessibilityLabel="Upload evidence"
@@ -1265,37 +1175,31 @@ function handleReject() {
               <View className="mt-3">
                 {uploadState.status === "picking" ||
                 uploadState.status === "initing" ||
-                uploadState.status === "uploading" ? (
+                (uploadState.status === "uploading" || uploadState.status === "completing") ? (
                   <View className="flex-row items-center gap-2">
                     <ActivityIndicator />
                     <Text className="text-sm text-zinc-600 dark:text-zinc-300">
                       {uploadState.status === "picking"
                         ? "Opening picker…"
                         : uploadState.status === "initing"
-                        ? "Creating upload session…"
-                        : "Uploading to storage…"}
+                        ? "Preparing upload…"
+                        : uploadState.status === "completing" ? "Confirming server receipt…" : "Uploading file…"}
                     </Text>
                   </View>
                 ) : null}
 
+                {uploadState.status === "completion_pending" ? (
+                  <View className="mt-2">
+                    <Text className="text-sm text-zinc-700 dark:text-zinc-200">Receipt is not confirmed. Retry completion without uploading another copy.</Text>
+                    <Pressable accessibilityRole="button" onPress={() => void retryEvidenceCompletion()} className="py-3">
+                      <Text className="text-base text-sky-600">Retry completion</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
                 {uploadState.status === "done" ? (
                   <View className="mt-1">
-                    <Text className="text-sm text-sky-600">
-                      Upload complete
-                    </Text>
-
-                    <Text className="text-sm text-zinc-800 dark:text-zinc-200 mt-1">
-                      {displayFileNameFromKey(uploadState.storageKey)}
-                    </Text>
-
-                    <Text
-                      className="text-xs text-zinc-500 dark:text-zinc-400 mt-1"
-                      numberOfLines={1}
-                    >
-                      {shortKey(uploadState.storageKey)}
-                    </Text>
-
-                    {/* Intentionally no "complete" call yet (server 501). */}
+                    <Text className="text-sm text-sky-600">Received — awaiting review</Text>
+                    <Text className="text-sm text-zinc-800 dark:text-zinc-200 mt-1">{uploadState.receipt.name}</Text>
                   </View>
                 ) : null}
 
