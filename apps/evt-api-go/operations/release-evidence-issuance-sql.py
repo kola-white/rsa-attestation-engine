@@ -138,11 +138,12 @@ def baseline():
  if urllib.parse.unquote(uri.username or '')!='cvera_api_runtime' or uri.path!='/evt' or set(q)-{'sslmode','search_path'} or q.get('search_path',['public'])!=['public'] or env.get('PGOPTIONS') or env.get('PGSERVICE'):raise RuntimeError('runtime role/path mismatch')
  return services()
 
-def rehearse(folder,artifacts):
+def rehearse(folder,artifacts,memory_mib=64):
  global PHASE
+ if memory_mib not in (64,128):raise RuntimeError('unsupported rehearsal test capacity')
  name='cvera-issuance-restore-'+uuid.uuid4().hex[:12];image=info(DB,'Image')
  try:
-  run(['docker','run','-d','--pull','never','--name',name,'--network','none','--memory','64m','--memory-swap','64m','--cpus','0.5','--shm-size','16m','--label','cvera.scope=issuance-schema-rehearsal','-e','POSTGRES_HOST_AUTH_METHOD=trust','-e','POSTGRES_INITDB_ARGS=-c shared_buffers=8MB -c max_connections=10 -c maintenance_work_mem=4MB -c autovacuum=off',image,'-c','shared_buffers=8MB','-c','max_connections=10','-c','work_mem=512kB','-c','maintenance_work_mem=4MB','-c','autovacuum=off','-c','max_worker_processes=0','-c','max_parallel_workers=0'])
+  run(['docker','run','-d','--pull','never','--name',name,'--network','none','--memory',str(memory_mib)+'m','--memory-swap',str(memory_mib)+'m','--cpus','0.5','--shm-size','16m','--label','cvera.scope=issuance-schema-rehearsal','-e','POSTGRES_HOST_AUTH_METHOD=trust','-e','POSTGRES_INITDB_ARGS=-c shared_buffers=8MB -c max_connections=10 -c maintenance_work_mem=4MB -c autovacuum=off',image,'-c','shared_buffers=8MB','-c','max_connections=10','-c','work_mem=512kB','-c','maintenance_work_mem=4MB','-c','autovacuum=off','-c','max_worker_processes=0','-c','max_parallel_workers=0'])
   for _ in range(60):
    r=subprocess.run(['docker','exec',name,'psql','-X','-h','127.0.0.1','-U','postgres','-Atqc','SELECT 1'],capture_output=True,timeout=5)
    if r.returncode==0:break
@@ -162,8 +163,8 @@ def rehearse(folder,artifacts):
   PHASE='clone_normal_request_review_and_receipt_probe'
   sql(artifacts['operations/evidence-issuance-restore-probe.sql'],name)
   sql('BEGIN;'+SETTINGS+VERIFY+'ROLLBACK;',name)
-  if read(FINGERPRINT,name)!=before or info(name,'State.OOMKilled'):raise RuntimeError('parent boundary changed')
-  private(folder/'restore-rehearsal.json',json.dumps({'restore':'PASS','rollback':'PASS','commit':'PASS','privileges':'PASS','empty_authority_and_credential_fail_closed':'PASS','clone':name,'image':image,'memory_limit_mib':64}).encode())
+  if read(FINGERPRINT,name)!=before or info(name,'State.OOMKilled') or info(name,'HostConfig.Memory')!=memory_mib*1024**2:raise RuntimeError('parent boundary changed')
+  private(folder/'restore-rehearsal.json',json.dumps({'restore':'PASS','rollback':'PASS','commit':'PASS','privileges':'PASS','empty_authority_and_credential_fail_closed':'PASS','clone':name,'image':image,'memory_limit_mib':memory_mib}).encode())
  finally:
   r=subprocess.run(['docker','inspect',name],capture_output=True,timeout=10)
   if r.returncode==0:

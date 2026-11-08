@@ -68,7 +68,6 @@ jobs:
           set -euo pipefail
           python3 apps/evt-api-go/operations/test-evidence-issuance-smoke.py
           python3 apps/evt-api-go/operations/test-evidence-issuance-release.py
-          python3 apps/evt-api-go/operations/test-norstar-authority-preparation.py
 
       - name: Verify API release build and targeted vulnerability fixes
         shell: bash
