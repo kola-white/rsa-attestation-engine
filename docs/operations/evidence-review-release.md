@@ -105,3 +105,19 @@ rollback. Review functions can remain unavailable while the earlier API operates
 Any destructive database restore needs a separate decision. Preserve source hashes,
 transaction/result evidence and backups privately; do not claim deployment or
 acceptance until the actual workflow and smoke results pass.
+
+## Guarded console driver
+
+`apps/evt-api-go/operations/release-evidence-review-sql.py` implements this approved
+SQL phase using immutable migration/binding hashes from 7d97e12. It checks the
+known c5fdb5a API and accepted clean checkout, restricted runtime and protected
+configuration, fresh backup capacity, and current parent types/owners/RLS. It
+restore-tests the new dump, rehearses rollback/commit and precise ACL/denials, then
+applies only 000017 and bindings. Source hashes and actual transaction/result are
+recorded privately. Existing services/configuration/roles are compared afterward;
+no fixture resources/grants are created by this schema phase.
+
+The driver passed an actual local network-none 64 MiB PostgreSQL backup/restore,
+rollback/commit, exact ACL/fail-closed checks, existing registry preservation and
+rerun rejection. This is local preparation, not production execution evidence.
+A production STOP must be inspected without blind retry or merge/deployment.
