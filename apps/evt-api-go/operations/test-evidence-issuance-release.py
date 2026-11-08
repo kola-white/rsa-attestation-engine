@@ -58,6 +58,10 @@ try:
  spec=importlib.util.spec_from_file_location('public_registration',APP/'operations/register-approved-issuer-credential.py')
  credential=importlib.util.module_from_spec(spec);spec.loader.exec_module(credential)
  credential.ROOT=APP.parents[1];credential.sql=m.sql
+ def reviewed_registration_source(args,data=None):
+  assert args==['git','-C',str(credential.ROOT),'show',credential.SOURCE+':apps/evt-api-go/operations/register-evidence-issuer-credential.sql']
+  return (APP/'operations/register-evidence-issuer-credential.sql').read_bytes()
+ credential.run=reviewed_registration_source
  public=credential.ROOT/'keys/public/issuer-prod-2026-10.pub.pem'
  modulus=m.run(['openssl','rsa','-pubin','-in',str(public),'-modulus','-noout']).decode().strip().split('=')[1]
  encoded=base64.urlsafe_b64encode(bytes.fromhex(modulus)).rstrip(b'=').decode()

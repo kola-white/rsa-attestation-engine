@@ -153,6 +153,8 @@ def main():
  global PHASE,STATE,RECORD
  parser=argparse.ArgumentParser();parser.add_argument('--approved-live-acceptance',type=Path,required=True);args=parser.parse_args()
  if os.geteuid()!=0:raise RuntimeError('approved existing owner console required')
+ with open('/dev/tty','rb') as tty:
+  if not os.isatty(tty.fileno()):raise RuntimeError('hidden local terminal prompts required')
  os.umask(0o077);c=config(args.approved_live_acceptance)
  # Durable intent path is fixed to the approved private input; rerunning it
  # cannot create a second genuine request or issue a second credential.
