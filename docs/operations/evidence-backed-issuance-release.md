@@ -186,3 +186,16 @@ verdict rejection and ambiguous-issuance no-retry behavior. Existing Go tests co
 authority/key/binding/claim revocation in both concurrency orders. These are local
 proofs; production preparation, deployment and genuine live acceptance need their
 actual console/CI results before being reported PASS.
+
+## Actual production preparation result
+
+Owner returned PASS for executor d3ee63c / pinned SQL ab0c0f6. The fresh private
+backup, same-image restore, rollback/commit and actual normal-workflow probe all
+passed; runtime received five EXECUTEs only in the clone. Production SQL remained
+read-only and production schema/authority/credentials/services were unchanged.
+Use the already prepared root-private directory
+`/opt/cvera/issuance-release-20261108T224912Z-02ce57` for a separately approved apply;
+do not repeat NorStar registration or regenerate the preparation without a state
+change or failed verification. The next independent release decision can authorize
+only schema apply plus non-signing merge/deployment, keeping real authority,
+credential activation and live acceptance reserved until their inputs and approvals.

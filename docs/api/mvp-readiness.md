@@ -186,3 +186,13 @@ unexecuted without their separate owner approvals. Signed NorStar packet and a
 separate human reviewer remain external inputs; they do not block an authorized
 non-signing implementation release. See the existing
 [executable release procedure](../operations/evidence-backed-issuance-release.md).
+
+Production issuance-schema preparation **PASS**, returned from the existing owner
+console using pinned executor d3ee63c and SQL source ab0c0f6: fresh private evt
+archive restored on the same PostgreSQL image; rollback/commit, actual normal
+request/review/receipt probe and five-EXECUTE privileges passed in the isolated
+clone. Production SQL was read-only; no schema was applied and no authority,
+credential or service changed. This resolves production schema/default/type
+compatibility for the proposed atomic release; it does not activate trust or prove
+a production signature. The private preparation receipt is retained on the Droplet
+under `issuance-release-20261108T224912Z-02ce57` for the separately approved apply.
