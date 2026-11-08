@@ -78,10 +78,11 @@ Before the live scenario, obtain explicit approval for any bounded AUTO window
 needed by normal request submission and its MANUAL restoration. Never change
 dispatch mode implicitly or force ATTESTATION_PENDING with direct SQL.
 
-The subject creates/submits exactly one explicitly approved synthetic request
+The subject creates/submits exactly one explicitly approved genuine pilot request
 through normal `/v1/requests` routes. Its subject is the authenticated canonical
-principal; its title/claims are visibly controlled acceptance data, never a claim
-about an unrelated real employee. Normal dispatch must reach ATTESTATION_PENDING.
+principal; its title and snapshot must truthfully describe the corroborated
+NorStar relationship (Managing Member — owner), without implying payroll employment
+or unrelated employee facts. Normal dispatch must reach ATTESTATION_PENDING.
 The operator binds a new empty case and explicit required check to that exact
 request, with attributable upload/review/HR assignments only as separately approved.
 Before credential activation/signing, verify there is no other eligible bound
@@ -89,8 +90,9 @@ pending request within the newly established authority scope and no other ACTIVE
 scope; the runtime cannot create bindings or authority. Stop if that bounded
 precondition is not met rather than activating general production issuance.
 
-Upload a tiny public synthetic file, complete/hash it, and independently approve
-its exact binding/claim context. Keep scan PENDING. Confirm eligibility is false
+Upload the authentic, scoped role evidence privately, complete/hash it, and have
+the separate eligible human review its exact binding/claim context. Synthetic
+files cannot substitute for the genuine role evidence. Keep scan PENDING. Confirm eligibility is false
 for unrelated principal/employer/request or unavailable authority, and true only
 for the approved authoritative context. One authorized HR call issues the exact
 credential; no privileged key use outside the service. The subject retrieves its
@@ -106,12 +108,13 @@ integrity separately from trusted evidence-review resolution. Capture only
 sanitized PASS/STOP flags, revision and artifact ID/reference privately.
 
 As explicitly authorized cleanup, revoke the exact synthetic issued claim and
-append real REVOKE/SUSPEND to the test-only authority lifecycle as authorized,
+append real REVOKE/SUSPEND to the pilot authority lifecycle only as authorized,
 then require the unchanged artifact to fail trust despite valid signature. Revoke
-fixture grants/binding and close its case; log out both accounts. Preserve signed
-request/credential/audit receipts. Do not fabricate an unsigned rejection of an
+pilot grants/binding and close its case only within the approved cleanup scope;
+log out both accounts. Preserve signed request/credential/audit receipts and private
+role evidence. Do not fabricate an unsigned rejection of an
 already issued request, delete application records, reset identities or erase
-history. Retain PENDING synthetic evidence until separately approved deletion.
+history. Retain PENDING pilot evidence until separately approved deletion.
 
 ## Recovery and containment
 
