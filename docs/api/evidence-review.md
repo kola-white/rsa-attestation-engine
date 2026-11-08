@@ -3,8 +3,9 @@
 The owner approved this policy on 2026-11-07: case review grants are separate from
 upload grants, operator-provisioned, attributable and revocable; active granted
 reviewers can list/download/review received evidence; no self-review; manual decisions
-are distinct from scan status. This document describes the feature branch, not a
-production release. Migration 000017 and its bindings require operator approval.
+are distinct from scan status. This document describes the implementation. The owner-approved production SQL
+phase for 000017/bindings passed on 2026-11-08 UTC; API deployment and HTTP
+acceptance remain separate gates. See the operations release evidence.
 
 ## Authorization and trust
 

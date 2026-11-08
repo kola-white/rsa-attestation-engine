@@ -6,6 +6,33 @@ live-current-key attestation proof deferral. Evidence completion is released at 
 CI/deployment and authenticated synthetic hashing/deduplication/private-storage
 acceptance passed. See [release evidence](../operations/evidence-completion-lifecycle.md#production-acceptance--2026-11-07).
 
+## Implementation progress after the accepted completion release
+
+The following are implemented on focused branches, **not deployed or accepted in
+production**:
+
+| Slice | Review | Remaining gate |
+|---|---|---|
+| Separate reviewer grants, private listing/download, attributable manual decisions, no self-review; scan remains PENDING | [PR #136](https://github.com/kola-white/rsa-attestation-engine/pull/136), `docs/api/evidence-review.md` | Operator-approved 000017/bindings and two-principal synthetic acceptance |
+| Expo real assigned case/check selection, PUT followed by completion, safe same-session retry, explicit pending display | [PR #137](https://github.com/kola-white/rsa-attestation-engine/pull/137), `docs/api/evidence-client.md` | Backend discovery release, normal client distribution and device acceptance |
+| Owner-run scoped deletion, grant freeze/revocation, URL-expiry wait, confirmed object absence and metadata redaction | [PR #138](https://github.com/kola-white/rsa-attestation-engine/pull/138), `docs/operations/evidence-retention.md` | Review/release; any production deletion needs separate per-case authority |
+
+Full local Go tests/race/vet and client tests/typecheck/web export pass. Local
+verification does not stand in for the above production/device gates. New schema,
+credentials, production deletion and signing have not been executed by this work.
+
+[Live issuance acceptance preparation](../operations/live-issuance-acceptance.md)
+identifies the normal authorized request path and public-key proof; it preserves
+the owner's live-signing deferral. One product decision remains for a genuinely
+evidence-backed issuance workflow: the explicit persisted case/check-to-request
+relationship and the review outcome that permits issuance. It is **not** implied
+by separate upload/review or employer grants. Private evidence collection and
+bounded manual review can be piloted independently; issued claims must not be
+advertised as evidence-backed before that decision and enforcement exist.
+
+The original accepted-release gap assessment below remains the launch checklist;
+its statements about the client/API describe production c5fdb5a, not these branches.
+
 ## Required for a usable evidence-backed verification pilot
 
 1. **Connect the existing client to completion.** The HR upload helper in

@@ -197,7 +197,7 @@ def main():
   if not isinstance(conflict,dict) or conflict.get('error')!='duplicate_evidence':raise RuntimeError('unexpected duplicate conflict')
   PHASE='private_storage_and_database_acceptance'
   metadata=json.loads(sql("SELECT jsonb_build_object('sealed',u.sealed_key,'hash',u.evidence_hash,'state',u.status,'scan',j.scan_status,'owned',s.principal_id=:'principal'::uuid) FROM public.evidence_uploads u JOIN public.upload_sessions s USING(upload_session_id) JOIN public.evidence_scan_jobs j USING(upload_id) WHERE u.upload_id=:'uploadid'::uuid;",{**variables,'uploadid':u['uploadId']}))
-  if metadata['hash']!=digest or metadata['state']!='RECEIVED' or metadata['scan']!='PENDING' or metadata['owned'] is not True or not re.fullmatch(r'sealed-evidence/[0-9a-f-]{36}',metadata['sealed']):raise RuntimeError('accepted DB evidence mismatch')
+  if metadata['hash']!=digest or metadata['state']!='RECEIVED' or metadata['scan']!='PENDING' or metadata['owned'] is not True or not (re.fullmatch(r'sealed-evidence/[0-9a-f-]{36}',metadata['sealed']) or re.fullmatch(re.escape('sealed-evidence/'+case+'/'+check+'/'+u['uploadId']+'/')+r'[0-9a-f-]{36}',metadata['sealed'])):raise RuntimeError('accepted DB evidence mismatch')
   endpoint=urllib.parse.urlsplit(settings['DO_ENDPOINT'])
   sealed=urllib.parse.urlunsplit((endpoint.scheme,endpoint.netloc,endpoint.path.rstrip('/')+'/'+urllib.parse.quote(settings['EVT_S3_BUCKET'],safe='')+'/'+urllib.parse.quote(metadata['sealed'],safe='/'),'', ''))
   staging=urllib.parse.urlunsplit((parsed.scheme,parsed.netloc,parsed.path,'',''))
