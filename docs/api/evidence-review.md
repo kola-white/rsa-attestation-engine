@@ -4,8 +4,8 @@ The owner approved this policy on 2026-11-07: case review grants are separate fr
 upload grants, operator-provisioned, attributable and revocable; active granted
 reviewers can list/download/review received evidence; no self-review; manual decisions
 are distinct from scan status. This document describes the implementation. The owner-approved production SQL
-phase for 000017/bindings passed on 2026-11-08 UTC; API deployment and HTTP
-acceptance remain separate gates. See the operations release evidence.
+phase for 000017/bindings passed on 2026-11-08 UTC; the API is deployed at 6e7293e. Positive two-account HTTP acceptance remains
+separate from the successful deployment. See the operations release evidence.
 
 ## Authorization and trust
 
@@ -122,6 +122,7 @@ flags, runtime/operator/PUBLIC privilege boundaries, real PostgreSQL blocking in
 both revocation orders and competing final decisions, plus atomic rollback on a
 failed binding with existing upload initialization remaining operational.
 
-The API is not production-verified by these local tests. Existing accepted
-completion release c5fdb5a remains the production baseline until a separately
-approved migration/release and focused two-principal acceptance are completed.
+The approved migration and exact-main API deployment passed on 2026-11-08 UTC
+at 6e7293e; public health/version/JWKS and anonymous denial probes passed. Positive
+two-principal HTTP acceptance remains pending; local tests are not relabelled as
+that acceptance. See the operations release evidence for current results.

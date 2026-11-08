@@ -50,3 +50,12 @@ synthetic pair: choose assigned destination, select PDF or photo, confirm RECEIV
 with PENDING, exercise a completion retry and expired/revoked-case denial, then
 revoke/close that synthetic fixture. Do not log credentials, URLs or file contents.
 The previously accepted live-signing deferral remains unchanged.
+
+## Delivery status — 2026-11-08 UTC
+
+PR #137 was integrated into #136 and deployed in main 6e7293e. The existing Expo
+Production web deployment succeeded, and public mvp.cvera.app assets contain the
+new discovery/selection/completion-retry/pending-display code. Backend 000017 and
+exact-main API deployment passed. This delivery evidence does not claim an actual
+authenticated browser file selection or native device upload; those remain the
+acceptance gate above. No new mobile signing credential or build was created.

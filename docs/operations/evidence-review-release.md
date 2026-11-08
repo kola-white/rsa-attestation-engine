@@ -141,3 +141,29 @@ corrupt completion stopping before review. It revokes fixture grants, closes the
 case and attempts both API and Kratos logout for each account. It does not create
 identities, delete evidence, sign claims or change scan status. STOP retains a
 private exact-fixture intent for inspection; do not blindly rerun or print it.
+
+## Deployment evidence — 2026-11-08 UTC
+
+PRs #137 and #138 were squash-integrated into the feature branch first, without
+main deployments. PR #136 was then squash-merged as
+**6e7293e75bf0577c1ce9105744249c718fe65361** after final head CI passed and the
+owner-confirmed 000017 production compatibility gate. The merged main tree was
+compared with the reviewed integrated tree and matched exactly.
+
+[Main CI/deployment run 42455187085](https://github.com/kola-white/rsa-attestation-engine/actions/runs/42455187085)
+passed, including Go/PostgreSQL/Node tests, release build/vulnerability checks and
+exact-revision API deployment. Publish run 42455186874 also passed. Public health
+returned 200, `/version` reported 6e7293e, and JWKS retained the single expected
+issuer-prod-2026-10 RS256 key. All four new evidence routes returned 401 without
+credentials. These probes changed no application records or grants.
+
+The existing Expo Production deployment for this same commit succeeded. Public
+mvp.cvera.app assets contain real assignment discovery, completion retry, assigned
+case selection and awaiting-review display. This establishes code delivery, not
+authenticated picker/native-device acceptance. No new mobile credentials/build or
+infrastructure were created. PR #131 remains untouched.
+
+Two-account authenticated review acceptance remains pending the existing console
+smoke result. No positive HTTP access/review result is inferred from anonymous
+401s, local tests or successful deployment. No signing, credential change or
+production destructive case deletion was performed by this release.
