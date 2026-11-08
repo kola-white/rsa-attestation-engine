@@ -103,10 +103,13 @@ def exercise(c,uploader,reviewer,hr,settings,folder):
   inspection=folder/('review-'+str(len(STATE['uploads'])))
   inspection.mkdir(mode=0o700);private_file(inspection/'canonical-evidence',canonical);private_file(inspection/'context.json',json.dumps(context).encode())
   print('Independent reviewer: personally inspect the canonical evidence and request context in '+str(inspection)+'. No contents are printed.',flush=True)
-  if getpass.getpass('Independent reviewer decision after personal inspection (APPROVED/REJECTED; hidden): ')!='APPROVED':raise RuntimeError('not independently approved; stop without signing')
+  decision=getpass.getpass('Independent reviewer decision after personal inspection (APPROVED/REJECTED; hidden): ')
+  if decision not in ('APPROVED','REJECTED'):raise RuntimeError('explicit actual review decision required')
   reason=getpass.getpass('Independent reviewer actual rationale (hidden): ').strip()
   if not reason:raise RuntimeError('attributable review reason required')
-  s.expect(s.http(s.API,base+'/'+upload['uploadId']+'/review','POST',{'decision':'APPROVED','reason':reason,'bindingId':binding,'claimDigest':context['claimDigest']},tokens[1]),200)
+  s.expect(s.http(s.API,base+'/'+upload['uploadId']+'/review','POST',{'decision':decision,'reason':reason,'bindingId':binding,'claimDigest':context['claimDigest']},tokens[1]),200)
+  if decision=='REJECTED':
+   STATE['review_rejected']=True;persist();raise RuntimeError('genuine review rejected; stop without signing')
  PHASE='current_eligibility_and_exact_signing_scope'
  endpoint='/v1/employer/requests/'+request;prepared=s.expect(s.http(s.API,endpoint+'/evidence-eligibility','POST',scope,tokens[2]),200)
  if prepared.get('eligible') is not True or prepared.get('evidenceReady') is not True or prepared.get('signingEnabled') is not True or prepared.get('authorityDecision')!='AUTHORIZED' or not prepared.get('authorityGrantId','').startswith(c['authorization_id']+':') or prepared.get('manualPolicy')!=p.MANUAL or prepared.get('scanStatuses')!=['PENDING']:raise RuntimeError('current authority/evidence/credential not eligible')

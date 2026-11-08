@@ -62,17 +62,18 @@ with tempfile.TemporaryDirectory(prefix='issuance-smoke-local-') as work:
     return 200,{'signature':'verified','trust':'trusted' if trusted else 'untrusted','verification':{'decision':'VERIFIED' if trusted else 'REJECTED','signature':'valid','validity':'valid','status':'valid','manifest_integrity':'valid','evidence_review':'valid','authority':{'Decision':'AUTHORIZED'},'scan_policy':m.p.MANUAL,'scan_statuses':['PENDING'],'commitment':commitment}}
    if path.endswith('/review'):return 200,{'reviewerId':reviewer}
    return 200,{'binding':{'requestId':uid() if self.broken=='context' else request,'bindingId':binding,'subjectId':subject,'issuerId':m.p.ISSUER,'employerId':'norstar-systems-llc','contextValid':True,'claimDigest':commitment['snapshot_sha256']}}
- for broken in (None,'context','authority','ambiguous-issue','revoke'):
+ for broken in (None,'context','authority','ambiguous-issue','revoke','review-rejection'):
   c['revoke_claim_after_verification']=broken=='revoke'
   target=folder/str(broken);target.mkdir();m.RECORD=target/'state.json';m.STATE={'grants':[],'uploads':[],'issuance_attempted':False};contract=Contract(broken)
   def signature(token,ignored_public,keys,expected):return actual_signature(token,public,keys,expected,fp)
-  with patch.object(m.s,'http',contract.http),patch.object(m.s,'sql',contract.sql),patch.object(m.s,'storage_url',lambda *a:None),patch.object(m.s,'object_request',lambda *a:(204,b'')),patch.object(m.r,'download',lambda *a:data),patch.object(m.getpass,'getpass',side_effect=['APPROVED','Actual LOCAL fixture decision only']),patch.object(m.p,'verify_signature',signature):
+  with patch.object(m.s,'http',contract.http),patch.object(m.s,'sql',contract.sql),patch.object(m.s,'storage_url',lambda *a:None),patch.object(m.s,'object_request',lambda *a:(204,b'')),patch.object(m.r,'download',lambda *a:data),patch.object(m.getpass,'getpass',side_effect=['REJECTED' if broken=='review-rejection' else 'APPROVED','Actual LOCAL fixture decision only']),patch.object(m.p,'verify_signature',signature):
    failed=False
    try:result=m.exercise(c,u,v,v,{},target)
    except RuntimeError:failed=True
    if broken and broken!='revoke':
     assert failed
     assert contract.calls==(1 if broken=='ambiguous-issue' else 0)
+    if broken=='review-rejection':assert m.STATE['review_rejected'] is True
    else:assert not failed and result['new_attestations']==1 and contract.calls==1
    if m.STATE['issuance_attempted']:
     try:m.once_issue('/must-not-retry',{},v['access'])
