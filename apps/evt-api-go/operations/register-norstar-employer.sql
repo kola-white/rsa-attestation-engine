@@ -21,12 +21,16 @@ BEGIN
  IF EXISTS(SELECT 1 FROM public.evt_employer_config WHERE employer_id=employer) THEN
   RAISE EXCEPTION 'ID already exists: reconcile, do not overwrite or blindly retry';
  END IF;
- -- AUTO is an explicit proposal for this NEW row, subject to owner approval.
- INSERT INTO public.evt_employer_config(employer_id,dispatch_mode) VALUES(employer,'AUTO');
+ IF EXISTS(SELECT 1 FROM pg_catalog.pg_trigger WHERE tgrelid=item.oid AND NOT tgisinternal AND (tgtype::integer & 4)=4)
+ OR EXISTS(SELECT 1 FROM pg_catalog.pg_rewrite WHERE ev_class=item.oid) THEN
+  RAISE EXCEPTION 'unreviewed registry INSERT trigger or rewrite rule requires inspection';
+ END IF;
+ -- Existing safe non-dispatching mode; no workflow or entitlement operation.
+ INSERT INTO public.evt_employer_config(employer_id,dispatch_mode) VALUES(employer,'MANUAL');
 END $registration$;
 SELECT jsonb_build_object('registered_employer_id',current_setting('cvera.norstar_employer_id'),
  'legal_entity','NorStar Systems LLC','jurisdiction','California','entity_number','B20250427754',
- 'dispatch_mode','AUTO','transaction_id',pg_current_xact_id()::text,
+ 'dispatch_mode','MANUAL','transaction_id',pg_current_xact_id()::text,
  'mapping_ref',current_setting('cvera.norstar_mapping_ref'),
  'approval_ref',current_setting('cvera.norstar_approval_ref'),
  'authority_or_credentials_created',false);

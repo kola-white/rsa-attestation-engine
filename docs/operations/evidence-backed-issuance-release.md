@@ -73,7 +73,10 @@ Do not execute snippets from feature development against production.
 Use two distinct existing normal accounts entered only at local hidden prompts:
 requestor subject/uploader and independent authorized HR/reviewer. No identity
 creation, role alteration or direct request-status updates. Confirm the approved
-real employer exists with supported AUTO dispatch; do not change dispatch mode.
+real employer exists. NorStar registration starts in MANUAL (non-dispatching).
+Before the live scenario, obtain explicit approval for any bounded AUTO window
+needed by normal request submission and its MANUAL restoration. Never change
+dispatch mode implicitly or force ATTESTATION_PENDING with direct SQL.
 
 The subject creates/submits exactly one explicitly approved synthetic request
 through normal `/v1/requests` routes. Its subject is the authenticated canonical

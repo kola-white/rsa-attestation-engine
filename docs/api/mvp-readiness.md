@@ -134,3 +134,11 @@ mapping, finish the authentic signed delegation and separate first-party decisio
 nominate an eligible non-uploader case reviewer, and explicitly authorize any future
 schema/recording/activation/credential/signing operations. First-party authority
 adjudication does not satisfy or waive no-self-review of uploaded evidence.
+
+NorStar's prepared new registration now uses MANUAL rather than AUTO. Source and
+local regression confirm MANUAL normal submission remains SUBMITTED, preserves
+the mode and creates no HR/review/upload grants, authority or credential. A later
+AUTO dispatch window requires explicit approval; there is no existing manual
+dispatch route and direct status patching is excluded. Production INSERT side
+effects and actual-schema/backup compatibility remain unverified until the
+[reviewed preflight/restore sequence](../operations/norstar-schema-backup-review.md).

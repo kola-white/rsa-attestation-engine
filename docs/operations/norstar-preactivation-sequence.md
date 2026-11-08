@@ -11,7 +11,12 @@ Owner confirms whether an existing opaque employer ID already maps to NorStar
 Systems LLC, California B20250427754. The read-only result was 12 registry entries,
 zero matching candidates; that is not proof of absence. If a mapping exists, reuse
 its ID and SKIP the new-registration script. Otherwise approve the new proposed
-`norstar-systems-llc` and explicitly approve AUTO as its initial dispatch mode.
+`norstar-systems-llc` with initial **MANUAL** dispatch. AUTO is not used for
+registration: normal CandidateSubmit would advance an AUTO request to
+ATTESTATION_PENDING; MANUAL leaves it SUBMITTED. Neither mode grants HR, case
+review/upload, issuer authority or credential permissions. Creating a registry row
+is not organizational verification. Actual INSERT triggers/rules must be checked;
+the prepared registration refuses unreviewed user INSERT triggers/rewrite rules.
 Retain the legal-entity/ID mapping and the production approval reference privately.
 
 After that separate write approval, the existing root console runs
@@ -25,6 +30,10 @@ It performs one INSERT transaction and returns only registry/transaction metadat
 It refuses missing references, a non-owner or an existing ID; it never overwrites
 or silently adopts an existing row. No legal-name/registration columns are invented.
 A unique-ID race/error is STOP, not permission to choose an alias or retry blindly.
+The later live scenario requires a separately approved dispatch plan: existing
+code has no manual-dispatch route, so a narrowly reviewed AUTO window would need
+explicit owner authorization before normal create/submit, followed by MANUAL
+restoration as approved. Do not patch request status or silently change the mode.
 
 ## 2. Complete the two private signed acts
 
@@ -132,3 +141,9 @@ network-none disposable PostgreSQL 16, actual authority migrations, four recordi
 transactions, APPROVED-not-ACTIVE gate, missing-input/runtime/duplicate/rerun denials.
 No production connection, signing key or credential was used. This is not a claim
 of real-schema production verification or authentic NorStar delegation.
+
+See [schema, backup and command review](norstar-schema-backup-review.md) for the
+read-only collision/side-effect metadata check, fresh actual-backup restore and
+future command sequence. MANUAL registration was locally verified; production
+trigger/default/constraint and legal-mapping checks remain prerequisites, not
+assumptions. No new privileges or signing activity are included in preparation.

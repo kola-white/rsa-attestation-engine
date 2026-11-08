@@ -620,3 +620,44 @@ func TestEvidenceIssuanceRequiresExplicitCredentialActivation(t *testing.T) {
 		t.Fatal("implicit credential activation or issuance", err)
 	}
 }
+
+func TestNorStarManualDispatchDoesNotGrantOrIssue(t *testing.T) {
+	x := issuanceSetup(t, false)
+	// Explicit local workflow scaffolding, not new production DDL or permissions.
+	evidenceExec(t, x.f.pool, `ALTER TABLE evt_requests ALTER COLUMN request_id SET DEFAULT gen_random_uuid();ALTER TABLE evt_requests ADD COLUMN submitted_at timestamptz;ALTER TABLE evt_requests ADD COLUMN attestation_dispatched_at timestamptz`)
+	evidenceExec(t, x.f.pool, `GRANT INSERT ON evt_requests,evt_employer_config,evt_request_events TO `+pgx.Identifier{x.f.runtime}.Sanitize()+`;GRANT SELECT ON evt_employer_config TO `+pgx.Identifier{x.f.runtime}.Sanitize())
+	evidenceExec(t, x.f.pool, `UPDATE evt_employer_config SET dispatch_mode='MANUAL' WHERE employer_id='binding-employer'`)
+	counts := func() string {
+		var out string
+		err := x.f.pool.QueryRow(context.Background(), `SELECT jsonb_build_array((SELECT count(*) FROM employer_hr_assignments),(SELECT count(*) FROM case_evidence_review_grants),(SELECT count(*) FROM case_evidence_upload_grants),(SELECT count(*) FROM authority_authorizations),(SELECT count(*) FROM evidence_issuer_credentials),(SELECT count(*) FROM evidence_issued_credentials))::text`).Scan(&out)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	before := counts()
+	var request, status string
+	err := x.engine.DB.WithTx(context.Background(), func(tx pgx.Tx) error {
+		repo := evt.Repo{DB: x.engine.DB}
+		var err error
+		request, err = repo.CandidateCreateDraft(context.Background(), tx, x.f.principal, "binding-employer", json.RawMessage(`{"primary_employment":{"title":"Managing Member — owner"}}`))
+		if err != nil {
+			return err
+		}
+		status, err = repo.CandidateSubmit(context.Background(), tx, request, x.f.principal)
+		return err
+	})
+	if err != nil || status != "SUBMITTED" {
+		t.Fatal("MANUAL submission dispatched", status, err)
+	}
+	var safe bool
+	if err = x.f.pool.QueryRow(context.Background(), `SELECT r.status::text='SUBMITTED' AND r.attestation_dispatched_at IS NULL AND coalesce(r.attestation_jws,'')='' AND c.dispatch_mode='MANUAL' AND NOT EXISTS(SELECT 1 FROM evt_request_events e WHERE e.request_id=r.request_id AND e.event_type='ATTESTATION_DISPATCHED') FROM evt_requests r JOIN evt_employer_config c USING(employer_id) WHERE r.request_id=$1`, request).Scan(&safe); err != nil || !safe {
+		t.Fatal("submission bypassed non-dispatching mode", err)
+	}
+	if counts() != before {
+		t.Fatal("request creation/submission created entitlement, authority or credential")
+	}
+	if issued, err := x.engine.Issue(context.Background(), x.f.other, request, "binding-employer"); err == nil || issued.Credential != "" {
+		t.Fatal("unbound MANUAL request issued")
+	}
+}
