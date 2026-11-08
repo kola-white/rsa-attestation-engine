@@ -2,6 +2,7 @@
 """Local-only, network-none SQL regression; never opens a production connection."""
 import datetime,hashlib,importlib.util,json,subprocess,tempfile,time,uuid
 from pathlib import Path
+from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1]
 NAME='cvera-norstar-local-'+uuid.uuid4().hex[:12]
 LABEL='norstar-preparation-local-test'
@@ -15,6 +16,25 @@ def sql(body,check=True,name=NAME):
 
 def main():
  try:
+  registration_spec=importlib.util.spec_from_file_location('approved_registration',ROOT/'operations/register-approved-norstar.py')
+  registration=importlib.util.module_from_spec(registration_spec);registration_spec.loader.exec_module(registration)
+  with tempfile.TemporaryDirectory(prefix='norstar-replay-local-') as folder, patch.object(registration,'secure'):
+   receipt=Path(folder)/'receipt';intent=Path(folder)/'intent'
+   empty={'registry':[]};present={'registry':[{'employer_id':registration.EMPLOYER,'dispatch_mode':'MANUAL'}]}
+   assert registration.existing_result(empty,receipt,intent) is None
+   try:registration.existing_result(present,receipt,intent)
+   except RuntimeError:pass
+   else:raise AssertionError('unexplained existing registration adopted')
+   intent.write_text('{}')
+   try:registration.existing_result(empty,receipt,intent)
+   except RuntimeError:pass
+   else:raise AssertionError('ambiguous commit retried')
+   receipt.write_text(json.dumps({'norstar_registration':'PASS','approval_ref':registration.APPROVAL,'registered_employer_id':registration.EMPLOYER}))
+   assert registration.existing_result(present,receipt,intent)['already_executed'] is True
+   for rows in (empty,{'registry':[{'employer_id':registration.EMPLOYER,'dispatch_mode':'AUTO'}]}):
+    try:registration.existing_result(rows,receipt,intent)
+    except RuntimeError:pass
+    else:raise AssertionError('changed registration accepted as previous success')
   run(['docker','run','-d','--pull','never','--name',NAME,'--network','none','--memory','64m','--memory-swap','64m','--cpus','0.5','--shm-size','16m','--label','cvera.scope='+LABEL,
    '-e','POSTGRES_HOST_AUTH_METHOD=trust','-e','POSTGRES_INITDB_ARGS=-c shared_buffers=8MB -c max_connections=10 -c maintenance_work_mem=4MB -c autovacuum=off','postgres:16',
    '-c','shared_buffers=8MB','-c','max_connections=10','-c','work_mem=512kB','-c','maintenance_work_mem=4MB','-c','autovacuum=off','-c','max_worker_processes=0','-c','max_parallel_workers=0'])

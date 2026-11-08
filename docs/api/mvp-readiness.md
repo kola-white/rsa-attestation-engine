@@ -152,6 +152,12 @@ were found; no verified existing legal mapping was discovered. Production SQL wa
 read-only and registry/privileges/services remained unchanged. The private receipt
 is /opt/cvera/norstar-preparation-20261108T220104Z-9065a0/preparation-result.json.
 Registration and authority recording were explicitly NOT executed.
+The owner has since authorized completion of the one-row MANUAL registration.
+Its guarded executor and replay/ambiguous-commit regressions are implemented;
+production confirmation still requires the existing root-console result. Signed
+delegation, attributable first-party adjudication and a separate case reviewer
+remain outstanding. Registration authorizes none of the reserved authority,
+credential, migration, deployment or live-signing operations.
 Production registration remains separately gated, independent of the still-blocked
 signed authority paperwork and case reviewer. No ACTIVE authority or signing is
 included in the prerequisite authorization.

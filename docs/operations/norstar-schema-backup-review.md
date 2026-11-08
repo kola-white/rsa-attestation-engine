@@ -211,3 +211,13 @@ NorStar Systems LLC / California B20250427754 to the new internal ID
 Any newly found authoritative existing mapping/collision stops creation. That
 registration does not require the separate signed delegation, first-party authority
 decision or case reviewer, and authorizes none of those later operations.
+
+The owner subsequently directed completion of this exact registration. The bounded
+executor `operations/register-approved-norstar.py --execute-approved-registration`
+uses that authorization and the existing verified private backup, rechecks source
+SQL hashes/collisions/catalog and runs only the pinned MANUAL insertion. It keeps
+the owner-approved legal mapping and transaction receipt private. A verified prior
+receipt returns PASS without inserting; an unexplained existing row or unresolved
+intent returns STOP rather than adopting a mapping or repeating a possible COMMIT.
+No authority, credential, migration, grant, dispatch or service operation is included.
+Production registration remains unconfirmed until its console result is returned.
