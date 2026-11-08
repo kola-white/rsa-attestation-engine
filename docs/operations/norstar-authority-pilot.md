@@ -71,31 +71,64 @@ Use an opaque reference such as `urn:cvera:authority-evidence:<random-uuid>`;
 record its exact private locator/hash mapping and any redacted review-copy hash.
 An opaque reference without retrievable evidence and integrity mapping is not proof.
 
-## 3. Authorized independent adjudication
+## 3. Attributable adjudication; independent review is optional here
 
-The owner designates a named, competent person with a stable decision-maker
-identity and a narrowly documented mandate to evaluate this delegation. For this
-conflicted pilot, that person must not be the proposed subject/delegation signer
-or the overlapping Cvera operator. No paid vendor, new authentication provider,
-adjudicator endpoint or production database account is required.
+The accepted authority contract requires sufficient organizational evidence and an
+attributable Cvera decision. It does **not** require a third-party adjudicator or
+a different human for the employer representative, subject and Cvera operator.
+Authority evidence §2.7 permits attributable independently verifiable evidence;
+§3 requires provenance, representative power and a reasoned decision. The state
+machine §13 deliberately leaves the evidence-establishment mechanism open. Its
+APPROVE/ACTIVATE requirements in §§6–7 still apply without exception.
 
-The adjudicator independently checks the official entity record, representative's
-identity/capacity/powers, signature attribution, role truth, internal employer
-mapping, exact issuer/employer/claim scope, dates, conflicts and withdrawal rights.
-They produce a dated APPROVED or REJECTED decision, reasons, authority basis,
-evidence reference and their attributable identity. Missing/conflicting evidence
-remains unapproved. Another account controlled by the same person does not create
-independence; machine account separation alone is not evidence of human independence.
+The earlier wording made an additional pilot safeguard mandatory. That was an
+operating recommendation, not a frozen architectural constraint. Independent
+review may be selected to strengthen conflict management; it is not a requirement
+that can be inferred from the word adjudication or from the projector's comments.
 
-The Cvera operator may record that signed decision as a clerical act after separate
-production authorization. Preserve the actual adjudicator as `DecisionMakerID`,
-use their authorized decision identity for the APPROVE event as required by the
-existing projector, and distinguish the recording operator in the private operation
-receipt. Never invent an adjudicator or relabel the operator as an independent
-reviewer to obtain ACTIVE. ACTIVATE is a separate authorized operational transition,
-not a substitute adjudication. The same independent person may also perform case
-evidence review if separately granted that existing permission; the uploader still
-cannot review their own evidence. No new role/provisioning permission is implied.
+Paul Coe is only a potential reviewer and is currently unavailable. His prior
+Cvera engineering participation is owner-disclosed; neither his independence nor
+his appointment/approval is established. If later selected, assess current interests,
+authority/control, compensation and involvement in the specific assertion before
+labelling his review independent. Prior engineering participation alone proves
+neither eligibility nor disqualification. A second account is not another person.
+
+A first-party procedure is permissible in principle, subject to all of the following:
+
+1. Verify NorStar's legal entity/internal ID mapping, actual representative's
+   capacity and power, authentic organizational consent and the precise issuer/
+   employer/employment.role scope. Public filings and authentic private governance
+   records must corroborate the signed delegation; issuer self-declaration, domain
+   control or an RSA key alone never establishes organizational authority.
+2. Keep NorStar's organizational authorization, Cvera's evidence adjudication and
+   later operational activation as separate attributable records/acts, even if
+   performed by the same person in disclosed capacities. Approval is not ACTIVE.
+3. Explicitly record that the representative, claim subject, adjudicator and
+   recording operator overlap, identify the conflict, describe what was checked,
+   and label the decision first-party/operator-adjudicated. Never describe it as
+   independent third-party validation or invent a reviewer identity.
+4. Preserve decision/authorization IDs, actual decision-maker identity and
+   capacity/mandate, APPROVED or REJECTED outcome, rationale, authority basis,
+   opaque retrievable evidence reference plus hashes, actual decision/recording
+   timestamps and the conflict disclosure. Detailed disclosures/signature can be
+   retained in the referenced private packet; no new database column is needed.
+   Missing/conflicting evidence cannot produce approval or ACTIVE.
+5. Use the accepted append-only recording protocol and real actor identity.
+   APPROVE's actor and evidence reference must match its adjudication; ACTIVATE
+   requires separately verified prerequisites and explicit owner authorization.
+   Paul must not be named as decision-maker unless he actually made the decision.
+
+The owner must explicitly select the first-party operating procedure before any
+production adjudication/activation; this clarification is not execution approval.
+A different person remains an optional authority-review safeguard, not a new role,
+vendor, endpoint or database privilege requirement.
+
+**Separate mandatory evidence boundary:** the owner-approved case evidence policy
+still forbids reviewing one's own uploads. First-party authority adjudication does
+not authorize self-review, create a case-review grant or establish evidence-backed
+issuance eligibility. Another eligible active reviewer with an explicit case grant
+must approve the subject/uploader's evidence through the accepted API. Offline
+authority review and case evidence approval are distinct decisions.
 
 The implemented machine authority scope is issuer + employer + claim type, not a
 per-title or per-subject grant. The single-request pilot is an operational release
@@ -106,7 +139,7 @@ machine-enforced unless represented by existing effective intervals/access check
 ## 4. Bounded sequence and explicit approval gates
 
 **Preparation gate — current authorization:** read-only reconciliation; private
-packet/delegation preparation; owner nomination of adjudicator; independent signed
+packet/delegation preparation; explicit choice of first-party or independent authority adjudication; attributable
 decision; local tests/CI and pinned release artifacts. No production writes.
 
 **Production schema gate — separate owner authorization:** use the existing root
@@ -118,7 +151,7 @@ without fabricated migration history. Unexpected partial state is STOP. If neede
 include the one reconciled employer row explicitly; do not silently insert or change
 its dispatch mode. This gate creates no ACTIVE authorization or credential binding.
 
-**Authority/credential gate — separate explicit scope:** after adjudication, owner
+**Authority/credential gate — separate explicit scope:** after sufficient, attributable adjudication, owner
 approves the exact employer ID, authorization/decision IDs, evidence hashes/ref,
 actual actor, start/end and withdrawal procedure. Persist the accepted authorization,
 adjudication and SUBMIT/APPROVE/ACTIVATE sequence using one evidence-row recording

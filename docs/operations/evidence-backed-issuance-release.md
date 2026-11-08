@@ -2,7 +2,7 @@
 
 **BLOCKED: real employer delegation is not yet accepted.** The owner has supplied
 NorStar Systems LLC, California B20250427754, as the candidate; internal employer
-reconciliation, representative evidence, signed delegation and independent
+reconciliation, representative evidence, signed delegation and attributable
 adjudication remain outstanding. See [NorStar pilot preparation](norstar-authority-pilot.md).
 Do not create a demonstration authorization, activate a production credential,
 perform live signing, or claim production acceptance. No production operation is
@@ -12,7 +12,7 @@ authorized by this document. Continue code/tests/CI independently.
 
 After an authorized employer representative attests to delegation, present the
 pinned final commit/hashes, real employer identifier, canonical issuer
-`https://cvera.app`, claim `employment.role`, independent adjudicator/actor and
+`https://cvera.app`, claim `employment.role`, actual adjudicator/actor and
 opaque evidence/basis reference to the owner. Keep private documents local.
 The following scope needs one explicit bounded production authorization:
 
@@ -38,7 +38,7 @@ The following scope needs one explicit bounded production authorization:
    or unexpected existing authority schema is a STOP requiring compatibility
    review, not permission to overwrite/backfill history. Empty tables establish
    no authority. Normal API remains fail-closed with empty authority.
-5. Record the real employer's authorization, independently attributable
+5. Record the real employer's authorization, attributable
    adjudication and lifecycle using the accepted repository/recording protocol:
    authorization, adjudication, SUBMIT, APPROVE, ACTIVATE. Each evidence row uses
    its own transaction/allocated recording position; **do not combine those five

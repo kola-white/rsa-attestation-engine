@@ -112,7 +112,7 @@ separate gates; Weekend 2's earlier deferral is not silently changed.
 NorStar Systems LLC (owner-supplied California entity B20250427754) is the proposed
 first-party pilot authority subject for the qualified Managing Member — owner
 role. Its internal employer ID, representative's power, signed delegation and
-independent adjudication have not been verified or registered. See the
+attributable adjudication have not been verified or registered. See the
 [NorStar preparation and approval gates](../operations/norstar-authority-pilot.md).
 PR #141 engineering checks passed at c7e5239; this candidate nomination does not
 activate authority or change production acceptance status.
@@ -121,6 +121,7 @@ The owner's read-only NorStar reconciliation returned 12 employer registry entri
 and no matching candidates, with no data/configuration change. An internal ID is
 still unconfirmed because the registry lacks a legal-entity mapping field; a
 no-match search is not proof that no opaque existing ID was assigned. Owner
-mapping confirmation, signed delegation and a named independent adjudicator remain
-the actionable prerequisites. No authority or signing activation follows from
-nomination or from the filing number alone.
+mapping confirmation, signed delegation and a documented attributable
+adjudication remain the actionable prerequisites. Third-party authority adjudication is optional; the
+mandatory no-self-review policy for uploaded case evidence remains unchanged.
+No authority or signing activation follows from nomination or from the filing number alone.
