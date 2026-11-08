@@ -1,145 +1,188 @@
-# Controlled evidence-backed issuance release: preparation only
+# Integrated issuance release and genuine NorStar acceptance
 
-**BLOCKED: real employer delegation is not yet accepted.** The owner has supplied
-NorStar Systems LLC, California B20250427754, as the candidate; internal employer
-reconciliation, representative evidence, signed delegation and attributable
-adjudication remain outstanding. See [NorStar pilot preparation](norstar-authority-pilot.md).
-Do not create a demonstration authorization, activate a production credential,
-perform live signing, or claim production acceptance. No production operation is
-authorized by this document. Continue code/tests/CI independently.
+Engineering is implemented; production release and live acceptance are not yet
+executed. NorStar registration is complete: `norstar-systems-llc`, MANUAL,
+transaction 3007. **Never repeat registration.** Signed delegation, attributable
+first-party adjudication and the separate human case reviewer remain owner inputs.
+They do not block preparation or a separately authorized non-signing deployment.
 
-## Exact proposed operations for separate owner authorization
+## Executable non-signing release
 
-After an authorized employer representative attests to delegation, present the
-pinned final commit/hashes, real employer identifier, canonical issuer
-`https://cvera.app`, claim `employment.role`, actual adjudicator/actor and
-opaque evidence/basis reference to the owner. Keep private documents local.
-The following scope needs one explicit bounded production authorization:
+`operations/release-evidence-issuance-sql.py --prepare` checks the deployed e84b9a6
+baseline and actual 000018 parents, runtime role/path and absence of authority and
+issuance objects. It makes a fresh root-private evt archive, retains API recovery
+image/configuration, restores the same PostgreSQL image in a network-none 64 MiB
+clone without shared live volumes, and rehearses rollback, injected failure (local
+regression), commit, exact privileges, normal request defaults/enums/events,
+contextual review, manifest preparation and issuance-receipt persistence. All
+synthetic rows/public placeholders are clone-only and rolled back. No production
+SQL writes, credentials, authority records, grants or service changes occur.
+This is compatibility evidence, not proof of a genuine signature or delegation.
 
-1. Established Droplet root console only: verify deployed main, current 000018
-   catalog, restricted runtime role/search path, fresh private evt backup and
-   isolated 64 MiB restore rehearsal, retained current API image/configuration.
-   No SSH credential creation, private-key export or role/credential changes.
-2. Rehearse actual-schema 000019 plus `evidence-issuance-privileges.sql` rollback
-   and commit on that restore. Runtime receives **five EXECUTEs only**; table
-   DML/SELECT and authority mutations remain owner-only. Rehearse a fully local
-   issuance/verification with explicit local key/authority fixtures; those are
-   never applied to the live database or used as production acceptance proof.
-3. Apply the same additive 000019 and bindings in one bounded READ COMMITTED
-   owner transaction; verify exact owners, immutable triggers, stripped default
-   ACLs/PUBLIC, no active credentials/issuance rows and unchanged parent/role ACLs.
-   Record actual source/hash/transaction privately. Do not fabricate migration
-   history, assume 000001–000013 were applied, or add an automatic migration runner.
-4. Inspect the authority catalog. If all four authority tables/functions are
-   absent, separately restore/rehearse the existing **000002–000013** SQL in
-   order, without 000001 or fake version rows. Strip inherited non-owner ACLs
-   from these tables/functions; do not grant runtime direct access or allocator
-   EXECUTE. The only runtime read is the new coherent definer function. Partial
-   or unexpected existing authority schema is a STOP requiring compatibility
-   review, not permission to overwrite/backfill history. Empty tables establish
-   no authority. Normal API remains fail-closed with empty authority.
-5. Record the real employer's authorization, attributable
-   adjudication and lifecycle using the accepted repository/recording protocol:
-   authorization, adjudication, SUBMIT, APPROVE, ACTIVATE. Each evidence row uses
-   its own transaction/allocated recording position; **do not combine those five
-   inserts into one transaction**. Intermediate incomplete views fail closed.
-   Evidence, approved actor and actual timestamps must be real and attributable;
-   never mark `conditions_satisfied` from test convenience. Confirm the existing
-   complete projector/evaluator reports ACTIVE for only the approved exact scope.
-6. Bind the existing production public credential explicitly to canonical Cvera
-   using `register-evidence-issuer-credential.sql` in an owner transaction.
-   Compare the committed PUBLIC key with the stable published JWKS and the
-   service's configured kid without reading the private key. Existing expected
-   public SPKI SHA-256 is
-   `35fabf72cfd7dfa88f41aa7a40d7a506966b6ddd797a54c98bd1cd3cf9ec007c`
-   for `issuer-prod-2026-10`; recheck against deployed public material first.
-   Owner must explicitly supply credential valid_from/valid_until, positive
-   claim lifetime, attribution and basis reference. The SQL has no defaults and
-   validates the exact PEM DER fingerprint. The runtime additionally verifies
-   RSA size/exponent, kid, issuer and exact in-memory signer public-key match.
-   No replacement key, password, file mount or runtime role is needed.
-7. Use reviewed PR squash merge, main CI and existing exact-main deployment.
-   Verify health/version/JWKS continuity and fail-closed negatives before the
-   separately approved controlled live acceptance. No silent fallback to legacy
-   attestation is permitted for bound requests.
+The pinned driver stages SQL from its explicit SOURCE/hash manifest, independently
+of the running checkout. The required transaction is **existing 000002–000013,
+owner-only ACL cleanup including the identity sequence, 000019, five runtime
+EXECUTE bindings and verification**. No 000001, presumed migration history, runner,
+role or version-table entries are invented. Existing/partial authority or issuance
+objects cause STOP for compatibility/history inspection; they are never replaced.
+Runtime gets no new table/sequence privileges or authority-writing permission.
+Normal PUBLIC function EXECUTE and inherited non-owner default ACLs are removed
+from the new objects in that same transaction. Parents/roles/ACLs remain unchanged.
+Empty authority and credential registries cannot enable evidence-backed signing.
 
-The production release driver and exact console command must be pinned and
-restore-validated for the final approved schema/authority state before execution.
-This document is a scope/prerequisite record, not an executable migration runner.
-Do not execute snippets from feature development against production.
+After production preparation PASS, obtain explicit authorization for that exact
+schema transaction and non-signing PR #141 merge/deployment. Then execute:
 
-## One bounded normal-API acceptance
+```sh
+python3 release-evidence-issuance-sql.py \
+  --apply-approved-schema /opt/cvera/issuance-release-<actual-preparation-directory> \
+  --approval-ref '<actual owner authorization reference>'
+```
 
-Use two distinct existing normal accounts entered only at local hidden prompts:
-requestor subject/uploader and independent authorized HR/reviewer. No identity
-creation, role alteration or direct request-status updates. Confirm the approved
-real employer exists. NorStar registration starts in MANUAL (non-dispatching).
-Before the live scenario, obtain explicit approval for any bounded AUTO window
-needed by normal request submission and its MANUAL restoration. Never change
-dispatch mode implicitly or force ATTESTATION_PENDING with direct SQL.
+Use only reviewed, pinned artifacts in the existing Droplet root console. The
+executor checks the recorded backup/rehearsal/source hashes and unchanged source
+state before applying, records actual transaction/source/hashes privately and
+verifies after COMMIT. A prior apply intent/receipt or ambiguous COMMIT is STOP,
+not permission to retry. It never records/activates authority, registers a public
+credential, deploys or signs. The separately authorized squash merge uses existing
+main CI/exact-main API deployment. Verify health/version/JWKS and the unavailable
+credential failure before any subsequent activation. No extra infrastructure.
 
-The subject creates/submits exactly one explicitly approved genuine pilot request
-through normal `/v1/requests` routes. Its subject is the authenticated canonical
-principal; its title and snapshot must truthfully describe the corroborated
-NorStar relationship (Managing Member — owner), without implying payroll employment
-or unrelated employee facts. Normal dispatch must reach ATTESTATION_PENDING.
-The operator binds a new empty case and explicit required check to that exact
-request, with attributable upload/review/HR assignments only as separately approved.
-Before credential activation/signing, verify there is no other eligible bound
-pending request within the newly established authority scope and no other ACTIVE
-scope; the runtime cannot create bindings or authority. Stop if that bounded
-precondition is not met rather than activating general production issuance.
+## Actual authority and credential inputs; separately authorized execution
 
-Upload the authentic, scoped role evidence privately, complete/hash it, and have
-the separate eligible human review its exact binding/claim context. Synthetic
-files cannot substitute for the genuine role evidence. Keep scan PENDING. Confirm eligibility is false
-for unrelated principal/employer/request or unavailable authority, and true only
-for the approved authoritative context. One authorized HR call issues the exact
-credential; no privileged key use outside the service. The subject retrieves its
-own committed bytes through `/v1/requests/{id}/credential`; cross-subject access
-denies. Keep tokens, URLs, evidence and artifact contents out of logs/reports.
+Keep completed private documents/settings outside Git. First-party adjudication
+is permitted with truthful representative/subject/operator/conflict disclosure;
+independent third-party authority adjudication is not a requirement. The different
+human CASE reviewer remains mandatory. Use the existing signed templates and
+`record-norstar-authority-approved.sql`: authorization, actual adjudication,
+SUBMIT, APPROVE in **four separately allocated transactions**. Each must commit
+before the next; errors preserve partial history for reconciliation. No activation
+is inferred from approval, a filing number, registration, HR or case grants.
 
-Independently verify with public-key material and trusted current resolver,
-expected canonical subject and the explicit manual pilot policy. Require all
-signature, issuer/key binding, employer authority, snapshot/manifest/context,
-status and policy dimensions; verify modified bytes, wrong subject/policy,
-manifest mismatch and cross-request negatives. Report cryptographic manifest
-integrity separately from trusted evidence-review resolution. Capture only
-sanitized PASS/STOP flags, revision and artifact ID/reference privately.
+After owner approval of the real packet and exact scope
+`https://cvera.app / norstar-systems-llc / employment.role`, the private input for
+`activate-norstar-authority.sql` adds these session settings to the actual NorStar
+recording settings:
 
-As explicitly authorized cleanup, revoke the exact synthetic issued claim and
-append real REVOKE/SUSPEND to the pilot authority lifecycle only as authorized,
-then require the unchanged artifact to fail trust despite valid signature. Revoke
-pilot grants/binding and close its case only within the approved cleanup scope;
-log out both accounts. Preserve signed request/credential/audit receipts and private
-role evidence. Do not fabricate an unsigned rejection of an
-already issued request, delete application records, reset identities or erase
-history. Retain PENDING pilot evidence until separately approved deletion.
+- `cvera.norstar_activation_approval_ref`: actual explicit production approval.
+- `cvera.norstar_activation_event_id`: newly reserved event ID, never reused.
+- `cvera.norstar_activation_conditions_satisfied`: `true` only after actual signed
+  organizational evidence, representative power, delegation and decision checks.
+- `cvera.norstar_delegation_valid_from`: actual signed start, already effective.
 
-## Recovery and containment
+The script locks the global recording boundary before validating exact APPROVED
+history and appending one ACTIVATE in its own transaction. It rejects runtime,
+missing/false conditions, wrong scope and repeats. The real evaluator still must
+report current ACTIVE authority; SQL success alone is not an authority verdict.
+Preserve the signed end/withdrawal policy: a date only in a letter does not install
+an automatic expiry. Record lifecycle expiry/withdrawal through the accepted
+mechanism at the required time; do not claim a scheduler exists.
 
-- Before credential registration/real ACTIVE authority, new issuance fails closed;
-  leaving additive tables and reverting only the API to e84b9a6 is compatible.
-- With an issued credential, stop further issuance by an attributable authority
-  suspension/revocation under owner approval; revoke the exact claim if necessary.
-  Revoke a signing credential only for a credential-level decision, not as a
-  pretend reversal of bytes already signed. One-way revocation is irreversible;
-  reactivation/new delegation is a new explicitly approved authorization.
-- Keep the new guarded verifier available to report revocation. An older API
-  cannot independently verify these artifacts and must not be described as a
-  successful functional rollback. It still blocks legacy signing for bound
-  requests. Do not roll back further than e84b9a6 while any bound pending requests
-  exist. Do not drop new audit tables, restore stale database data or re-enable
-  legacy credentials to make recovery appear successful.
-- Any ambiguous COMMIT, failed backup restore, unexpected catalog/privilege/data
-  state or failed acceptance is STOP. Preserve private intent/results and use a
-  compatible correction or owner-directed recovery; never blindly rerun DDL,
-  issuance or fixture provisioning.
+`contain-norstar-authority.sql` is prepared owner-only recovery for separately
+approved attributable SUSPEND or REVOKE, with the same actual authorization/actor/
+evidence settings plus `containment_event`, `containment_event_id` and
+`containment_approval_ref`. It serializes history checking and append, preserves
+positive intervals and refuses invalid/terminal repeats. REVOKE is irreversible;
+no reset, deletion, fabricated timestamp or pretend independent decision occurs.
+Stage and hash the exact approved SQL, then execute completed private settings
+and that SQL through the existing channel:
 
-## Current disposition
+```sh
+cat "$CVERA_PRIVATE_SETTINGS" "$CVERA_REVIEWED_SQL" | docker exec -i evt-api-go-db-1 \
+  psql -X -U postgres -d evt -Atq -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate
+```
 
-Engineering implementation/tests are independent of real employer approval.
-Production authority setup, credential activation and live signing remain blocked
-until that prerequisite exists and the owner approves the exact final procedure.
-Baseline #140 synthetic acceptance is pending/unconfirmed; it is neither rerun
-nor claimed PASS here. Native picker/device acceptance remains separate.
+Capture results only in a private receipt. Do not send settings, documents or raw
+errors here. Recording approval does not authorize ACTIVATE or live signing.
+
+`register-approved-issuer-credential.py --approved-public-registration <private.json>`
+is separately authorized credential activation, not a key operation. Root-private
+0600 JSON supplies `approval_ref`, `valid_from`, `valid_until`, positive
+`claim_lifetime_seconds`, `established_by`, `basis_ref`; none has a default. It
+compares the committed PUBLIC key and stable JWKS against canonical kid
+`issuer-prod-2026-10`, RSA >=3072/E65537 and public SPKI SHA-256
+`35fabf72cfd7dfa88f41aa7a40d7a506966b6ddd797a54c98bd1cd3cf9ec007c`,
+then runs the pinned existing credential-registration SQL once. It neither opens a
+private key nor changes a role/password/key mount. Existing records or ambiguous
+commits STOP rather than reactivate/overwrite. Lifetimes are actual owner choices,
+not invented pilot defaults. A key binding is not employer authority.
+
+## One genuine normal-API acceptance, not another synthetic claim
+
+`smoke-evidence-issuance.py --approved-live-acceptance <private.json>` implements the
+complete workflow. It must be separately authorized at the reviewed deployed
+revision, with actual active authority and credential binding already established.
+It has no schema, authority or credential activation operation. Stage it beside
+`issuance-acceptance-support.py`, `smoke-evidence-review.py` and
+`smoke-evidence-completion.py` from the same approved revision.
+
+Root-private 0600 JSON supplies the actual values:
+
+| Fields | Meaning |
+|---|---|
+| `approval_ref`, `actor_id`, `basis_ref`, `expected_main` | Approved one-request live operation and exact deployed SHA |
+| `subject_principal`, `reviewer_principal`, `hr_principal` | Canonical UUIDs from normal authentication, privately reconciled to actual people; reviewer differs from subject |
+| `authorization_id`, `authority_evidence_ref` | Real recorded NorStar authority and signed packet |
+| `case_id`, `claim_snapshot` | New explicit case; truthful `primary_employment.title` = `Managing Member — owner`, with only corroborated optional facts |
+| `evidence` | One genuine file per explicitly required check: `check_id`, private `path`, `mime_type`, approved `sha256`; existing 5 MiB/PDF/PNG/JPEG limits |
+| `revoke_claim_after_verification` | Explicit boolean owner choice: revoke this issued claim and prove trust denial, or retain it and verify current non-revoked status |
+
+No personal values or completed examples belong in Git. The reviewer may also be
+an already eligible HR actor; otherwise an existing separate HR account acts as
+issuer. This is reuse of current single-role authorization, not a requirement to
+make the reviewer HR or to change account roles. Hidden local prompts perform
+normal login/session/exchange; credentials never leave the console for Codex.
+
+The client creates one normal subject request while NorStar remains MANUAL, opens
+only the explicitly approved brief AUTO window for normal submit, and restores
+MANUAL in `finally`. It never patches request status. It provisions only the
+approved case/check/binding/upload/review grants and, if absent and explicitly in
+scope, that exact HR assignment through existing operator permissions. Genuine
+files are uploaded/completed privately. The OTHER human personally inspects the
+canonical attachment and immutable context, then supplies their actual decision
+and rationale under their authenticated principal. No automated review approval,
+synthetic documents or second account controlled by the uploader substitutes.
+
+Before signing, eligibility must show current authority, evidence and key, and no
+other NorStar request may be pending within the narrow pilot scope. Durable
+issuance intent precedes the **single** positive HTTP call. Retries/restarts using
+the same private input refuse duplicate provisioning/signing. An ambiguous result
+requires read-only reconciliation of the subject's already committed artifact,
+not another signing call. Tokens and URLs never enter the private state receipt.
+
+The subject retrieves the exact portable committed SD-JWT VC. A separate public-
+key/OpenSSL check establishes its RS256 signature and trusted public JWKS binding.
+Canonical issuer/subject/employer/claim, request/binding/version and exact database
+snapshot/manifest digests must match. The independent verification pathway (no
+signer) must separately return valid signature, manifest integrity, resolved review,
+current authority/status and explicit policy. Wrong subject/policy and modified
+signature must deny trust. Cryptographic manifest integrity is not a substitute
+for the trusted resolver's evidence-review facts. Malware stays visibly PENDING.
+
+Only temporary grants/HR assignment created by this run are revoked on exit;
+existing assignments, genuine evidence, request, binding, case, authority,
+credential and audit records are retained. Claim revocation occurs only when
+explicitly selected/authorized. Do not close/revoke the binding of a retained
+credential: the verifier correctly treats that as disqualification. Both normal
+sessions are logged out. The private credential is retained root-only; report
+sanitized PASS/STOP and revision only. Native picker/device acceptance remains
+separate. Historic PR #140 smoke stays unconfirmed and is not rerun.
+
+## Recovery and evidence limits
+
+Before real activation/issuance, leaving additive empty tables and recovering the
+API to e84b9a6 with the retained image/configuration is compatible. Never roll back
+past its bound-request legacy-signing guard. After issuance, preserve the new
+verifier so current revocation can be evaluated; an old API is not a complete
+functional rollback. Owner-authorized authority suspension stops further issuance;
+owner-authorized exact claim/credential revocation has its distinct purpose and
+is not erasure of a signature. Never restore stale data, drop audit tables, fake an
+unsigned rejection or enable legacy credentials to conceal a failed acceptance.
+
+Local operations regressions cover actual PostgreSQL transaction/restore/ACL and
+workflow compatibility, runtime/false-condition/duplicate/terminal lifecycle
+refusal, independent temporary RSA-3072 signature verification, incomplete trust
+verdict rejection and ambiguous-issuance no-retry behavior. Existing Go tests cover
+authority/key/binding/claim revocation in both concurrency orders. These are local
+proofs; production preparation, deployment and genuine live acceptance need their
+actual console/CI results before being reported PASS.

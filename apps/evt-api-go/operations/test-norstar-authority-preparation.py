@@ -98,6 +98,25 @@ def main():
   sql('CREATE ROLE local_runtime NOLOGIN;GRANT USAGE ON SCHEMA public TO local_runtime;GRANT SELECT ON evt_employer_config TO local_runtime;')
   assert sql(settings+'SET ROLE local_runtime;'+record,False).returncode!=0
   assert sql("SELECT to_regclass('public.evidence_issuer_credentials') IS NULL;").stdout.strip()=='t'
+  activation=(ROOT/'operations/activate-norstar-authority.sql').read_text()
+  containment=(ROOT/'operations/contain-norstar-authority.sql').read_text()
+  extra="SET cvera.norstar_activation_approval_ref='LOCAL ONLY';SET cvera.norstar_activation_event_id='local-activation';SET cvera.norstar_activation_conditions_satisfied='true';SET cvera.norstar_delegation_valid_from='2020-01-01T00:00:00Z';"
+  assert sql(settings+activation,False).returncode!=0
+  assert sql(settings+extra+"SET cvera.norstar_activation_conditions_satisfied='false';"+activation,False).returncode!=0
+  assert sql(settings+extra+"SET ROLE local_runtime;"+activation,False).returncode!=0
+  activated=json.loads(sql(settings+extra+activation).stdout)
+  assert activated['authority_activation']=='RECORDED'
+  assert sql(settings+extra+activation,False).returncode!=0
+  assert sql('SELECT committed_position FROM authority_recording_boundary;').stdout.strip()=='5'
+  withdrawal="SET cvera.norstar_containment_approval_ref='LOCAL ONLY';SET cvera.norstar_containment_event_id='local-suspend';SET cvera.norstar_containment_event='SUSPEND';"
+  assert sql(settings+containment,False).returncode!=0
+  assert json.loads(sql(settings+withdrawal+containment).stdout)['authority_containment']=='RECORDED'
+  assert sql(settings+withdrawal+containment,False).returncode!=0
+  revoked=withdrawal+"SET cvera.norstar_containment_event_id='local-revoke';SET cvera.norstar_containment_event='REVOKE';"
+  assert json.loads(sql(settings+revoked+containment).stdout)['event']=='REVOKE'
+  assert sql(settings+revoked+containment,False).returncode!=0
+  assert sql('SELECT committed_position FROM authority_recording_boundary;').stdout.strip()=='7'
+
   # Rehearse the documented backup/restore on a second isolated clone. This
   # is a real local archive restore, not a production-backup readiness claim.
   clone=NAME+'-restore'
@@ -122,10 +141,10 @@ def main():
    restored=subprocess.run(['docker','exec','-i',clone,'pg_restore','-U','postgres','-d','evt','--exit-on-error'],input=dump,capture_output=True,timeout=60)
    assert restored.returncode==0 and hashlib.sha256(archive.read_bytes()).hexdigest()==digest
    assert sql("SELECT dispatch_mode FROM evt_employer_config WHERE employer_id='norstar-systems-llc';",name=clone).stdout.strip()=='MANUAL'
-   assert sql('SELECT committed_position FROM authority_recording_boundary;',name=clone).stdout.strip()=='4'
-   assert sql("SELECT count(*) FROM authority_journal_events WHERE event_type='ACTIVATE';",name=clone).stdout.strip()=='0'
+   assert sql('SELECT committed_position FROM authority_recording_boundary;',name=clone).stdout.strip()=='7'
+   assert sql("SELECT count(*) FROM authority_journal_events WHERE event_type='ACTIVATE';",name=clone).stdout.strip()=='1'
   print(json.dumps({'norstar_preparation_local':'PASS','missing_inputs_denied':True,'duplicate_and_blind_resume_denied':True,
-   'production_preparation_driver_rehearsal':True,'source_read_only_enforced':True,'real_local_archive_restore':True,'metadata_preflight_read_only':True,'manual_non_dispatching_registration':True,'unreviewed_insert_trigger_denied':True,'four_recording_transactions':True,'stops_approved_not_active':True,'runtime_denied':True,'production_accessed':False,'signing_or_credentials_used':False}))
+   'production_preparation_driver_rehearsal':True,'source_read_only_enforced':True,'real_local_archive_restore':True,'metadata_preflight_read_only':True,'manual_non_dispatching_registration':True,'unreviewed_insert_trigger_denied':True,'four_recording_transactions':True,'stops_approved_not_active':True,'separate_activation_and_containment':True,'runtime_denied':True,'production_accessed':False,'signing_or_credentials_used':False}))
  finally:
   for name in [NAME+'-driver-rehearsal',NAME+'-restore',NAME]:
    r=run(['docker','inspect',name],check=False)

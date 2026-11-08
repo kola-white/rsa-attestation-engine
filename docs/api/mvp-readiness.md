@@ -164,3 +164,25 @@ credential, migration, deployment or live-signing operations.
 Production registration remains separately gated, independent of the still-blocked
 signed authority paperwork and case reviewer. No ACTIVE authority or signing is
 included in the prerequisite authorization.
+
+### Executable integrated issuance release/acceptance preparation
+
+PR #141 now includes a read-only production preparation / isolated archive-restore
+rehearsal and a separately approved atomic authority bootstrap (existing 000002–
+000013) plus 000019/five-EXECUTE apply phase. Empty registries fail closed and no
+migration history, role, authority or credential is invented. Prepared owner-only
+activation/containment SQL and public-credential registration retain the accepted
+contracts. The genuine acceptance client uses normal request/evidence/issuance
+APIs, another human's explicit contextual review, one durable signing attempt,
+portable artifact retrieval, separate public-key signature checking and current
+trusted verifier facts. It preserves genuine evidence and PENDING scans.
+
+Local operations regressions pass for rollback/commit/failure, same-image isolated
+archive restore, hostile table/sequence ACL stripping, actual workflow/receipt SQL,
+activation/containment denials and independent local RSA-3072 verification. These
+are not production acceptance. Production authority schema/000019 apply, real
+recording/activation, credential registration, deployment and live signing remain
+unexecuted without their separate owner approvals. Signed NorStar packet and a
+separate human reviewer remain external inputs; they do not block an authorized
+non-signing implementation release. See the existing
+[executable release procedure](../operations/evidence-backed-issuance-release.md).
