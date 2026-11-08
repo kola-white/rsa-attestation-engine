@@ -121,3 +121,23 @@ The driver passed an actual local network-none 64 MiB PostgreSQL backup/restore,
 rollback/commit, exact ACL/fail-closed checks, existing registry preservation and
 rerun rejection. This is local preparation, not production execution evidence.
 A production STOP must be inspected without blind retry or merge/deployment.
+
+## Production SQL evidence
+
+On 2026-11-08 UTC the owner returned PASS for the checksum-verified driver at
+0205d47. Migration **000017 only** and restricted bindings were applied from source
+7d97e12 after a fresh actual backup restore and rollback/commit rehearsal.
+Parent catalog/roles remained unchanged, API recovery was retained, and no
+resources/grants, credentials, configuration or services changed. The actual
+transaction/source record stays private on the Droplet. This establishes schema
+compatibility, not deployed HTTP or device acceptance.
+
+`smoke-evidence-review.py`, staged beside the reviewed completion smoke helper,
+implements the approved two-account acceptance. It requires the exact deployed
+main SHA and two different normally authenticated canonical principals before
+provisioning a unique synthetic fixture. Its offline contract test exercises
+grant separation, self-review denial, attribution/retry/conflict/revocation and
+corrupt completion stopping before review. It revokes fixture grants, closes the
+case and attempts both API and Kratos logout for each account. It does not create
+identities, delete evidence, sign claims or change scan status. STOP retains a
+private exact-fixture intent for inspection; do not blindly rerun or print it.
