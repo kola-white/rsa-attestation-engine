@@ -47,17 +47,20 @@ See [review contract](evidence-review.md), [client integration](evidence-client.
    request/case, explicit required checks, canonical request subject/employer and
    frozen claim context; independent contextual approval; no adoption/reuse; current
    ACTIVE authority for issuer **https://cvera.app**, employer and employment.role.
-   [Binding implementation](request-evidence-binding.md) is locally verified on its
-   feature branch, not yet deployed. Production authority is intentionally
+   [Binding implementation](request-evidence-binding.md) is deployed at e84b9a6
+   (PR #140); migration 000018 and final CI/deployment passed. Its separate
+   two-account/two-request smoke remains **pending/unconfirmed** and must not be
+   rerun or represented as accepted. Production authority is intentionally
    unconfigured and eligibility therefore fails closed; no authority privileges
    or live signing are enabled. Bound requests cannot bypass this through legacy
    attestation. Upload, review, employer access, issuer authority and final verifier
    reliance remain separate. The linked document lists the exact next issuance/
    independent-verification work rather than treating a preparation receipt as a
    signed, trusted claim.
-4. Before advertising working real-user current-key attestations, obtain the
-   separately deferred issuance authorization and perform the prepared normal-API
-   signature/tamper acceptance. Signature validity must remain distinct from
+4. Before advertising working real-user current-key attestations, establish the
+   real employer delegation and obtain separately scoped authorization for the
+   [integrated issuance acceptance](../operations/evidence-backed-issuance-release.md).
+   The older legacy signature/tamper preparation is not evidence-backed issuance. Signature validity must remain distinct from
    unsupported/unconfigured legacy trust, status and expiry outcomes. Existing
    internal trust-recording and recruiter-consumption routes are not independent
    cryptographic verification. This does not reopen Weekend 2 closure.
@@ -79,3 +82,29 @@ pilot; blanket permissions and self-service administration are unnecessary.
   volume justifies them; the bounded API records one final decision per upload.
 - Self-service administration, additional credential formats/providers, HSMs,
   dashboards and nonessential infrastructure remain outside this MVP slice.
+
+## Integrated issuance milestone: objectives 2–5
+
+[Evidence-backed issuance and independent verification](evidence-backed-issuance.md)
+is implemented on `feature/evidence-backed-issuance`, **not deployed or accepted**.
+It connects the existing complete authority projector/evaluator to current locked
+eligibility, adds canonical issuer/subject/request/snapshot and manifest commitments,
+and returns a portable SD-JWT VC only after issuance persistence commits. A
+separate verifier without a private key checks trusted issuer/credential binding,
+current authority, exact issuance/manifest/context, revocation and explicit manual
+pilot policy. The subject can retrieve only its own committed credential.
+Signature validity alone never produces a trusted result.
+
+Migration 000019 and five bounded runtime EXECUTEs are prepared; no production SQL,
+authority establishment, credential activation or signing has occurred. Authority
+000002–000013 are not presumed deployed or version-recorded. Empty/unavailable
+sources and absent/inactive issuer credential registration fail closed. Real
+employer delegation evidence and exact bounded owner authorization remain production
+prerequisites. See the [controlled release plan](../operations/evidence-backed-issuance-release.md).
+
+Local full Go/PostgreSQL tests, relevant race tests and vet passed, including
+normal request-to-portable-claim, retrieval, transaction rollback and current-fact
+verification/revocation concurrency regressions. CI is recorded separately in the PR. Local RSA/authority fixtures prove engineering behavior only. No live
+production issuance/independent-verification acceptance is claimed. Baseline #140
+acceptance, native picker/device validation and real production acceptance remain
+separate gates; Weekend 2's earlier deferral is not silently changed.

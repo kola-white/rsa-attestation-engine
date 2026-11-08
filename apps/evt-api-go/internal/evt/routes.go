@@ -56,6 +56,7 @@ func (m *Module) Register(v1 *gin.RouterGroup) {
 	{
 		req.GET("/requests", m.Candidate.List)
 		req.GET("/requests/:request_id", m.Candidate.Get)
+ req.GET("/requests/:request_id/credential", m.Candidate.Credential)
 
 		req.POST("/requests", m.Candidate.CreateDraft)
 		req.PATCH("/requests/:request_id", m.Candidate.PatchDraft)
@@ -75,6 +76,7 @@ func (m *Module) Register(v1 *gin.RouterGroup) {
 
 		hr.POST("/requests/:request_id/attest", m.Employer.Attest)
  hr.POST("/requests/:request_id/evidence-eligibility", m.Employer.EvidenceEligibility)
+ hr.POST("/requests/:request_id/issue-evidence", m.Employer.IssueEvidence)
 	}
 
 	// -----------------------------

@@ -20,11 +20,12 @@ import (
 )
 
 type Server struct {
-	cfg     *config.Config
-	db      *sql.DB
-	s3      evidenceStore
-	policy  storage.EvidencePolicy
-	hmacKey []byte
+	cfg              *config.Config
+	db               *sql.DB
+	s3               evidenceStore
+	policy           storage.EvidencePolicy
+	hmacKey          []byte
+	issuanceVerifier *evtdb.IssuanceEngine
 }
 
 func NewRouter(cfg *config.Config) http.Handler {
@@ -96,6 +97,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 		log.Fatalf("pgxpool init failed: %v", err)
 	}
 	evtDB := &evtdb.DB{Pool: pool}
+	s.issuanceVerifier = &evtdb.IssuanceEngine{DB: evtDB}
 	evtModule, err := evtmod.NewModule(evtDB)
 	if err != nil {
 		log.Fatalf("evt module init failed: %v", err)

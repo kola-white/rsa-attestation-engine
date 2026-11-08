@@ -9,11 +9,13 @@ import (
 
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/credential"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/credential/sdjwtvc"
+	ec "github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/evidencecredential"
 )
 
 type VerificationOutcome struct {
-	Signature string `json:"signature"` // "verified" | "invalid" | "unknown"
-	Trust     string `json:"trust"`     // "trusted" | "untrusted" | "unknown"
+	Verification *ec.Outcome `json:"verification,omitempty"`
+	Signature    string      `json:"signature"` // "verified" | "invalid" | "unknown"
+	Trust        string      `json:"trust"`     // "trusted" | "untrusted" | "unknown"
 
 	Why *struct {
 		Summary string `json:"summary"`
@@ -36,7 +38,9 @@ type verifyOutcomeRequest struct {
 	//
 	// A future API revision can rename this to credential without breaking
 	// the current Expo client during the migration.
-	JWSCompact string `json:"jwsCompact"`
+	JWSCompact      string `json:"jwsCompact"`
+	ExpectedSubject string `json:"expectedSubject,omitempty"`
+	Policy          string `json:"policy,omitempty"`
 }
 
 func (s *Server) HandleVerificationOutcome(
@@ -51,6 +55,8 @@ func (s *Server) HandleVerificationOutcome(
 		)
 		return
 	}
+
+	w.Header().Set("Cache-Control", "private, no-store")
 
 	// Defensive request limit.
 	r.Body = http.MaxBytesReader(
@@ -86,10 +92,20 @@ func (s *Server) HandleVerificationOutcome(
 		return
 	}
 
-	out := verifyCredentialOutcome(
-		r,
-		rawCredential,
-	)
+	var out VerificationOutcome
+	if evidenceBoundCredential(rawCredential) {
+		resolved := ec.Verify(r.Context(), rawCredential, req.ExpectedSubject, req.Policy, time.Now().UTC(), s.issuanceVerifier)
+		trust := "unknown"
+		if resolved.Decision == "VERIFIED" {
+			trust = "trusted"
+		} else if resolved.Decision == "REJECTED" {
+			trust = "untrusted"
+		}
+		out = newVerificationOutcome(mapSignatureEvidence(resolved.Signature), trust, resolved.Reason, "Evidence-backed employment policy evaluation.", mapValidityEvidence(resolved.Validity), mapStatusEvidence(resolved.Status))
+		out.Verification = &resolved
+	} else {
+		out = verifyCredentialOutcome(r, rawCredential)
+	}
 
 	// Do not log credential contents.
 	log.Printf(
@@ -378,4 +394,18 @@ func (o VerificationOutcome) whyCode() string {
 	}
 
 	return o.Why.Code
+}
+
+// Dispatch only; all decoded fields remain untrusted until the bounded verifier
+// validates signature, credential binding and exact trusted issuance facts.
+func evidenceBoundCredential(raw string) bool {
+	parts := strings.Split(raw, "~")
+	if len(parts) < 1 {
+		return false
+	}
+	_, payload, err := sdjwtvc.DecodeIssuerJWTUnverified(parts[0])
+	if err != nil {
+		return false
+	}
+	return payload["vct"] == ec.VCT
 }

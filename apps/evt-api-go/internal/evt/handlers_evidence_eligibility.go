@@ -11,12 +11,13 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/auth"
+	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/requestbinding"
 )
 
 // EvidenceEligibility prepares a manifest; it never calls Signer/Attest/Verify.
-// The trusted authority source remains deliberately unconfigured in production:
-// no new authority schema privileges, fabricated grants or positive default.
+// A missing authority store remains explicitly unconfigured. Bounded trusted
+// resolution is used when deployed; no client or fabricated authority is accepted.
 func (h *EmployerHandlers) EvidenceEligibility(c *gin.Context) {
 	claims := auth.MustClaims(c)
 	if claims == nil {
@@ -47,12 +48,18 @@ func (h *EmployerHandlers) EvidenceEligibility(c *gin.Context) {
 	defer cancel()
 	var result requestbinding.Result
 	err = h.DB.WithTx(ctx, func(tx pgx.Tx) error {
-		// Same explicitly trusted application path used by existing evidence routes.
-		if _, err := tx.Exec(ctx, `SELECT pg_catalog.set_config('search_path',pg_catalog.format('pg_catalog,%I,pg_temp',pg_catalog.current_schema()),true)`); err != nil {
+
+		source, err := db.OptionalAuthoritySource(ctx, tx)
+		if err != nil {
 			return err
 		}
-		var err error
-		result, err = requestbinding.Prepare(ctx, tx, claims.Sub, request.String(), input.EmployerID, nil)
+		result, err = requestbinding.Prepare(ctx, tx, claims.Sub, request.String(), input.EmployerID, source)
+		if err != nil {
+			return err
+		}
+		if result.Eligible && h.Repo != nil && h.Repo.Signer != nil {
+			result.SigningEnabled, err = db.ActiveEvidenceSigningCredential(ctx, tx, h.Repo.Signer)
+		}
 		return err
 	})
 	if err != nil {
