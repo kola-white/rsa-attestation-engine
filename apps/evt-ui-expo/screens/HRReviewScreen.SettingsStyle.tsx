@@ -1,6 +1,7 @@
 import { RefreshControl, useColorScheme } from "react-native";
 import React, { useLayoutEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/auth/AuthContext";
+import { EvidenceReviewLink } from "@/components/EvidenceReviewLink";
 import {
   uploadEvidence, completeEvidence, listEvidenceChecks,
   EvidenceCompletionPending, EvidenceRequestError,
@@ -871,6 +872,7 @@ const onPullRefresh = React.useCallback(async () => {
 
     headerRight: () => (
       <View className="flex-row items-center gap-2">
+        <EvidenceReviewLink />
         <Pressable
           onPress={logout}
           accessibilityRole="button"

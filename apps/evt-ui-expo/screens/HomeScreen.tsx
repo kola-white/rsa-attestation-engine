@@ -5,6 +5,7 @@ import { useAuth } from "@/src/auth/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { AppStackParamList } from "@/src/navigation/MainAppNavigator";
+import { EvidenceReviewLink } from "@/components/EvidenceReviewLink";
 
 type AppNav = NativeStackNavigationProp<AppStackParamList, "Home">;
 
@@ -19,6 +20,7 @@ export const HomeScreen: React.FC = () => {
       <Text className="text-base text-slate-300 mb-6">
         {user?.email ?? "Signed in user"}
       </Text>
+      <EvidenceReviewLink />
 
       <Pressable
         className="h-12 items-center justify-center rounded-xl bg-sky-400 active:bg-sky-600 mb-3"

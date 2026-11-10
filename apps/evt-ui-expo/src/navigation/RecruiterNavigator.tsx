@@ -10,6 +10,7 @@ import type { AppStackParamList } from "@/src/navigation/MainAppNavigator";
 import { RecruiterCandidatesScreen } from "@/screens/RecruiterCandidates";
 import { CandidateDetailScreen } from "@/screens/CandidateDetail";
 import { RecruiterFiltersScreen } from "@/screens/RecruiterFilters";
+import { EvidenceReviewLink } from "@/components/EvidenceReviewLink";
 
 console.log("[RecruiterNavigator] module loaded");
 
@@ -54,6 +55,7 @@ export const RecruiterNavigator: React.FC = () => {
       initialRouteName="RecruiterCandidates"
       screenOptions={{
         headerShown: true,
+        headerRight: () => <EvidenceReviewLink />,
         headerLargeTitle: true,
         headerShadowVisible: false,
 

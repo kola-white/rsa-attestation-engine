@@ -5,12 +5,15 @@ import { HomeScreen } from "@/screens/HomeScreen";
 import { HRReviewScreenSettingsStyle } from "@/screens/HRReviewScreen.SettingsStyle";
 import { RecruiterNavigator } from "@/src/navigation/RecruiterNavigator";
 import { RequestorNavigator } from "@/src/navigation/RequestorNavigator";
+import { EvidenceReviewScreen } from "@/screens/EvidenceReviewScreen";
+import { EvidenceReviewLink } from "@/components/EvidenceReviewLink";
 
 export type AppStackParamList = {
   Home: undefined;
   HRReview: undefined;
   Recruiter: undefined;
   ReqHome: undefined;
+  EvidenceReview: undefined;
 };
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
@@ -33,7 +36,7 @@ export const MainAppNavigator: React.FC<Props> = ({ initialRouteName }) => {
       <Stack.Screen
         name="HRReview"
         component={HRReviewScreenSettingsStyle}
-        options={{ headerShown: true }}
+        options={{ headerShown: true, headerRight: () => <EvidenceReviewLink /> }}
       />
 
       <Stack.Screen
@@ -47,6 +50,7 @@ export const MainAppNavigator: React.FC<Props> = ({ initialRouteName }) => {
         component={RequestorNavigator}
         options={{ headerShown: false }}
       />
+      <Stack.Screen name="EvidenceReview" component={EvidenceReviewScreen} options={{ title: "Evidence reviews" }} />
     </Stack.Navigator>
   );
 };
