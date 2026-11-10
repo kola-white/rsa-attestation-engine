@@ -1,5 +1,17 @@
 # Minimum NorStar sequence: prepared, not authorized for execution
 
+> **Historical preparation record — current status reconciled 2026-11-10.**
+> NorStar registration completed as `norstar-systems-llc`, MANUAL, transaction
+> `3007`; exact canonical Cvera/employment.role authority is ACTIVE, activation
+> transaction `3019` (owner-confirmed). **Never repeat registration or activation.**
+> Earlier pending/unapproved statements below describe their original stages;
+> preserve them as history, not instructions to replay. PR #141 is merged and
+> implementation deployment is owner-confirmed. Public credential registration,
+> eligible NorStar HR assignment, Tara's genuine independent review and genuine
+> issuance acceptance remain pending. Use the [current baseline and ordered
+> checklist](norstar-production-readiness.md); this document grants no new authority.
+
+
 This is an executable operator plan, not production permission. The scripts do not
 create roles, change privileges, activate issuer authority, register a signing
 credential or sign an attestation. They require a separately authorized, verified
