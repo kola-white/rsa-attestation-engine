@@ -2,10 +2,31 @@
 
 Weekend 2 remains closed with the owner's explicit live-current-key attestation
 proof deferral. Completion at c5fdb5a passed production hashing, deduplication,
-private storage and revocation acceptance. The next evidence pilot is integrated
+private storage and revocation acceptance. The evidence pilot was integrated
 and deployed as **6e7293e75bf0577c1ce9105744249c718fe65361** (PR #136, including focused
 PRs #137 and #138). This assessment distinguishes implementation/delivery from
 positive authenticated acceptance; it is not a new security audit.
+
+## November 10, 2026 production reconciliation
+
+The [current NorStar baseline and four-stage STOP/GO checklist](../operations/norstar-production-readiness.md)
+is authoritative for the remaining pilot operations. This update uses owner-confirmed
+production observations and repository/GitHub evidence; no production access occurred.
+
+- **Implemented and delivered:** PR #141 merged as `bce7b9833885b69b94a2f7d6cf85d415cbc6ebac`;
+  its [main CI/deployment run](https://github.com/kola-white/rsa-attestation-engine/actions/runs/42534540050)
+  succeeded. Deployment is owner-confirmed. The current November 10 live SHA is
+  **UNVERIFIED** here; local main is not a deployment receipt.
+- **Configured:** NorStar `norstar-systems-llc`, MANUAL, registration transaction
+  `3007`; exact `https://cvera.app / norstar-systems-llc / employment.role`
+  authority ACTIVE, activation transaction `3019`. **Never repeat either operation.**
+- **Outstanding configuration:** owner-confirmed November 10 read-only checks show
+  `issuer-prod-2026-10` issuer credential `registered=false`, `active=false`, and
+  **zero** eligible active HR principals with unrevoked NorStar assignments.
+  These are operational prerequisites, not demonstrated implementation defects.
+- **Acceptance:** independent two-account synthetic evidence-review PASS remains
+  valid. Tara's genuine independent review and the first genuine NorStar
+  evidence-backed issuance/verification remain **PENDING**; no genuine PASS is claimed.
 
 ## Implemented evidence pilot
 
@@ -14,7 +35,7 @@ positive authenticated acceptance; it is not a new security audit.
 | Explicit reviewer grants, private listing/download, attributable manual APPROVED/REJECTED, no self-review | Full PostgreSQL authorization/locking/ACL regressions; owner-confirmed 000017 and narrow existing-role bindings after fresh actual backup restore/rehearsal | API deployed/healthy at 6e7293e; anonymous denial and positive two-account HTTP acceptance PASS |
 | Expo real assigned case/check selection, PUT followed by completion, safe same-session retry, awaiting-review display | Seven transport test groups, full Node CI, Expo typecheck/web export; existing Production web deployment for 6e7293e and public client markers confirmed | Actual authenticated file-picker and native device acceptance |
 | Bounded owner-run case deletion | Local owner-only freeze/revoke/expiry/manifest/redaction and offline partial-failure/resume/storage tests; runbook and dry-run-default tool committed | No production deletion performed; each destructive run needs separate per-case authority |
-| Live issuance acceptance preparation | Existing authorized candidate/assigned-employer path and exact legacy public-key/tamper proof documented | Production signing remains owner-deferred, not passed |
+| Integrated issuance and independent verification | PR #141 merged; owner-confirmed implementation deployment; existing current authority/evidence/credential checks | Public credential registration, eligible HR assignment, Tara's genuine review and separately authorized one-request acceptance remain pending |
 
 Manual review does **not** mark scans CLEAN: received evidence remains PENDING
 until an explicit trusted scanning process exists. Review grants are independent
@@ -50,15 +71,18 @@ See [review contract](evidence-review.md), [client integration](evidence-client.
    [Binding implementation](request-evidence-binding.md) is deployed at e84b9a6
    (PR #140); migration 000018 and final CI/deployment passed. Its separate
    two-account/two-request smoke remains **pending/unconfirmed** and must not be
-   rerun or represented as accepted. Production authority is intentionally
-   unconfigured and eligibility therefore fails closed; no authority privileges
-   or live signing are enabled. Bound requests cannot bypass this through legacy
+   rerun or represented as accepted. NorStar authority is now owner-confirmed ACTIVE
+   (transaction 3019);
+   the integrated source/issuance implementation shipped in PR #141. Missing
+   public credential registration and HR eligibility still prevent the genuine
+   workflow. No genuine live issuance acceptance is claimed. Bound requests cannot
+   bypass this through legacy
    attestation. Upload, review, employer access, issuer authority and final verifier
-   reliance remain separate. The linked document lists the exact next issuance/
-   independent-verification work rather than treating a preparation receipt as a
-   signed, trusted claim.
-4. Before advertising working real-user current-key attestations, establish the
-   real employer delegation and obtain separately scoped authorization for the
+   reliance remain separate. The [current operational checklist](../operations/norstar-production-readiness.md)
+   identifies the remaining work; a preparation receipt is not a signed, trusted claim.
+4. Before advertising accepted real-user current-key attestations, resolve public
+   credential registration, exact HR eligibility and genuine independent case review,
+   then obtain separately scoped authorization for the
    [integrated issuance acceptance](../operations/evidence-backed-issuance-release.md).
    The older legacy signature/tamper preparation is not evidence-backed issuance. Signature validity must remain distinct from
    unsupported/unconfigured legacy trust, status and expiry outcomes. Existing
@@ -86,28 +110,38 @@ pilot; blanket permissions and self-service administration are unnecessary.
 ## Integrated issuance milestone: objectives 2–5
 
 [Evidence-backed issuance and independent verification](evidence-backed-issuance.md)
-is implemented on `feature/evidence-backed-issuance`, **not deployed or accepted**.
-It connects the existing complete authority projector/evaluator to current locked
-eligibility, adds canonical issuer/subject/request/snapshot and manifest commitments,
-and returns a portable SD-JWT VC only after issuance persistence commits. A
-separate verifier without a private key checks trusted issuer/credential binding,
-current authority, exact issuance/manifest/context, revocation and explicit manual
-pilot policy. The subject can retrieve only its own committed credential.
-Signature validity alone never produces a trusted result.
+is implemented and owner-confirmed deployed through PR #141. It connects the
+accepted authority evaluator to locked eligibility, canonical issuer/subject/request
+and snapshot identity, immutable manifest commitments, committed portable credential
+retrieval and signer-independent verification of current trusted facts. Signature
+validity alone never produces trusted VERIFIED.
 
-Migration 000019 and five bounded runtime EXECUTEs are prepared; no production SQL,
-authority establishment, credential activation or signing has occurred. Authority
-000002–000013 are not presumed deployed or version-recorded. Empty/unavailable
-sources and absent/inactive issuer credential registration fail closed. Real
-employer delegation evidence and exact bounded owner authorization remain production
-prerequisites. See the [controlled release plan](../operations/evidence-backed-issuance-release.md).
+The historical non-signing release and local full Go/PostgreSQL, race and vet
+results remain recorded below and in the [release runbook](../operations/evidence-backed-issuance-release.md).
+Recorded local coverage includes normal request-to-portable-claim issuance,
+subject retrieval, rollback and current-fact verification/revocation concurrency.
+Those tests were not rerun during this documentation-only task.
+They do not prove genuine NorStar acceptance. Current ACTIVE organizational
+authority does not replace public credential registration, HR assignment or another
+human's contextual case review. Missing/inactive/revoked/unavailable trust still
+fails closed. No new schema bootstrap, registration or activation replay is needed
+merely to complete this documentation update.
 
-Local full Go/PostgreSQL tests, relevant race tests and vet passed, including
-normal request-to-portable-claim, retrieval, transaction rollback and current-fact
-verification/revocation concurrency regressions. CI is recorded separately in the PR. Local RSA/authority fixtures prove engineering behavior only. No live
-production issuance/independent-verification acceptance is claimed. Baseline #140
-acceptance, native picker/device validation and real production acceptance remain
-separate gates; Weekend 2's earlier deferral is not silently changed.
+The remaining owner-controlled stages are **public credential registration →
+eligible NorStar HR assignment → Tara's account and case-review authorization →
+one genuine request/issuance/independent-verification acceptance**. Case-specific
+review access is granted only after the accepted case/binding exists, within its
+separately approved scope. See the [ordered checklist and gap assessment](../operations/norstar-production-readiness.md).
+Native picker/device acceptance and the unconfirmed #140 smoke remain separate;
+Weekend 2's earlier closure and signing deferral are not silently changed.
+
+### Historical preparation narrative — superseded for current status
+
+The following paragraphs preserve intermediate observations and preparation
+receipts from before completion. Statements that registration, schema, deployment,
+authority paperwork or activation were still pending describe those historical
+stages, **not November 10 status**. The baseline above supersedes them. Do not
+replay a historical operation or infer missing acceptance from a preparation PASS.
 
 NorStar Systems LLC (owner-supplied California entity B20250427754) is the proposed
 first-party pilot authority subject for the qualified Managing Member — owner

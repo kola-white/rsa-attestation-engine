@@ -1,12 +1,28 @@
 # Integrated issuance release and genuine NorStar acceptance
 
-Engineering is implemented; production release and live acceptance are not yet
-executed. NorStar registration is complete: `norstar-systems-llc`, MANUAL,
-transaction 3007. **Never repeat registration.** Signed delegation, attributable
-first-party adjudication and the separate human case reviewer remain owner inputs.
-They do not block preparation or a separately authorized non-signing deployment.
+## Current status — November 10, 2026
 
-## Executable non-signing release
+PR #141 is merged as `bce7b9833885b69b94a2f7d6cf85d415cbc6ebac`;
+[main CI/deployment run 42534540050](https://github.com/kola-white/rsa-attestation-engine/actions/runs/42534540050)
+succeeded for that SHA, and the owner confirms the implementation is deployed.
+The current live November 10 SHA is **UNVERIFIED** here; no production probe was
+performed. Genuine NorStar issuance/independent-verification acceptance is pending.
+
+NorStar registration **completed**, MANUAL, transaction `3007`; organizational
+authority **ACTIVE**, transaction `3019`, for the exact canonical issuer/employer/
+employment.role scope. **Never repeat registration or activation.** The owner's
+November 10 read-only checks report the issuer credential unregistered/inactive
+and zero eligible NorStar-assigned HR principals. Tara's genuine case review is
+pending. Synthetic independent evidence-review PASS is not genuine NorStar PASS.
+Use the [current ordered STOP/GO checklist](norstar-production-readiness.md) for the
+four remaining separately approved stages, complete credential/HR inputs and
+read-only checks. No approval is granted by these documents.
+
+## Historical executable non-signing release — completed, do not replay
+
+The following records the original release procedure and its prerequisites, not
+a current instruction to bootstrap/redeploy. Preserve its private backup/change
+receipts; current recovery availability must be checked during an approved operation.
 
 `operations/release-evidence-issuance-sql.py --prepare` checks the deployed e84b9a6
 baseline and actual 000018 parents, runtime role/path and absence of authority and
@@ -48,8 +64,11 @@ credential, deploys or signs. The separately authorized squash merge uses existi
 main CI/exact-main API deployment. Verify health/version/JWKS and the unavailable
 credential failure before any subsequent activation. No extra infrastructure.
 
-## Actual authority and credential inputs; separately authorized execution
+## Authority history and remaining credential registration
 
+NorStar's recording and activation steps below are historical and completed. Do
+not execute them again; activation transaction 3019 supersedes the earlier
+APPROVED_NOT_ACTIVE gate. Credential registration remains separate and pending.
 Keep completed private documents/settings outside Git. First-party adjudication
 is permitted with truthful representative/subject/operator/conflict disclosure;
 independent third-party authority adjudication is not a requirement. The different
@@ -187,15 +206,18 @@ authority/key/binding/claim revocation in both concurrency orders. These are loc
 proofs; production preparation, deployment and genuine live acceptance need their
 actual console/CI results before being reported PASS.
 
-## Actual production preparation result
+## Historical production preparation result
 
 Owner returned PASS for executor d3ee63c / pinned SQL ab0c0f6. The fresh private
 backup, same-image restore, rollback/commit and actual normal-workflow probe all
 passed; runtime received five EXECUTEs only in the clone. Production SQL remained
 read-only and production schema/authority/credentials/services were unchanged.
-Use the already prepared root-private directory
-`/opt/cvera/issuance-release-20261108T224912Z-02ce57` for a separately approved apply;
+At that preparation stage, the already prepared root-private directory
+`/opt/cvera/issuance-release-20261108T224912Z-02ce57` was retained for the subsequent
+separately approved apply;
 do not repeat NorStar registration or regenerate the preparation without a state
-change or failed verification. The next independent release decision can authorize
-only schema apply plus non-signing merge/deployment, keeping real authority,
-credential activation and live acceptance reserved until their inputs and approvals.
+change or failed verification. That historical next decision covered schema apply
+plus non-signing merge/
+deployment; it is no longer a pending release decision. Authority activation has
+since completed. Credential registration and genuine acceptance remain separately
+gated as described in the November 10 baseline.

@@ -2,10 +2,26 @@
 
 ## Delivery state
 
-Implementation branch: `feature/evidence-backed-issuance`. Not deployed or
-production-accepted. Binding release #140 is deployed at e84b9a6; its separate
-synthetic acceptance is **pending**, with no rerun authorized or performed.
-Migration 000018 has passed production schema/backup/restore verification.
+As of **2026-11-10**, PR #141 is merged as
+`bce7b9833885b69b94a2f7d6cf85d415cbc6ebac`; its
+[main CI/deployment run 42534540050](https://github.com/kola-white/rsa-attestation-engine/actions/runs/42534540050)
+succeeded, and the owner confirms the implementation is deployed. Current live
+November 10 revision is **UNVERIFIED** in this documentation-only reconciliation.
+No genuine evidence-backed NorStar issuance/verification acceptance is claimed.
+
+NorStar registration is complete (`norstar-systems-llc`, MANUAL, transaction 3007)
+and its exact organizational authority is owner-confirmed ACTIVE (transaction
+3019). Do not repeat registration or activation. November 10 read-only observations
+show public issuer credential `issuer-prod-2026-10` **not registered/not active**
+and zero eligible active NorStar-assigned HR principals. Tara's genuine independent
+case review remains pending. These are separate operational/human gates, not proof
+of defects in the deployed contract below.
+
+The independent two-account evidence-review synthetic acceptance is PASS;
+it does not prove genuine NorStar review. Binding release #140 is recorded deployed
+at e84b9a6 with 000018 verified; its separate synthetic smoke remains UNCONFIRMED,
+with no rerun implied. See the [current four-stage operational checklist](../operations/norstar-production-readiness.md)
+for exact prerequisites, approvals, verification and STOP conditions.
 
 ## Integrated contract
 
@@ -113,10 +129,11 @@ read, prepare issuance, commit issuance and resolve exact issued facts. No direc
 new-table or authority-table DML/SELECT/UPDATE locking grants. Owner-only claim
 revocation and credential registration are not exposed as application endpoints.
 
-The existing authority schema is not presumed deployed. Existing 000002–000013
-must be inspected/restored/rehearsed before a separately authorized bootstrap;
-000001 migration-history fabrication is forbidden. All authority mutations must
-retain the accepted one-evidence-row-per-recording-transaction protocol.
+The historical #141 release required verified authority 000002–000013 plus
+000019/bindings before deployment. The owner now confirms deployment and ACTIVE
+NorStar authority; do not replay that bootstrap. Preserve actual schema/change
+receipts rather than inventing 000001 migration history. Any future authority
+mutation retains the accepted one-evidence-row-per-recording-transaction protocol.
 
 ## Verification and remaining acceptance
 
@@ -129,12 +146,12 @@ ACLs and real PostgreSQL blocking in both issuance/revocation orderings.
 Local keys and authority are explicit test fixtures, never production substitutes.
 Exact commands/results and CI are recorded in the release PR/readiness assessment.
 
-Production gates remain: baseline #140 acceptance; separately authorized schema
-and bounded runtime read deployment; real attributable employer delegation;
-verified canonical issuer/public credential activation; one explicitly authorized
-normal-request, two-account evidence/review/issuance/verification acceptance.
-Native device/picker acceptance is separate. No signing-key operation, authority
-establishment, credential activation or live signing has been executed here.
+Remaining genuine production gates are separately approved public credential
+registration, an eligible NorStar HR principal/assignment, Tara's independent
+review and the one-request acceptance. Authority activation is complete, not a
+remaining gate. Synthetic acceptance, historical #140 smoke, native-device/picker
+validation and genuine live acceptance must remain separately reported. This
+feature document authorizes no operation, account/grant change or signing.
 
 Local verification commands (run from `apps/evt-api-go`; the existing guarded
 local test driver supplies only the disposable PostgreSQL DSN, and CI supplies
@@ -150,5 +167,6 @@ All passed locally with database integration enabled. Tests without that explici
 local/CI database setting skip PostgreSQL cases and are not equivalent evidence.
 The normal create/submit test explicitly labels its legacy request UUID default
 and timestamp columns as workflow scaffolding; actual production catalog/default
-compatibility must be established by a restored-schema rehearsal before live
-normal-request acceptance. No assumption about missing production DDL is a migration.
+compatibility required the release's restored-schema rehearsal. That historical
+preparation does not prove genuine live normal-request acceptance. No assumption
+about missing production DDL is a migration.

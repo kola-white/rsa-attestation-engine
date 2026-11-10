@@ -1,6 +1,11 @@
 # Request-bound evidence preparation
 
-Status: implementation/local verification; not deployed. No signing is enabled.
+Status reconciled **2026-11-10**: #140 deployed at e84b9a6; its separate synthetic
+acceptance remains UNCONFIRMED. PR #141 subsequently shipped integrated issuance/
+verification (owner-confirmed deployment). Genuine NorStar acceptance is pending.
+The original non-signing #140 behavior and remaining-work list below are historical
+milestone context; see [current readiness](mvp-readiness.md) and the
+[operational checklist](../operations/norstar-production-readiness.md).
 The owner approved the policy and exact issuer `https://cvera.app` (no trailing
 slash) on 2026-11-08. That identifier is distinct from authentication JWT `iss`,
 the API hostname, HR principal IDs, employer IDs and signing-key `kid`. Choosing
@@ -106,7 +111,8 @@ review locks coordinate resource/review/state changes; no stale snapshot is a
 cached permission. Unsupported isolation, RLS or unsafe schema resolution fails
 closed. The positive authority bridge is tested with real local journal fixtures.
 
-**Production authority source is intentionally unconfigured.** The runtime is
+**Historical #140 deployment state, superseded by #141:** production authority
+source was intentionally unconfigured. The runtime is
 not granted authority-table access and migrations 000001–000013 are not presumed
 deployed or fabricated. When evidence is ready the production endpoint therefore
 returns `eligible:false`, `evidenceReady:true`, `reason:AUTHORITY_SOURCE_UNAVAILABLE`.
@@ -132,7 +138,11 @@ DDL, restore-test a fresh backup, and atomically apply 000018 plus exact bounded
 bindings before the API is represented as binding-ready. No authority schema,
 credentials, memberships or broad table privileges are added by this milestone.
 
-## Exact remaining work before controlled evidence-backed issuance
+## Historical remaining work at the #140 milestone
+
+The implementation work below shipped in #141; NorStar authority is now
+owner-confirmed ACTIVE (transaction 3019). Public credential/HR configuration,
+Tara's review and genuine acceptance remain pending as listed in current readiness.
 
 1. Establish real, attributable employer delegation for canonical issuer
    https://cvera.app and employment.role. Verify/deploy the existing authority
