@@ -154,7 +154,7 @@ function ReviewSession({ principal, token }: { principal: string; token: string 
         <View className="gap-3">{checks.map(c => <Button key={c.caseId + "/" + c.checkId} label={`${c.caseId} / ${c.checkId}`} selected={scope?.caseId === c.caseId && scope.checkId === c.checkId} disabled={loading} onPress={() => setScope(c)} />)}</View>
         {listing ? <>
           <ClaimContext binding={listing.binding} />
-          <Text accessibilityRole="header" className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Required check: {listing.checkId}</Text>
+          <Text accessibilityRole="header" className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{listing.binding?.requiredCheck ? "Required check" : "Assigned check"}: {listing.checkId}</Text>
           {listing.evidence.length === 0 ? <Text className="text-base text-zinc-700 dark:text-zinc-300">No received evidence is available for this check. No decision can be recorded.</Text> : null}
           {listing.evidence.map(item => <Attachment key={`${revision}/${listing.caseId}/${listing.checkId}/${item.uploadId}`} item={item} listing={listing} client={client} principal={principal} refresh={refresh} gate={gate} />)}
         </> : null}

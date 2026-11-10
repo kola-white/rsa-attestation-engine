@@ -111,11 +111,12 @@ No separate frontend lint command is configured.
 
 ### Deployment (separate authorization required)
 
-The frontend target is **mvp.cvera.app**, served by the existing **Vercel expo-app**
+The frontend target is **mvp.cvera.app**, served by the existing **Vercel expo-app-mvp**
 Git integration, not the DigitalOcean API deploy script or Spaces trust publisher.
 Read-only GitHub metadata confirmed successful Vercel Production deployment
 7690993571 for `9f300543a36c7cbdc5605a5c1c58b29167e29cfe`, with a Vercel `expo-app`
-deployment URL. This is evidence of the existing release mechanism, not deployment
+deployment URL; PR #144's successful Vercel check identifies project `expo-app-mvp`.
+This is evidence of the existing release mechanism, not production deployment
 of this feature or proof of its custom-domain alias. Actual Vercel project build
 settings/domain mapping are not versioned here and must be confirmed before release.
 
