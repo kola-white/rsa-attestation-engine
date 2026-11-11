@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { RequestorStackParamList, EmploymentClaimDraft } from "@/src/navigation/requestorTypes";
 import { useAuth } from "@/src/auth/AuthContext";
+import { employmentSnapshot } from "@/src/api/employmentClaim";
 
 type Nav = NativeStackNavigationProp<RequestorStackParamList, "RequestorNewRequest">;
 
@@ -69,6 +70,7 @@ export const RequestorNewRequestScreen: React.FC = () => {
     }
 
     try {
+      const canonicalSnapshot = employmentSnapshot(claimSnapshot, {}, employerId);
       setSubmitting(true);
 
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/v1/requests`, {
@@ -80,7 +82,7 @@ export const RequestorNewRequestScreen: React.FC = () => {
         },
         body: JSON.stringify({
           employer_id: employerId.trim(),
-          claim_snapshot: claimSnapshot,
+          claim_snapshot: canonicalSnapshot,
         }),
       });
 

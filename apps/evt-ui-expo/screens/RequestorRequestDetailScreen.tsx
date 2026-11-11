@@ -1,5 +1,5 @@
 // screens/RequestorRequestDetailScreen.tsx
-import React, { useLayoutEffect, useMemo, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,8 @@ import type {
   RequestStatus,
 } from "@/src/navigation/requestorTypes";
 import { useAuth } from "@/src/auth/AuthContext";
+import { fetchRequestorRequest } from "@/src/api/requestor";
+import { employmentDraftFromSnapshot, employmentSnapshot, employmentDraftNeedsSave } from "@/src/api/employmentClaim";
 
 type R = RouteProp<RequestorStackParamList, "RequestorRequestDetail">;
 type N = NativeStackNavigationProp<
@@ -32,7 +34,7 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_EVT_API_BASE_URL ?? "";
 export const RequestorRequestDetailScreen: React.FC = () => {
   const route = useRoute<R>();
   const navigation = useNavigation<N>();
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
 
   const { request_id, snapshot } = route.params;
 
@@ -52,6 +54,9 @@ export const RequestorRequestDetailScreen: React.FC = () => {
     () => snapshot?.status ?? "DRAFT",
   );
   const [busy, setBusy] = useState(false);
+  const [storedClaim, setStoredClaim] = useState<Record<string, unknown> | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const loadedFor = useRef<string | null>(null);
   const [isRequestInfoOpen, setIsRequestInfoOpen] = useState(false);
 
   useLayoutEffect(() => {
@@ -64,11 +69,26 @@ export const RequestorRequestDetailScreen: React.FC = () => {
     });
   }, [navigation]);
 
-  const canEdit = status === "DRAFT";
-  const canSubmit = status === "DRAFT";
-  const canCancel = status === "DRAFT";
+  const requestIdentity = `${user?.id}/${request_id}`;
+  const canEdit = status === "DRAFT" && storedClaim !== null && loadedFor.current === requestIdentity;
+  const canSubmit = canEdit;
+  const canCancel = canEdit;
 
   const apiUrl = useMemo(() => API_BASE_URL.replace(/\/$/, ""), []);
+  useEffect(() => {
+    let current = true;
+    // Normal access-token renewal must not discard unsaved edits for the same requestor/request.
+    if (accessToken && user && loadedFor.current === requestIdentity) return;
+    setStoredClaim(null); setLoadError(null);
+    if (!accessToken || !user || !apiUrl) { loadedFor.current = null; return; }
+    void fetchRequestorRequest(apiUrl, accessToken, request_id).then(data => {
+      if (!current) return;
+      loadedFor.current = requestIdentity;
+      setStoredClaim(data.claim_snapshot ?? {}); setClaim(employmentDraftFromSnapshot(data.claim_snapshot));
+      setExpectedVersion(data.version); setStatus(data.status);
+    }).catch(() => { if (current) setLoadError("Could not load the current request. Go back and try again."); });
+    return () => { current = false; };
+  }, [accessToken, apiUrl, request_id, requestIdentity, user?.id]);
 
   const displayStatus = useMemo((): string => {
     if (status === "ATTESTED") return "Verified";
@@ -79,6 +99,7 @@ export const RequestorRequestDetailScreen: React.FC = () => {
   const updatedAt = snapshot?.updated_at ?? "Unavailable";
 
   async function patchDraft() {
+    if (!canEdit || !storedClaim) return;
     if (!apiUrl) {
       Alert.alert("Config error", "EXPO_PUBLIC_EVT_API_BASE_URL is empty.");
       return;
@@ -89,6 +110,7 @@ export const RequestorRequestDetailScreen: React.FC = () => {
     }
 
     try {
+      const canonicalSnapshot = employmentSnapshot(claim, storedClaim);
       setBusy(true);
 
       const res = await fetch(`${apiUrl}/v1/requests/${request_id}`, {
@@ -100,11 +122,12 @@ export const RequestorRequestDetailScreen: React.FC = () => {
         },
         body: JSON.stringify({
           expected_version: expectedVersion,
-          claim_snapshot: claim,
+          claim_snapshot: canonicalSnapshot,
         }),
       });
 
       if (res.status === 204) {
+        setStoredClaim(canonicalSnapshot);
         setExpectedVersion((v) => v + 1);
         Alert.alert("Saved", "Changes saved.");
         return;
@@ -118,12 +141,19 @@ export const RequestorRequestDetailScreen: React.FC = () => {
       } catch {}
 
       Alert.alert("Update failed", err);
+    } catch (e) {
+      Alert.alert("Update failed", e instanceof Error ? e.message : "Changes were not confirmed. Reload the request before retrying.");
     } finally {
       setBusy(false);
     }
   }
 
   async function submit() {
+    if (!canSubmit || !storedClaim) return;
+    if (employmentDraftNeedsSave(claim, storedClaim)) {
+      Alert.alert("Save changes first", "Save the draft before submitting so the employment claim matches the facts shown here.");
+      return;
+    }
     if (!apiUrl) {
       Alert.alert("Config error", "EXPO_PUBLIC_EVT_API_BASE_URL is empty.");
       return;
@@ -290,6 +320,7 @@ export const RequestorRequestDetailScreen: React.FC = () => {
       </Modal>
 
       <ScrollView contentInsetAdjustmentBehavior="automatic" className="px-5">
+        {storedClaim === null ? <Text accessibilityLiveRegion="polite" className="mt-4 text-sm text-zinc-600 dark:text-zinc-300">{loadError ?? "Loading current request…"}</Text> : null}
         <View className="mt-4 flex-row items-center">
           <Text className="text-xs text-zinc-500 dark:text-zinc-400">
             Request ID
@@ -441,7 +472,7 @@ export const RequestorRequestDetailScreen: React.FC = () => {
               ]}
             >
               <Text className="text-white font-semibold">
-                {canSubmit ? "Submit request" : "Submitted"}
+                {status === "DRAFT" ? "Submit request" : "Submitted"}
               </Text>
             </Pressable>
           </View>
