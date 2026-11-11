@@ -26,6 +26,7 @@ import type {
   CandidateRowSnapshot,
 } from "@/src/navigation/recruiterTypes";
 import { CandidateRow } from "@/components/CandidateRow";
+import { EvidenceReviewLink } from "@/components/EvidenceReviewLink";
 import {
   useRecruiterFiltersStore,
   DEFAULT_RECRUITER_QUERY,
@@ -359,6 +360,8 @@ export function RecruiterCandidatesScreen() {
         color: "#e5e7eb",
       },
       headerRight: () => (
+        <View className="flex-row items-center gap-2">
+        <EvidenceReviewLink />
         <Pressable
           onPress={openFilters}
           accessibilityRole="button"
@@ -369,6 +372,7 @@ export function RecruiterCandidatesScreen() {
             Filter
           </Text>
         </Pressable>
+        </View>
       ),
     });
   }, [nav, openFilters]);

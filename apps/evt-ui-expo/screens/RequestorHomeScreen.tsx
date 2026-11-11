@@ -25,6 +25,7 @@ import {
   claimFromSnapshot,
 } from "@/src/api/requestor";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { EvidenceReviewLink } from "@/components/EvidenceReviewLink";
 
 type Nav = NativeStackNavigationProp<RequestorStackParamList, "RequestorHome">;
 
@@ -42,7 +43,7 @@ export const RequestorHomeScreen: React.FC = () => {
     navigation.setOptions({
       title: "",
       headerLargeTitle: false,
-      headerRight: undefined,
+      headerRight: () => <EvidenceReviewLink />,
     });
   }, [navigation]);
 

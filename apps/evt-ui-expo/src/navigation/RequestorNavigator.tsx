@@ -5,6 +5,7 @@ import type { RequestorStackParamList } from "@/src/navigation/requestorTypes";
 import { RequestorHomeScreen } from "@/screens/RequestorHomeScreen";
 import { RequestorNewRequestScreen } from "@/screens/RequestorNewRequestScreen";
 import { RequestorRequestDetailScreen } from "@/screens/RequestorRequestDetailScreen";
+import { EvidenceReviewLink } from "@/components/EvidenceReviewLink";
 
 const Stack = createNativeStackNavigator<RequestorStackParamList>();
 
@@ -15,6 +16,7 @@ export const RequestorNavigator: React.FC = () => {
       screenOptions={{
         headerShown: true,
         headerLargeTitle: true,
+        headerRight: () => <EvidenceReviewLink />,
       }}
     >
       <Stack.Screen
