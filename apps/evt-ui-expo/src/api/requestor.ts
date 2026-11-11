@@ -1,5 +1,6 @@
 // src/api/requestor.ts
-import type { RequestStatus, EmploymentClaimDraft } from "@/src/navigation/requestorTypes";
+import type { RequestStatus } from "@/src/navigation/requestorTypes";
+export { claimFromSnapshot } from "./employmentClaim";
 
 export type RequestorListRow = {
   request_id: string;
@@ -15,28 +16,18 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
-/**
- * Coerce claim_snapshot -> EmploymentClaimDraft for the existing UI.
- * If fields are missing, we fall back to safe placeholders.
- */
-export function claimFromSnapshot(
-  snap: Record<string, unknown> | null
-): EmploymentClaimDraft {
-  const employer =
-    isRecord(snap) && typeof snap.employer === "string" ? snap.employer : "Unknown employer";
-
-  const job_title =
-    isRecord(snap) && typeof snap.job_title === "string" ? snap.job_title : "Unknown title";
-
-  const start_mm_yyyy =
-    isRecord(snap) && typeof snap.start_mm_yyyy === "string" ? snap.start_mm_yyyy : "??/????";
-
-  const end_mm_yyyy =
-    isRecord(snap) && (typeof snap.end_mm_yyyy === "string" || snap.end_mm_yyyy === null)
-      ? (snap.end_mm_yyyy as string | null)
-      : null;
-
-  return { employer, job_title, start_mm_yyyy, end_mm_yyyy };
+export type RequestorDetail = RequestorListRow & { version: number };
+export async function fetchRequestorRequest(apiBaseUrl: string, accessToken: string, requestId: string, transport: typeof fetch = fetch): Promise<RequestorDetail> {
+  const response = await transport(`${apiBaseUrl.replace(/\/$/, "")}/v1/requests/${encodeURIComponent(requestId)}`, {
+    headers: { Accept: "application/json", Authorization: `Bearer ${accessToken}` }, cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Could not load the current request. Go back and try again.");
+  const data: unknown = await response.json();
+  const statuses: RequestStatus[] = ["DRAFT", "SUBMITTED", "ATTESTATION_PENDING", "ATTESTED", "REJECTED", "VERIFIED", "UNVERIFIED", "CONSUMED", "CLOSED", "CANCELED"];
+  if (!isRecord(data) || data.request_id !== requestId || !Number.isSafeInteger(data.version) || (data.version as number) < 1
+    || !statuses.includes(data.status as RequestStatus) || (data.claim_snapshot !== null && !isRecord(data.claim_snapshot))
+    || typeof data.created_at !== "string" || typeof data.updated_at !== "string") throw new Error("The request response is incomplete. Go back and try again.");
+  return data as RequestorDetail;
 }
 
 export async function fetchRequestorRequests(

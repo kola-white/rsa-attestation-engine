@@ -14,7 +14,7 @@
     "sign-file": "node dist/pkg/issuer/sign-file.js",
     "verify": "node dist/pkg/verification/run-verify.js",
     "test:ci": "npm run validate:evt:schema && npm run validate:evt:vectors:valid && npm run validate:evt:vectors:invalid && npm run test:evidence-client",
-    "test:evidence-client": "tsx --test tests/evidence-upload-lifecycle.test.ts tests/evidence-review-client.test.ts"
+    "test:evidence-client": "tsx --test tests/evidence-upload-lifecycle.test.ts tests/evidence-review-client.test.ts tests/request-employment-claim.test.ts"
   },
   "keywords": [],
   "author": "Nicholas Whitehouse",
