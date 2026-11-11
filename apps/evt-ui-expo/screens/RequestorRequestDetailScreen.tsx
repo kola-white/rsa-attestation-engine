@@ -79,6 +79,7 @@ export const RequestorRequestDetailScreen: React.FC = () => {
     let current = true;
     // Normal access-token renewal must not discard unsaved edits for the same requestor/request.
     if (accessToken && user && loadedFor.current === requestIdentity) return;
+    loadedFor.current = null;
     setStoredClaim(null); setLoadError(null);
     if (!accessToken || !user || !apiUrl) { loadedFor.current = null; return; }
     void fetchRequestorRequest(apiUrl, accessToken, request_id).then(data => {
