@@ -2,6 +2,7 @@ import { RefreshControl, useColorScheme } from "react-native";
 import React, { useLayoutEffect, useMemo, useState } from "react";
 import { useAuth } from "@/src/auth/AuthContext";
 import { EvidenceReviewLink } from "@/components/EvidenceReviewLink";
+import { EmployerReview, employerLabel, type EmployerResponseType } from "@/src/api/employerReview";
 import {
   uploadEvidence, completeEvidence, listEvidenceChecks,
   EvidenceCompletionPending, EvidenceRequestError,
@@ -29,28 +30,6 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Crypto from "expo-crypto";
 
 console.log("[HRReview] module loaded");
-
-type EmployerResponseType =
-  | "FULL_MATCH"
-  | "PARTIAL_MATCH"
-  | "REJECTED_NO_RECORD"
-  | "REJECTED_POLICY";
-
-type HRQueueRow = {
-  request_id: string;
-  status: string;
-  claim_snapshot: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-};
-
-type HRQueueResp = { items: HRQueueRow[] };
-
-type HRGetResp = HRQueueRow & {
-  version: number;
-  employer_response_type?: EmployerResponseType | null;
-};
-
 
 type DisplayClaim = {
   employer: string;
@@ -606,15 +585,10 @@ export const HRReviewScreenSettingsStyle = () => {
 
 
 
-  const [loading, setLoading] = useState(true);
-  const [queue, setQueue] = useState<HRQueueRow[]>([]);
-  const [selected, setSelected] = useState<HRGetResp | null>(null);
-  const inflightRef = React.useRef(false);
-  const seqRef = React.useRef(0);
-  const selectedIdRef = React.useRef<string | null>(null);
-  const [refreshing, setRefreshing] = React.useState(false);
-
-  const employerId = "emp_demo_001"; // demo constant for now
+  const employerReview = useMemo(() => new EmployerReview(API_BASE_URL, accessToken ?? ""), [API_BASE_URL, accessToken]);
+  const { employers, employerId, queue, selected, loading, attesting, error: employerError } =
+    React.useSyncExternalStore(employerReview.subscribe, employerReview.snapshot, employerReview.snapshot);
+  const [refreshing, setRefreshing] = useState(false);
 
   const displayClaim = useMemo(() => {
   const snap = (selected?.claim_snapshot ?? {}) as Record<string, unknown>;
@@ -639,224 +613,21 @@ const isEmpty = !loading && queue.length === 0;
   }, [selected]);
 
 const handleChooseRequest = () => {
-  console.log("[HRReview][choose] pressed");
-  console.log("[HRReview][choose] queue.length", queue.length);
-  console.log("[HRReview][choose] loading", loading);
-  if (!queue.length) {
-    Alert.alert("No requests", "There are no requests waiting for review.");
-    return;
-  }
-
-  if (loading) {
-    Alert.alert("Still loading", "Requests are still loading. Try again in a moment.");
-    return;
-  }
-
-  const options = ["Cancel", ...queue.map((q) => q.request_id)];
-
-  if (Platform.OS === "ios") {
-    ActionSheetIOS.showActionSheetWithOptions(
-      { title: "Select request", options, cancelButtonIndex: 0 },
-      (idx) => {
-        if (idx <= 0) return;
-        const chosen = queue[idx - 1];
-        void (async () => {
-          setLoading(true);
-          try {
-            const d = await fetchDetail(chosen.request_id);
-            setSelected(d);
-            selectedIdRef.current = d.request_id;
-          } finally {
-            setLoading(false);
-          }
-        })();
-      }
-    );
-  } else {
-    Alert.alert(
-      "Select request",
-      undefined,
-      [
-        ...queue.map((q) => ({
-          text: q.request_id,
-          onPress: () => void (async () => {
-             setLoading(true);
-             try {
-               const d = await fetchDetail(q.request_id);
-               setSelected(d);
-               selectedIdRef.current = d.request_id;
-             } finally {
-               setLoading(false);
-             }
-           })(),
-        })),
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
-  }
+  if (loading || attesting || !queue.length) return;
+  // Inline selection works on web and native, without manual request-ID entry.
+  setRequestPickerOpen(open => !open);
 };
-
-const fetchDetail = React.useCallback(
-  async (requestId: string): Promise<HRGetResp> => {
-    if (!API_BASE_URL) throw new Error("Missing EXPO_PUBLIC_EVT_API_BASE_URL");
-    if (!accessToken) throw new Error("Missing access token (sign in again)");
-
-    const res = await fetch(
-      `${API_BASE_URL}/v1/employer/requests/${encodeURIComponent(
-        requestId
-      )}?employer_id=${encodeURIComponent(employerId)}`,
-      {
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    const text = await res.text();
-    if (!res.ok) throw new Error(`Detail failed (${res.status}): ${text}`);
-    return (text ? JSON.parse(text) : null) as HRGetResp;
-  },
-  [API_BASE_URL, accessToken, employerId]
-);
-
-const refreshQueueAndSelection = React.useCallback(async () => {
-  if (!API_BASE_URL) throw new Error("Missing EXPO_PUBLIC_EVT_API_BASE_URL");
-  if (!accessToken) throw new Error("Missing access token (sign in again)");
-  if (inflightRef.current) return;
-
-  inflightRef.current = true;
-  const mySeq = ++seqRef.current;
-
-  setLoading(true);
-  try {
-    const qRes = await fetch(
-      `${API_BASE_URL}/v1/employer/requests?employer_id=${encodeURIComponent(
-        employerId
-      )}`,
-      {
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    const qText = await qRes.text();
-    if (!qRes.ok) throw new Error(`Queue failed (${qRes.status}): ${qText}`);
-
-    const qJson = (qText ? JSON.parse(qText) : null) as HRQueueResp;
-    if (mySeq !== seqRef.current) return;
-
-    const items = qJson?.items ?? [];
-    setQueue(items);
-
-    // Prefer: explicit ref selection -> else first item
-    const preferredId = selectedIdRef.current ?? items[0]?.request_id ?? null;
-
-    if (!preferredId) {
-      setSelected(null);
-      selectedIdRef.current = null;
-      return;
-    }
-
-    // If selected item no longer exists, fall back to first
-    const nextId = items.some((x) => x.request_id === preferredId)
-      ? preferredId
-      : (items[0]?.request_id ?? null);
-
-    if (!nextId) {
-      setSelected(null);
-      selectedIdRef.current = null;
-      return;
-    }
-
-    const detail = await fetchDetail(nextId);
-    if (mySeq !== seqRef.current) return;
-
-    setSelected(detail);
-    selectedIdRef.current = detail.request_id;
-  } finally {
-    inflightRef.current = false;
-    setLoading(false);
-  }
-}, [API_BASE_URL, accessToken, employerId, fetchDetail]);
-
+const [requestPickerOpen, setRequestPickerOpen] = useState(false);
 const onPullRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await refreshQueueAndSelection();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refreshQueueAndSelection]);
-
-  const [attesting, setAttesting] = useState<EmployerResponseType | null>(null);
-
-  async function attest(responseType: EmployerResponseType) {
-    console.log("[HRReview][attest] pressed", responseType);
-    console.log("[HRReview][attest] selected", selected);
-    console.log("[HRReview][attest] accessToken present?", !!accessToken);
-    console.log("[HRReview][attest] queue.length", queue.length);
-    console.log("[HRReview][attest] loading", loading);
-    console.log("[HRReview][attest] attesting", attesting);
-
-  if (attesting) {
-    Alert.alert("Decision in progress", "Please wait for the current decision to finish.");
-    return;
-  }
-
-  try {
-    if (!selected) return Alert.alert("No request selected.");
-    if (!API_BASE_URL) return Alert.alert("Config error", "Missing API base URL.");
-    if (!accessToken) return Alert.alert("Auth error", "Missing access token.");
-    if (queue.length === 0) return Alert.alert("No requests waiting for review.");
-
-    setAttesting(responseType);
-
-    const requestId = selected.request_id;
-
-    const res = await fetch(
-      `${API_BASE_URL}/v1/employer/requests/${encodeURIComponent(requestId)}/attest`,
-      {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          employer_id: employerId,
-          response_type: responseType,
-          response_body: {},                 // keep empty for demo
-        }),
-      }
-    );
-
-    const text = await res.text();
-    if (!res.ok) {
-      let err = text || `HTTP ${res.status}`;
-      try {
-        const j = JSON.parse(text);
-        err = j?.error ?? err;
-      } catch {}
-      Alert.alert("Attest failed", err);
-      return;
-    }
-
-    // show result
-    const j = text ? JSON.parse(text) : null;
-    Alert.alert("Attested", `Status: ${j?.status ?? "ATTESTED"}`);
-
-    selectedIdRef.current = requestId;
-    await refreshQueueAndSelection();
-
-    // (Optional) also refresh queue so status changes reflect in list if you render it
-    // await refreshQueue();  // only if you have/need it
-  } catch (e: any) {
-    Alert.alert("Attest failed", String(e?.message ?? e));
-  } finally {
-    setAttesting(null);
+  setRefreshing(true);
+  setRequestPickerOpen(false);
+  try { await employerReview.refresh(); } finally { setRefreshing(false); }
+}, [employerReview]);
+async function attest(responseType: EmployerResponseType) {
+  const result = await employerReview.attest(responseType);
+  if (result) {
+    Alert.alert("Attested", `Status: ${result}`);
+    await employerReview.refresh();
   }
 }
 
@@ -905,14 +676,9 @@ const onPullRefresh = React.useCallback(async () => {
 
 useFocusEffect(
   React.useCallback(() => {
-    // On focus: refresh once
-    void refreshQueueAndSelection();
-
-    // On blur/unmount: invalidate late responses
-    return () => {
-      seqRef.current++;
-    };
-  }, [refreshQueueAndSelection])
+    void employerReview.refresh();
+    return employerReview.clear;
+  }, [employerReview])
 );
 
 function handleReject() {
@@ -977,6 +743,33 @@ function handleReject() {
       >
         
         <View className="px-4 pt-4 flex-1">
+          <SectionHeader title="Employer" />
+          <SettingsSection>
+            <SettingsRow>
+              <Text accessibilityLiveRegion="polite" className="text-base text-zinc-900 dark:text-zinc-100">
+                {loading && !employers.length ? "Loading employer access…"
+                  : employerError ? employerError
+                  : !employers.length ? "Employer access unavailable. Ask your Cvera administrator to confirm your assignment."
+                  : !employerId ? "Select an employer to review."
+                  : employerLabel(employers.find(e => e.employer_id === employerId)!, employers.findIndex(e => e.employer_id === employerId))}
+              </Text>
+              {employers.length > 1 ? employers.map((employer, index) => (
+                <Pressable key={employer.employer_id} accessibilityRole="button"
+                  accessibilityState={{ selected: employerId === employer.employer_id, disabled: !!attesting }}
+                  disabled={!!attesting}
+                  onPress={() => { setRequestPickerOpen(false); void employerReview.selectEmployer(employer.employer_id); }}
+                  className="mt-2 rounded-lg border border-zinc-300 p-3">
+                  <Text className="text-zinc-900 dark:text-zinc-100">
+                    {employerLabel(employer, index)}{employerId === employer.employer_id ? " (selected)" : ""}
+                  </Text>
+                </Pressable>
+              )) : null}
+              <Pressable accessibilityRole="button" disabled={loading || !!attesting}
+                onPress={() => void onPullRefresh()} className="mt-3 p-2">
+                <Text className="text-sky-600">Refresh employer access</Text>
+              </Pressable>
+            </SettingsRow>
+          </SettingsSection>
           {/* QUEUE */}
           <SectionHeader title="Queue" />
           <SettingsSection>
@@ -991,7 +784,7 @@ function handleReject() {
                 </Text>
 
                 <Pressable
-                  disabled={false}
+                  disabled={loading || !!attesting || !queue.length}
                   onPress={handleChooseRequest}
                   accessibilityRole="button"
                   accessibilityLabel="Choose request"
@@ -1009,6 +802,13 @@ function handleReject() {
                 </Pressable>
               </View>
 
+              {requestPickerOpen && !loading && !attesting ? queue.map((request, index) => (
+                <Pressable key={request.request_id} accessibilityRole="button"
+                  onPress={() => { setRequestPickerOpen(false); void employerReview.selectRequest(request.request_id); }}
+                  className="mt-2 p-2">
+                  <Text className="text-sky-600">Request {index + 1}</Text>
+                </Pressable>
+              )) : null}
               {selected?.request_id ? (
                 <Text className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
                   Selected: {selected.request_id}
@@ -1016,7 +816,7 @@ function handleReject() {
               ) : null}
             </SettingsRow>
           </SettingsSection>
-          {isEmpty ? (
+          {isEmpty && employerId && !employerError ? (
             <View className="mt-4 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-4 py-4">
               <Text className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
                 No requests waiting for review
@@ -1026,7 +826,7 @@ function handleReject() {
               </Text>
             </View>
           ) : null}
-          {!isEmpty ? (
+          {selected && !loading && !employerError ? (
           <>
           {/* CASE */}
           <SectionHeader title="Case" />
@@ -1231,7 +1031,7 @@ function handleReject() {
             bottomInset={insets.bottom}
             onApprove={() => void attest("FULL_MATCH")}
             onReject={handleReject}
-            disabled={!!attesting || !selected || isEmpty}
+            disabled={loading || !!attesting || !selected || isEmpty || !!employerError}
             disabledReason={
               attesting
                 ? "Decision in progress"

@@ -70,6 +70,7 @@ func (m *Module) Register(v1 *gin.RouterGroup) {
 	// ------------------------------------
 	hr := v1.Group("/employer", auth.GinRequireRole(auth.RoleHRReviewer))
 	{
+		hr.GET("/employers", m.Employer.Employers)
 		// Optional queue + detail endpoints; uncomment if implemented.
 		hr.GET("/requests", m.Employer.List)
 		hr.GET("/requests/:request_id", m.Employer.Get)

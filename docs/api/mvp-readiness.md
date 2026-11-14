@@ -60,10 +60,11 @@ See [review contract](evidence-review.md), [client integration](evidence-client.
    explicitly assigned case/check, receipt, retry and revoked access. Web asset
    delivery/export is not proof of a native file upload. Existing EAS metadata
    defines a development client only; no production mobile distribution or new
-   signing credential is assumed. The existing HR screen still has a demonstration
-   employer selector (`emp_demo_001`) for its separate employment queue; evidence
-   selection is independent. A real employer queue/attestation client must use
-   authoritative employer assignments before that separate workflow is offered.
+   signing credential is assumed. The [HR employer-resolution remediation](../architecture/employer-identity-and-reviewer-resolution.md)
+   now resolves the separate employment queue through authoritative HR assignments
+   in local source; deployment and Tara's UAT remain pending. Evidence selection
+   remains independently authorized. The same document records the UUIDv7 target
+   architecture; no canonical-ID migration is implemented.
 3. **The binding/eligibility policy is owner-approved.** One immutable operator-bound
    request/case, explicit required checks, canonical request subject/employer and
    frozen claim context; independent contextual approval; no adoption/reuse; current
