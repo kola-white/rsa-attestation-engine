@@ -1,7 +1,8 @@
 import { EvidenceCheck, EvidenceScope, EvidenceRequestError, listEvidenceChecks, MAX_EVIDENCE_BYTES } from "./evidence";
 
 export type Decision = "APPROVED" | "REJECTED";
-export type ReviewReceipt = { reviewId: string; uploadId: string; reviewerId: string; decision: Decision; reason: string; reviewedAt: string };
+export type ReviewContext = "SIMULATED_UAT" | "AUTHORITATIVE" | "UNCLASSIFIED";
+export type ReviewReceipt = { kind: "UNSIGNED_EVIDENCE_REVIEW_RECEIPT"; reviewContext: ReviewContext; requestId: string; bindingId: string; caseId: string; checkId: string; requestVersion: number; claimDigest: string; evidenceHash: string; reviewId: string; uploadId: string; reviewerId: string; decision: Decision; reason: string; reviewedAt: string };
 export type ReviewItem = {
   uploadId: string; name: string; mimeType: string; size: number; evidence_hash: string;
   status: "RECEIVED"; scanStatus: string; reviewStatus: "PENDING" | Decision;
@@ -10,6 +11,7 @@ export type ReviewItem = {
 };
 export type Binding = {
   bindingId: string; requestId: string; subjectId: string; employerId: string; issuerId: string;
+  reviewContext: ReviewContext; reviewerEligible: boolean; requestVersion: number;
   claimType: string; claimDigest: string; contextValid: boolean; requiredCheck: boolean;
   claimSnapshot: Record<string, unknown> | null;
 };
@@ -81,6 +83,16 @@ export class EvidenceReviewClient {
     }
     return rows.filter(row => row.canReview);
   }
+  async assignmentsForRequest(requestId: string): Promise<EvidenceCheck[]> {
+    if (!uuid.test(requestId)) throw new ReviewError(400);
+    const checks = await this.assignments();
+    const matches: EvidenceCheck[] = [];
+    for (const check of checks) {
+      const listing = await this.listing(check);
+      if (listing.binding?.requestId === requestId) matches.push(check);
+    }
+    return matches;
+  }
   async listing(scope: EvidenceScope): Promise<ReviewListing> {
     let data: unknown;
     try { data = await (await this.request(this.path(scope))).json(); }
@@ -100,6 +112,10 @@ export class EvidenceReviewClient {
       || typeof b.claimDigest !== "string" || !digest.test(b.claimDigest) || typeof b.contextValid !== "boolean"
       || typeof b.requiredCheck !== "boolean" || (b.claimSnapshot !== null && !object(b.claimSnapshot))
       || (b.contextValid && b.claimSnapshot === null))) throw new ReviewError(502);
+    if (object(b)) {
+      if (!["SIMULATED_UAT", "AUTHORITATIVE", "UNCLASSIFIED"].includes(String(b.reviewContext)) || typeof b.reviewerEligible !== "boolean"
+        || !Number.isSafeInteger(b.requestVersion) || (b.requestVersion as number) < 1) throw new ReviewError(502);
+    }
     return { ...scope, evidence: data.evidence as ReviewItem[], binding: (b ?? null) as Binding | null };
   }
   async download(scope: EvidenceScope, item: ReviewItem, sha256: (bytes: Uint8Array) => Promise<string>): Promise<Uint8Array> {
@@ -114,11 +130,15 @@ export class EvidenceReviewClient {
   async submit(scope: EvidenceScope, item: ReviewItem, binding: Binding, selected: Decision, rationale: string, reviewer: string): Promise<ReviewReceipt> {
     const reason = rationale.trim();
     if (!item.canReview || item.reviewStatus !== "PENDING" || !binding.contextValid || !binding.requiredCheck
+      || !binding.reviewerEligible || !["SIMULATED_UAT", "AUTHORITATIVE"].includes(binding.reviewContext) || reviewer === binding.subjectId
       || !decision(selected) || (selected === "APPROVED" && !item.canApprove) || !validRationale(reason)) throw new ReviewError(400);
-    const response = await this.request(this.path(scope, item.uploadId) + "/review", { decision: selected, reason, bindingId: binding.bindingId, claimDigest: binding.claimDigest });
+    const response = await this.request(this.path(scope, item.uploadId) + "/review", { decision: selected, reason, bindingId: binding.bindingId, claimDigest: binding.claimDigest, evidenceHash: item.evidence_hash });
     let r: unknown;
     try { r = await response.json(); } catch { throw new ReviewError(502, true); }
     if (!object(r) || typeof r.reviewId !== "string" || !uuid.test(r.reviewId) || r.uploadId !== item.uploadId
+      || r.kind !== "UNSIGNED_EVIDENCE_REVIEW_RECEIPT" || r.reviewContext !== binding.reviewContext || r.requestId !== binding.requestId
+      || r.bindingId !== binding.bindingId || r.caseId !== scope.caseId || r.checkId !== scope.checkId || r.requestVersion !== binding.requestVersion
+      || r.claimDigest !== binding.claimDigest || r.evidenceHash !== item.evidence_hash
       || r.reviewerId !== reviewer || r.decision !== selected || r.reason !== reason || !timestamp(r.reviewedAt)) throw new ReviewError(502, true);
     return r as ReviewReceipt;
   }

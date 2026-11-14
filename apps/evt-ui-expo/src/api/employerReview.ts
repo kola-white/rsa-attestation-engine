@@ -120,6 +120,10 @@ export class EmployerReview {
     } catch (error) { this.fail(error, epoch); }
   };
   attest = async (responseType: EmployerResponseType): Promise<string | null> => {
+    if (responseType === "FULL_MATCH" || responseType === "PARTIAL_MATCH") {
+      this.update({ error: "Positive decisions require claim-bound evidence review." });
+      return null;
+    }
     const { employerId, selected, loading } = this.state;
     if (!employerId || !selected || loading || this.pendingDecision) return null;
     const epoch = ++this.epoch;

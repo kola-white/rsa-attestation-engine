@@ -15,11 +15,12 @@ const item: ReviewItem = {
   reviewerId: null, reviewedAt: null, reviewReason: null, canReview: true, canApprove: true,
 };
 const binding: Binding = {
+  reviewContext: "SIMULATED_UAT", reviewerEligible: true, requestVersion: 1,
   bindingId: "33333333-3333-4333-8333-333333333333", requestId: "44444444-4444-4444-8444-444444444444", subjectId: "55555555-5555-4555-8555-555555555555",
   employerId: "employer", issuerId: "https://cvera.app", claimType: "employment.role", claimDigest: "a".repeat(64), contextValid: true, requiredCheck: true,
   claimSnapshot: { primary_employment: { title: "Managing Member — owner", issuer_name: "Employer" } },
 };
-const receipt = { reviewId: "66666666-6666-4666-8666-666666666666", uploadId: item.uploadId, reviewerId: reviewer, decision: "APPROVED", reason: "Inspected original and claim context.", reviewedAt: "2026-11-10T21:00:00Z" };
+const receipt = { kind: "UNSIGNED_EVIDENCE_REVIEW_RECEIPT", reviewContext: binding.reviewContext, requestId: binding.requestId, bindingId: binding.bindingId, ...scope, requestVersion: binding.requestVersion, claimDigest: binding.claimDigest, evidenceHash: item.evidence_hash, reviewId: "66666666-6666-4666-8666-666666666666", uploadId: item.uploadId, reviewerId: reviewer, decision: "APPROVED", reason: "Inspected original and claim context.", reviewedAt: "2026-11-10T21:00:00Z" };
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
 const client = (fn: (url: string, init?: RequestInit) => Response | Promise<Response>) => new EvidenceReviewClient(base, token, ((url, init) => fn(String(url), init)) as typeof fetch);
 
@@ -85,7 +86,7 @@ test("both decisions submit the exact server binding/digest and validate actual 
     const actual = { ...receipt, decision };
     const c = client((url, init) => {
       assert.ok(url.endsWith("/review"));
-      assert.deepEqual(JSON.parse(init!.body as string), { decision, reason: receipt.reason, bindingId: binding.bindingId, claimDigest: binding.claimDigest });
+      assert.deepEqual(JSON.parse(init!.body as string), { decision, reason: receipt.reason, bindingId: binding.bindingId, claimDigest: binding.claimDigest, evidenceHash: item.evidence_hash });
       return json(actual);
     });
     assert.deepEqual(await c.submit(scope, item, binding, decision, " " + receipt.reason + " ", reviewer), actual);
@@ -161,4 +162,32 @@ test("web handoff uses temporary local bytes, a safe attachment name, and revoke
     create.mock.restore(); revoke.mock.restore(); timer.mock.restore();
     if (original) Object.defineProperty(globalThis, "document", original); else Reflect.deleteProperty(globalThis, "document");
   }
+});
+
+test("unclassified contexts and claimant reviewers never submit a decision", async () => {
+  let calls=0;
+  const c=client(()=>{calls++;return json(receipt)});
+  for(const changed of [{...binding,reviewContext:"UNCLASSIFIED" as const},{...binding,reviewerEligible:false},{...binding,subjectId:reviewer}]) {
+    await assert.rejects(()=>c.submit(scope,item,changed,"APPROVED",receipt.reason,reviewer),ReviewError);
+  }
+  assert.equal(calls,0);
+});
+
+test("unsigned receipt must preserve mode, request version, binding and both digests", async () => {
+  for(const changed of [
+    {...receipt,kind:"SIGNED_EMPLOYER_VERIFICATION"}, {...receipt,reviewContext:"AUTHORITATIVE"},
+    {...receipt,requestId:binding.subjectId}, {...receipt,bindingId:binding.subjectId},
+    {...receipt,requestVersion:2}, {...receipt,claimDigest:"0".repeat(64)},
+    {...receipt,evidenceHash:"0".repeat(64)}, {...receipt,caseId:"another-case"}, {...receipt,checkId:"another-check"},
+  ]) await assert.rejects(()=>client(()=>json(changed)).submit(scope,item,binding,"APPROVED",receipt.reason,reviewer),
+    (e:unknown)=>e instanceof ReviewError && e.uncertain);
+});
+
+test("request-filtered review discovery includes only granted cases bound to that request", async () => {
+  const cases=[{...scope,canReview:true,canUpload:false},{caseId:"case-2",checkId:scope.checkId,canReview:true,canUpload:false}];
+  const c=client(url=> url.endsWith("/checks") ? json({items:cases})
+    : url.includes("/case-2/") ? json({caseId:"case-2",checkId:scope.checkId,binding:{...binding,requestId:binding.subjectId},evidence:[]})
+    : json({...scope,binding,evidence:[]}));
+  assert.deepEqual(await c.assignmentsForRequest(binding.requestId),[cases[0]]);
+  await assert.rejects(()=>c.assignmentsForRequest("not-a-request"),ReviewError);
 });

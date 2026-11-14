@@ -1,5 +1,10 @@
 # Evidence-backed employment issuance and independent verification
 
+The local [claim-bound review integrity remediation](../architecture/claim-bound-review-integrity.md)
+adds migration 000020, denies new positive legacy signing, and separates simulated
+unsigned review from authoritative issuance. It is not deployed; historical
+release narratives below do not authorize simulated signing or a production apply.
+
 ## Delivery state
 
 As of **2026-11-10**, PR #141 is merged as

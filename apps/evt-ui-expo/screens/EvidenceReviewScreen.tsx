@@ -1,3 +1,5 @@
+import { useRoute, type RouteProp } from "@react-navigation/native";
+import type { AppStackParamList } from "@/src/navigation/MainAppNavigator";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import * as Crypto from "expo-crypto";
@@ -19,11 +21,13 @@ function ClaimContext({ binding }: { binding: Binding | null }) {
   if (!binding) return <Text className="text-base text-red-700 dark:text-red-400">No bound employment request is available. Decisions are disabled.</Text>;
   return <View className="gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800">
     <Text className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Employment claim</Text>
+    <Text className="text-base font-semibold text-amber-800 dark:text-amber-300">{binding.reviewContext === "SIMULATED_UAT" ? "Simulated UAT — evidence review only. Not an employer-authorized verification." : binding.reviewContext === "AUTHORITATIVE" ? "Authoritative review context — review alone does not issue or verify a credential." : "Unclassified context — decisions are disabled."}</Text>
     <Text selectable className="text-base text-zinc-800 dark:text-zinc-200">Employer: {binding.employerId}{"\n"}Claim: {binding.claimType}{"\n"}Issuer: {binding.issuerId}</Text>
     <Text className="text-sm text-zinc-600 dark:text-zinc-300">Read the complete asserted facts below and compare them with each attachment.</Text>
     <Text selectable className="text-sm text-zinc-900 dark:text-zinc-100">{JSON.stringify(binding.claimSnapshot, null, 2)}</Text>
+    <Text selectable className="text-xs text-zinc-600 dark:text-zinc-300">Frozen claim version: {binding.requestVersion}{"\n"}Claim SHA-256: {binding.claimDigest}</Text>
     <Button label={details ? "Hide request identifiers" : "Show request identifiers and integrity details"} onPress={() => setDetails(!details)} />
-    {details ? <Text selectable className="text-xs text-zinc-600 dark:text-zinc-300">Subject: {binding.subjectId}{"\n"}Request: {binding.requestId}{"\n"}Binding: {binding.bindingId}{"\n"}Claim SHA-256: {binding.claimDigest}</Text> : null}
+    {details ? <Text selectable className="text-xs text-zinc-600 dark:text-zinc-300">Subject: {binding.subjectId}{"\n"}Request: {binding.requestId}{"\n"}Binding: {binding.bindingId}{"\n"}Frozen request version: {binding.requestVersion}{"\n"}Claim SHA-256: {binding.claimDigest}</Text> : null}
     {!binding.contextValid || !binding.requiredCheck ? <Text className="text-base text-red-700 dark:text-red-400">This request context is no longer eligible. Decisions are disabled.</Text> : null}
   </View>;
 }
@@ -39,7 +43,7 @@ function Attachment({ item, listing, client, principal, refresh, gate }: {
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const binding = listing.binding;
   const key = `${principal}/${listing.caseId}/${item.uploadId}`;
-  const valid = !!binding?.contextValid && binding.requiredCheck && item.canReview && item.reviewStatus === "PENDING" && !receipt && !gate.has(key);
+  const valid = !!binding?.contextValid && binding.reviewerEligible && binding.subjectId !== principal && binding.reviewContext !== "UNCLASSIFIED" && binding.requiredCheck && item.canReview && item.reviewStatus === "PENDING" && !receipt && !gate.has(key);
   const rationaleValid = validRationale(reason);
   const canSubmit = valid && inspected && opened && !!selected && rationaleValid && (selected !== "APPROVED" || item.canApprove);
   async function open() {
@@ -80,16 +84,16 @@ function Attachment({ item, listing, client, principal, refresh, gate }: {
     <Button label={busy ? "Working…" : "Open / download document"} disabled={busy || !["PENDING", "CLEAN"].includes(item.scanStatus)} onPress={() => void open()} />
     <Text className="text-sm text-zinc-600 dark:text-zinc-300">{Platform.OS === "android" ? "Choose a private folder, then open the saved document in your document viewer." : "Open the downloaded document in your PDF or image viewer."} Use a trusted viewer for unscanned files. Delete your downloaded copy when no longer needed.</Text>
     {receipt ? <View accessibilityLiveRegion="polite" className="gap-2 rounded-xl bg-sky-50 p-3 dark:bg-sky-950">
-      <Text className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Review recorded: {receipt.decision}</Text>
-      <Text selectable className="text-sm text-zinc-800 dark:text-zinc-200">{receipt.reason}{"\n"}Reviewer: {receipt.reviewerId}{"\n"}Recorded: {receipt.reviewedAt}{"\n"}Receipt: {receipt.reviewId}</Text>
+      <Text className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Unsigned evidence review recorded: {receipt.decision}</Text>
+      <Text selectable className="text-sm text-zinc-800 dark:text-zinc-200">{receipt.reason}{"\n"}Context: {receipt.reviewContext}{"\n"}Not a signed employer verification.{"\n"}Reviewer: {receipt.reviewerId}{"\n"}Recorded: {receipt.reviewedAt}{"\n"}Receipt: {receipt.reviewId}</Text>
     </View> : item.reviewStatus !== "PENDING" ? <Text selectable className="text-sm text-zinc-800 dark:text-zinc-200">Recorded decision: {item.reviewStatus}{"\n"}{item.reviewReason}{"\n"}Reviewer: {item.reviewerId}{"\n"}Recorded: {item.reviewedAt}</Text> : <>
       {!valid ? <Text className="text-sm text-zinc-700 dark:text-zinc-300">A decision is unavailable for this attachment. Refresh to check access, context or an earlier submission.</Text> : null}
       <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: inspected, disabled: !opened || busy || !valid }} disabled={!opened || busy || !valid}
         onPress={() => { setInspected(!inspected); setConfirming(false); }} className="min-h-12 flex-row items-center gap-3 rounded-xl border border-zinc-300 p-3 focus-visible:outline-2 focus-visible:outline-sky-600 dark:border-zinc-700">
-        <Text className="flex-1 text-base text-zinc-900 dark:text-zinc-100">{inspected ? "☑" : "☐"} I personally inspected this document and the employment claim above.</Text>
+        <Text className="flex-1 text-base text-zinc-900 dark:text-zinc-100">{inspected ? "☑" : "☐"} I inspected the document and claim, and acknowledge the claim binding and document SHA-256 shown here.</Text>
       </Pressable>
       <View className="flex-row flex-wrap gap-3">
-        {(["APPROVED", "REJECTED"] as const).map(d => <Button key={d} label={d === "APPROVED" ? "Approve" : "Reject"} selected={selected === d} disabled={!valid || busy || (d === "APPROVED" && !item.canApprove)} onPress={() => { setSelected(d); setConfirming(false); }} />)}
+        {(["APPROVED", "REJECTED"] as const).map(d => <Button key={d} label={d === "APPROVED" ? (binding?.reviewContext === "SIMULATED_UAT" ? "Approve evidence (simulated UAT)" : "Approve evidence") : "Reject evidence"} selected={selected === d} disabled={!valid || busy || (d === "APPROVED" && !item.canApprove)} onPress={() => { setSelected(d); setConfirming(false); }} />)}
       </View>
       <Text className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Your rationale</Text>
       <TextInput accessibilityLabel={`Rationale for ${item.name}`} multiline editable={valid && !busy} value={reason} maxLength={1000}
@@ -110,13 +114,15 @@ function Attachment({ item, listing, client, principal, refresh, gate }: {
 // Reset all sensitive UI state when the authenticated principal or session changes.
 export function EvidenceReviewScreen() {
   const { user, accessToken, status } = useAuth();
+  const route = useRoute<RouteProp<AppStackParamList, "EvidenceReview">>();
+  const requestId = route.params?.requestId;
   const session = useRef({ token: accessToken, generation: 0 });
   if (session.current.token !== accessToken) session.current = { token: accessToken, generation: session.current.generation + 1 };
   if (status !== "authenticated" || !user || !accessToken) return <View className="flex-1 bg-white p-5 dark:bg-zinc-900"><Text className="text-base text-zinc-900 dark:text-zinc-100">Sign in again to access evidence reviews.</Text></View>;
-  return <ReviewSession key={user.id + session.current.generation} principal={user.id} token={accessToken} />;
+  return <ReviewSession key={user.id + session.current.generation + (requestId ?? "")} principal={user.id} token={accessToken} requestId={requestId} />;
 }
 
-function ReviewSession({ principal, token }: { principal: string; token: string }) {
+function ReviewSession({ principal, token, requestId }: { principal: string; token: string; requestId?: string }) {
   const client = useMemo(() => new EvidenceReviewClient(process.env.EXPO_PUBLIC_EVT_API_BASE_URL || API_BASE_URL, token), [token]);
   const gate = useRef(new ReviewSubmissionGate()).current;
   const [checks, setChecks] = useState<EvidenceCheck[]>([]), [scope, setScope] = useState<EvidenceCheck | null>(null);
@@ -129,19 +135,21 @@ function ReviewSession({ principal, token }: { principal: string; token: string 
     setLoading(true); setError(null); setListing(null);
     void (async () => {
       try {
-        const assignments = await client.assignments();
+        const assignments = requestId ? await client.assignmentsForRequest(requestId) : await client.assignments();
         if (!alive || id !== generation.current) return;
         setChecks(assignments);
+        if (!scope && requestId && assignments.length === 1) { setScope(assignments[0]); return; }
         if (scope) {
           if (!assignments.some(c => c.caseId === scope.caseId && c.checkId === scope.checkId)) throw new ReviewError(404);
           const data = await client.listing(scope);
+          if (requestId && data.binding?.requestId !== requestId) throw new ReviewError(409);
           if (alive && id === generation.current) setListing(data);
         }
       } catch (e) { if (alive && id === generation.current) { setChecks([]); setListing(null); setError(errorMessage(e)); } }
       finally { if (alive && id === generation.current) setLoading(false); }
     })();
     return () => { alive = false; };
-  }, [client, scope, revision]);
+  }, [client, scope, revision, requestId]);
   return <View className="flex-1 bg-white dark:bg-zinc-900">
     <ScrollView contentInsetAdjustmentBehavior="automatic" className="flex-1" keyboardShouldPersistTaps="handled">
       <View className="mx-auto w-full max-w-3xl gap-4 px-5 py-5">

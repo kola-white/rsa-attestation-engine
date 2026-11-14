@@ -137,14 +137,15 @@ func (s *Server) HandleEvidenceList(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(context) > 0 {
 		var policy struct {
-			ContextValid  bool `json:"contextValid"`
-			RequiredCheck bool `json:"requiredCheck"`
+			ContextValid     bool `json:"contextValid"`
+			RequiredCheck    bool `json:"requiredCheck"`
+			ReviewerEligible bool `json:"reviewerEligible"`
 		}
 		if err = json.Unmarshal(context, &policy); err != nil {
 			evidenceReviewError(w, err)
 			return
 		}
-		if !policy.ContextValid || !policy.RequiredCheck {
+		if !policy.ContextValid || !policy.RequiredCheck || !policy.ReviewerEligible {
 			var rows []map[string]any
 			if err = json.Unmarshal(data, &rows); err != nil {
 				evidenceReviewError(w, err)
@@ -230,10 +231,11 @@ func (s *Server) HandleEvidenceReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input struct {
-		Decision    string `json:"decision"`
-		Reason      string `json:"reason"`
-		BindingID   string `json:"bindingId"`
-		ClaimDigest string `json:"claimDigest"`
+		Decision     string `json:"decision"`
+		Reason       string `json:"reason"`
+		BindingID    string `json:"bindingId"`
+		ClaimDigest  string `json:"claimDigest"`
+		EvidenceHash string `json:"evidenceHash"`
 	}
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeErr(w, 400, "invalid_review")
@@ -253,11 +255,11 @@ func (s *Server) HandleEvidenceReview(w http.ResponseWriter, r *http.Request) {
 	var result json.RawMessage
 	if input.BindingID != "" || input.ClaimDigest != "" {
 		bindingID, parseErr := uuid.Parse(input.BindingID)
-		if parseErr != nil || len(input.ClaimDigest) != 64 {
+		if parseErr != nil || len(input.ClaimDigest) != 64 || len(input.EvidenceHash) != 64 {
 			writeErr(w, 400, "invalid_review")
 			return
 		}
-		err = tx.QueryRowContext(ctx, `SELECT record_request_evidence_review($1,$2,$3,$4,$5,$6,$7,$8)`, principal, r.PathValue("caseId"), r.PathValue("checkId"), id.String(), input.Decision, input.Reason, bindingID.String(), input.ClaimDigest).Scan(&result)
+		err = tx.QueryRowContext(ctx, `SELECT record_request_evidence_review($1,$2,$3,$4,$5,$6,$7,$8,$9)`, principal, r.PathValue("caseId"), r.PathValue("checkId"), id.String(), input.Decision, input.Reason, bindingID.String(), input.ClaimDigest, input.EvidenceHash).Scan(&result)
 	} else {
 		err = tx.QueryRowContext(ctx, `SELECT record_evidence_review($1,$2,$3,$4,$5,$6)`, principal, r.PathValue("caseId"), r.PathValue("checkId"), id.String(), input.Decision, input.Reason).Scan(&result)
 	}

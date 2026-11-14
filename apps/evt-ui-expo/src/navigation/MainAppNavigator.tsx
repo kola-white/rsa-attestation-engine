@@ -13,7 +13,7 @@ export type AppStackParamList = {
   HRReview: undefined;
   Recruiter: undefined;
   ReqHome: undefined;
-  EvidenceReview: undefined;
+  EvidenceReview: { requestId?: string } | undefined;
 };
 
 const Stack = createNativeStackNavigator<AppStackParamList>();

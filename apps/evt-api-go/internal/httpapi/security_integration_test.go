@@ -223,7 +223,7 @@ func TestSecurityPostgresConcurrentRefreshLogout(t *testing.T) {
 }
 
 // Authorized HTTP issuance remains on the production signer/verifier paths.
-func TestEmployerAssignedLocalSigning(t *testing.T) {
+func TestLegacyPositiveDeniedAndHistoricalSigningCompatibility(t *testing.T) {
 	s, pool := securityTestServer(t)
 	key, err := rsa.GenerateKey(rand.Reader, 3072)
 	if err != nil {
@@ -249,8 +249,8 @@ func TestEmployerAssignedLocalSigning(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Exercise real issuance using the proposed non-owner runtime grants, not
-	// the test administrator. This includes the production-required event serial.
+	// Exercise legacy positive denial through the actual restricted runtime.
+	// Historical fixture compatibility is tested separately below.
 	grantEmployer(t, pool, principal, "employer-b")
 	servicePrivilegeStubs(t, pool)
 	runtime := createEmployerProbeRole(t, pool)
@@ -263,7 +263,7 @@ func TestEmployerAssignedLocalSigning(t *testing.T) {
 	}
 	t.Cleanup(restrictedPool.Close)
 	d := &evtdb.DB{Pool: restrictedPool}
-	m := &evt.Module{Employer: &evt.EmployerHandlers{DB: d, Repo: &evt.Repo{DB: d, Signer: signer}}}
+	m := &evt.Module{Employer: &evt.EmployerHandlers{DB: d, Repo: &evt.Repo{DB: d, Signer: &evt.AttestationSigner{}}}}
 	engine := gin.New()
 	engine.Use(auth.GinRequireAuth(s.cfg.Auth.JWTSecret, s.cfg.Auth.Issuer, s.cfg.Auth.Audience))
 	m.Register(engine.Group("/v1"))
@@ -281,10 +281,32 @@ func TestEmployerAssignedLocalSigning(t *testing.T) {
 		r.Header.Set("Authorization", "Bearer "+raw)
 		r.Header.Set("Content-Type", "application/json")
 		engine.ServeHTTP(w, r)
-		if w.Code != 200 {
+		want := 200
+		if tc.method == "POST" {
+			want = 409
+		}
+		if w.Code != want {
 			t.Fatalf("assigned endpoint %s: %d %s", tc.path, w.Code, w.Body.String())
 		}
-		t.Logf("assigned HR principal received HTTP 200 for %s %s", tc.method, tc.path)
+		t.Logf("assigned HR principal received HTTP %d for %s %s", w.Code, tc.method, tc.path)
+	}
+	var unsigned *string
+	var state string
+	var events int
+	if err := s.db.QueryRow(`SELECT status,attestation_jws FROM evt_requests WHERE request_id='00000000-0000-4000-8000-00000000000c'`).Scan(&state, &unsigned); err != nil || state != "ATTESTATION_PENDING" || unsigned != nil {
+		t.Fatal("denied legacy action mutated request", err)
+	}
+	if err := s.db.QueryRow(`SELECT count(*) FROM evt_request_events`).Scan(&events); err != nil || events != 0 {
+		t.Fatal("denied legacy action created success audit", err)
+	}
+	// Construct historical bytes with an isolated fixture key, not through any
+	// approval API. Historical cryptographic compatibility remains tested below.
+	historical, _, err := signer.SignAttestationJWS(evt.AttestationClaims{RequestID: "00000000-0000-4000-8000-00000000000c", EmployerID: "employer-b", HRPersonID: principal, ResponseType: "FULL_MATCH", ResponseBody: []byte(`{"historical_fixture":true}`), IssuedAtUnix: time.Now().Unix()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.db.Exec(`UPDATE evt_requests SET attestation_jws=$1 WHERE request_id='00000000-0000-4000-8000-00000000000c'`, historical); err != nil {
+		t.Fatal(err)
 	}
 	var compact string
 	if err := s.db.QueryRow(`SELECT attestation_jws FROM evt_requests WHERE request_id='00000000-0000-4000-8000-00000000000c'`).Scan(&compact); err != nil {
@@ -341,5 +363,5 @@ func TestEmployerAssignedLocalSigning(t *testing.T) {
 	if err != nil || evidence.Cryptographic.Signature != credential.EvidenceInvalid {
 		t.Fatal("unknown kid accepted")
 	}
-	t.Log("LOCAL ONLY: HTTP issuance -> temporary PEM signer -> database JWS -> static JWKS signature verification; trust/status/liveness not established")
+	t.Log("LOCAL ONLY: legacy positive API denied; historical fixture JWS -> stored-byte read -> static JWKS signature verification; trust/status/liveness not established")
 }

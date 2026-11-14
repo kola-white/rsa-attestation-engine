@@ -12,7 +12,6 @@ import (
 
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/auth"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db"
-	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/requestbinding"
 )
 
 type EmployerHandlers struct {
@@ -99,7 +98,7 @@ func (h *EmployerHandlers) Attest(c *gin.Context) {
 	)
 
 	err := h.DB.WithTx(c.Request.Context(), func(tx pgx.Tx) error {
-		// IMPORTANT: Repo now generates JWS when needed and returns metadata
+		// Positive legacy decisions are denied; only permitted negative responses are recorded.
 		out, err := h.Repo.EmployerAttestServerSigned(
 			c.Request.Context(),
 			tx,
@@ -126,8 +125,8 @@ func (h *EmployerHandlers) Attest(c *gin.Context) {
 			requestID, req.EmployerID, hrPersonID, req.ResponseType, err, err,
 		)
 
-		if errors.Is(err, requestbinding.ErrSigningDeferred) {
-			c.JSON(http.StatusConflict, gin.H{"error": "evidence_backed_signing_not_enabled"})
+		if errors.Is(err, ErrPositiveAttestationRequiresEvidence) {
+			c.JSON(http.StatusConflict, gin.H{"error": "positive_decision_requires_evidence_review"})
 			return
 		}
 		if err == db.ErrNotFound {

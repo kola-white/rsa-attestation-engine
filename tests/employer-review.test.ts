@@ -29,8 +29,8 @@ test("one assignment automatically loads its text employer queue and detail with
   assert.equal(client.snapshot().selected?.request_id, "request-a");
   assert.equal(calls.length, 3);
   assert.ok(calls[1].url.endsWith("?employer_id=" + legacy));
-  assert.equal(await client.attest("FULL_MATCH"), "ATTESTED");
-  assert.deepEqual(JSON.parse(calls[3].init.body as string), { employer_id: legacy, response_type: "FULL_MATCH", response_body: {} });
+  assert.equal(await client.attest("REJECTED_POLICY"), "ATTESTED");
+  assert.deepEqual(JSON.parse(calls[3].init.body as string), { employer_id: legacy, response_type: "REJECTED_POLICY", response_body: {} });
   assert.equal(client.snapshot().selected, null);
 });
 
@@ -55,7 +55,7 @@ test("no assignments never fetches a queue or falls back to a demo employer", as
   const { client, calls } = setup([]);
   await client.refresh();
   await client.selectEmployer(legacy);
-  assert.equal(await client.attest("FULL_MATCH"), null);
+  assert.equal(await client.attest("REJECTED_POLICY"), null);
   assert.equal(calls.length, 1);
   assert.deepEqual(client.snapshot().queue, []);
   assert.equal(client.snapshot().loading, false);
@@ -73,7 +73,7 @@ test("revoked/unauthorized queue, detail and decision clear previously actionabl
       await client.refresh();
       assert.ok(client.snapshot().selected);
       deny = true;
-      if (target === "decision") await client.attest("FULL_MATCH");
+      if (target === "decision") await client.attest("REJECTED_POLICY");
       else if (target === "detail") await client.selectRequest("request-a");
       else await client.refresh();
       assert.equal(client.snapshot().selected, null);
@@ -137,8 +137,8 @@ test("decision in flight blocks duplicate submissions and employer changes", asy
     return url.includes("/requests?") ? json({ items: [row()] }) : json(row());
   });
   await client.refresh(); await client.selectEmployer(legacy);
-  const pending = client.attest("FULL_MATCH");
-  assert.equal(await client.attest("FULL_MATCH"), null);
+  const pending = client.attest("REJECTED_POLICY");
+  assert.equal(await client.attest("REJECTED_POLICY"), null);
   await client.selectEmployer(second); await client.refresh();
   assert.equal(client.snapshot().employerId, legacy);
   assert.equal(posts, 1);
@@ -156,10 +156,10 @@ test("ambiguous decision failures require reconciliation and leave no actionable
       }
       return url.includes("/requests?") ? json({ items: [row()] }) : json(row());
     });
-    await client.refresh(); await client.attest("FULL_MATCH");
+    await client.refresh(); await client.attest("REJECTED_POLICY");
     assert.equal(client.snapshot().selected, null);
     assert.match(client.snapshot().error!, /could not be confirmed/);
-    assert.equal(await client.attest("FULL_MATCH"), null);
+    assert.equal(await client.attest("REJECTED_POLICY"), null);
   }
 });
 
@@ -189,4 +189,12 @@ test("opaque text identifiers are encoded without normalization or UUID assumpti
   await client.refresh();
   assert.equal(client.snapshot().employerId, id);
   assert.ok(calls[1].url.endsWith(encodeURIComponent(id)));
+});
+
+test("legacy positive decisions never make a client mutation request", async () => {
+  const {client,calls}=setup([{employer_id:legacy}]);
+  await client.refresh();
+  for(const response of ["FULL_MATCH","PARTIAL_MATCH"] as const) assert.equal(await client.attest(response),null);
+  assert.equal(calls.length,3);
+  assert.match(client.snapshot().error!,/claim-bound evidence/);
 });

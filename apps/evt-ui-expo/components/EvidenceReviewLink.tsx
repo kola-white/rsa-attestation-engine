@@ -8,7 +8,7 @@ export function EvidenceReviewLink() {
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   return <Pressable accessibilityRole="button" accessibilityLabel="Open evidence reviews"
     className="min-h-12 justify-center rounded-xl px-3 active:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-sky-600 dark:active:bg-zinc-800"
-    onPress={() => navigation.navigate("EvidenceReview")}>
+    onPress={() => navigation.navigate("EvidenceReview", { requestId: undefined })}>
     <Text className="text-base font-semibold text-sky-600 dark:text-sky-400">Evidence reviews</Text>
   </Pressable>;
 }
