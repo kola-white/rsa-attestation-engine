@@ -36,27 +36,35 @@ type issuedFixture struct {
 }
 
 func issuanceSetup(t *testing.T, activate ...bool) issuedFixture {
+	return issuanceSetupContext(t, "AUTHORITATIVE", activate...)
+}
+func issuanceSetupContext(t *testing.T, mode string, activate ...bool) issuedFixture {
+	return issuanceSetupVersion(t, true, mode, activate...)
+}
+func issuanceSetupVersion(t *testing.T, integrity bool, mode string, activate ...bool) issuedFixture {
 	t.Helper()
-	f, request, binding := bindingSetup(t, `{"primary_employment":{"title":"Engineer","issuer_name":"Fixture Employer","start_date":"2020-01-01"}}`)
+	f, request, binding := bindingSetupContext(t, integrity, mode, `{"primary_employment":{"title":"Engineer","issuer_name":"Fixture Employer","start_date":"2020-01-01"}}`)
 	boundReceipt(t, f, binding)
+	if !integrity {
+		evidenceExec(t, f.pool, employerSQL(t, "../../migrations/000019_evidence_backed_issuance.sql"))
+		tx, err := f.pool.Begin(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err = tx.Exec(context.Background(), `SELECT set_config('cvera.evidence_runtime_role',$1,true)`, f.runtime); err != nil {
+			t.Fatal(err)
+		}
+		if _, err = tx.Exec(context.Background(), employerSQL(t, "../../operations/evidence-issuance-privileges.sql")); err != nil {
+			t.Fatal(err)
+		}
+		if err = tx.Commit(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}
 	// Existing api-runtime-privileges.sql grants this legacy SELECT in production.
 	evidenceExec(t, f.pool, `GRANT SELECT ON domain_users TO `+pgx.Identifier{f.runtime}.Sanitize())
 	evidenceExec(t, f.pool, `UPDATE domain_users SET role='requestor' WHERE id=$1`, f.principal)
-	evidenceExec(t, f.pool, employerSQL(t, "../../migrations/000019_evidence_backed_issuance.sql"))
-	tx, err := f.pool.Begin(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tx.Rollback(context.Background())
-	if _, err = tx.Exec(context.Background(), `SELECT set_config('cvera.evidence_runtime_role',$1,true)`, f.runtime); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = tx.Exec(context.Background(), employerSQL(t, "../../operations/evidence-issuance-privileges.sql")); err != nil {
-		t.Fatal(err)
-	}
-	if err = tx.Commit(context.Background()); err != nil {
-		t.Fatal(err)
-	}
+
 	repo, id := seedBindingAuthority(t, f, ec.Issuer, "binding-employer")
 	// Explicit local-only fixture: reproduce restricted production roles without
 	// inheriting the hostile CRUD defaults exercised by the migration fixtures.
@@ -196,7 +204,7 @@ func TestEvidenceIssuancePrivilegesAndAtomicMigration(t *testing.T) {
 	// Immutable key binding cannot be replaced by an UPDATE, even by its owner.
 	_, err := x.f.pool.Exec(ctx, `UPDATE evidence_issuer_credentials SET spki_sha256=repeat('0',64)`)
 	expectEmployerSQLState(t, err, "42501")
-	f, _, _ := bindingSetup(t)
+	f, _, _ := bindingSetupVersion(t, false)
 	tx, err := f.pool.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -552,6 +560,7 @@ func TestEvidenceIssuanceNormalRequestToPortableClaim(t *testing.T) {
 		t.Fatal("normal dispatch did not authorize binding")
 	}
 	binding := x.f.adminString(t, `SELECT bind_request_evidence($1,'case-b',ARRAY['employment.company_and_dates'],'local-owner','normal-request fixture')`, request.RequestID)
+	x.f.adminString(t, `SELECT classify_request_review($1,'AUTHORITATIVE','local-owner','normal request fixture')`, binding)
 	x.f.adminString(t, `SELECT grant_evidence_upload($1,'case-b','local-owner','normal-request upload')`, x.f.principal)
 	x.f.adminString(t, `SELECT grant_evidence_review($1,'case-b','local-owner','normal-request independent review')`, x.f.other)
 	m := &memoryEvidence{objects: map[string][]byte{}, mime: "application/pdf"}
@@ -576,7 +585,7 @@ func TestEvidenceIssuanceNormalRequestToPortableClaim(t *testing.T) {
 	if json.Unmarshal(list.Body.Bytes(), &listing) != nil || listing.Binding.BindingID != binding {
 		t.Fatal("normal request context not bound")
 	}
-	review, _ := json.Marshal(map[string]string{"decision": "APPROVED", "reason": "Independent contextual review", "bindingId": binding, "claimDigest": listing.Binding.Digest})
+	review, _ := json.Marshal(map[string]string{"decision": "APPROVED", "reason": "Independent contextual review", "bindingId": binding, "claimDigest": listing.Binding.Digest, "evidenceHash": evidenceDigest([]byte("a"))})
 	evidenceStatus(t, reviewRequest(x.f, x.f.other, "POST", base+"/"+init.Uploads[0].UploadID+"/review", string(review)), 200)
 	response := employerCall(engine, hr, "POST", "/v1/employer/requests/"+request.RequestID+"/issue-evidence", `{"employer_id":"binding-employer"}`)
 	evidenceStatus(t, response, 200)

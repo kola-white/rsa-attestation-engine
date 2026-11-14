@@ -2,18 +2,15 @@ package httpapi
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
+	"crypto/sha256"
 	"encoding/json"
-	"encoding/pem"
+	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/auth"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/authority"
 	evtdb "github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/evt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -25,7 +22,14 @@ import (
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/requestbinding"
 )
 
+func evidenceDigest(b []byte) string { return fmt.Sprintf("%x", sha256.Sum256(b)) }
 func bindingSetup(t *testing.T, snapshots ...string) (evidenceFixture, string, string) {
+	return bindingSetupVersion(t, true, snapshots...)
+}
+func bindingSetupVersion(t *testing.T, integrity bool, snapshots ...string) (evidenceFixture, string, string) {
+	return bindingSetupContext(t, integrity, "AUTHORITATIVE", snapshots...)
+}
+func bindingSetupContext(t *testing.T, integrity bool, mode string, snapshots ...string) (evidenceFixture, string, string) {
 	t.Helper()
 	f := evidenceSetup(t)
 	ctx := context.Background()
@@ -55,6 +59,12 @@ func bindingSetup(t *testing.T, snapshots ...string) (evidenceFixture, string, s
 	evidenceExec(t, f.pool, employerSQL(t, "../../migrations/000018_request_evidence_binding.sql"))
 	apply("../../operations/request-evidence-binding-privileges.sql")
 	applyEmployerBindings(t, f.pool, f.runtime, f.operator)
+	if integrity {
+		evidenceExec(t, f.pool, employerSQL(t, "../../migrations/000019_evidence_backed_issuance.sql"))
+		evidenceExec(t, f.pool, employerSQL(t, "../../migrations/000020_claim_bound_review_integrity.sql"))
+		apply("../../operations/evidence-issuance-privileges.sql")
+		apply("../../operations/claim-review-integrity-privileges.sql")
+	}
 	evidenceExec(t, f.pool, `INSERT INTO evt_employer_config(employer_id) VALUES('binding-employer')`)
 	request := uuid.NewString()
 	snapshot := `{"title":"Engineer"}`
@@ -65,6 +75,9 @@ func bindingSetup(t *testing.T, snapshots ...string) (evidenceFixture, string, s
 	grantEmployer(t, f.pool, f.other, "binding-employer")
 	evidenceExec(t, f.pool, `GRANT SELECT,UPDATE ON evt_requests TO `+pgx.Identifier{f.runtime}.Sanitize())
 	binding := f.adminString(t, `SELECT bind_request_evidence($1,'case-a',ARRAY['employment.company_and_dates'],'fixture','approved bound request')`, request)
+	if integrity && mode != "" {
+		f.adminString(t, `SELECT classify_request_review($1,$2,'fixture','explicit fixture review context')`, binding, mode)
+	}
 	return f, request, binding
 }
 func prepareBinding(t *testing.T, f evidenceFixture, request string, source requestbinding.LockedAuthoritySource) requestbinding.Result {
@@ -87,7 +100,7 @@ func prepareBinding(t *testing.T, f evidenceFixture, request string, source requ
 	}
 	return result
 }
-func boundReceipt(t *testing.T, f evidenceFixture, binding string) EvidenceInitResponse {
+func boundReceipt(t *testing.T, f evidenceFixture, binding string, decisions ...string) EvidenceInitResponse {
 	t.Helper()
 	m := &memoryEvidence{objects: map[string][]byte{}, mime: "application/pdf"}
 	init := completionInit(t, f, m)
@@ -110,8 +123,23 @@ func boundReceipt(t *testing.T, f evidenceFixture, binding string) EvidenceInitR
 	if listing.Binding.BindingID != binding || listing.Binding.Subject != f.principal {
 		t.Fatal("wrong review context", response.Body.String())
 	}
-	body, _ := json.Marshal(map[string]string{"decision": "APPROVED", "reason": "Reviewed bound subject and claim", "bindingId": binding, "claimDigest": listing.Binding.Digest})
-	evidenceStatus(t, reviewRequest(f, f.other, "POST", review, string(body)), 200)
+	decision := "APPROVED"
+	if len(decisions) > 0 {
+		decision = decisions[0]
+	}
+	body, _ := json.Marshal(map[string]string{"decision": decision, "reason": "Reviewed bound subject and claim", "bindingId": binding, "claimDigest": listing.Binding.Digest, "evidenceHash": evidenceDigest([]byte("a"))})
+	var modern bool
+	if err := f.pool.QueryRow(context.Background(), `SELECT to_regprocedure('record_request_evidence_review(uuid,text,text,uuid,text,text,uuid,text,text)') IS NOT NULL`).Scan(&modern); err != nil {
+		t.Fatal(err)
+	}
+	if modern {
+		evidenceStatus(t, reviewRequest(f, f.other, "POST", review, string(body)), 200)
+	} else {
+		var oldReceipt []byte
+		if err := f.s.db.QueryRow(`SELECT record_request_evidence_review($1,'case-a','employment.company_and_dates',$2,$3,'Reviewed bound subject and claim',$4,$5)`, f.other, init.Uploads[0].UploadID, decision, binding, listing.Binding.Digest).Scan(&oldReceipt); err != nil {
+			t.Fatal(err)
+		}
+	}
 	return init
 }
 func TestRequestBindingManifestAndUnavailableAuthority(t *testing.T) {
@@ -195,7 +223,11 @@ func TestRequestBindingContextStateAndCrossReuse(t *testing.T) {
 	for _, change := range []string{"claim", "version", "null-version", "subject", "case", "check", "rejected", "missing-scan", "infected", "error", "pending-review", "incomplete"} {
 		t.Run(change, func(t *testing.T) {
 			f, request, binding := bindingSetup(t)
-			init := boundReceipt(t, f, binding)
+			decision := "APPROVED"
+			if change == "rejected" {
+				decision = "REJECTED"
+			}
+			init := boundReceipt(t, f, binding, decision)
 			want := "EVIDENCE_NOT_APPROVED"
 			switch change {
 			case "claim":
@@ -222,8 +254,7 @@ func TestRequestBindingContextStateAndCrossReuse(t *testing.T) {
 				evidenceExec(t, f.pool, `UPDATE evidence_scan_jobs SET scan_status=$1`, strings.ToUpper(change))
 			case "pending-review":
 				evidenceExec(t, f.pool, `TRUNCATE evidence_reviews,request_evidence_review_contexts`)
-			case "rejected":
-				evidenceExec(t, f.pool, `UPDATE evidence_reviews SET decision='REJECTED'`)
+			case "rejected": // Created through the normal final-decision API above.
 			case "incomplete":
 				evidenceStatus(t, f.request(f.principal, "case-a", "employment.company_and_dates", false, evidenceFile), 200)
 				want = "UPLOAD_INCOMPLETE"
@@ -251,10 +282,11 @@ func TestRequestBindingContextStateAndCrossReuse(t *testing.T) {
 		t.Fatal(r)
 	}
 	secondBinding := f.adminString(t, `SELECT bind_request_evidence($1,'case-b',ARRAY['employment.company_and_dates'],'fixture','independent request')`, second)
+	f.adminString(t, `SELECT classify_request_review($1,'AUTHORITATIVE','fixture','independent request fixture')`, secondBinding)
 	f.adminString(t, `SELECT grant_evidence_review($1,'case-b','fixture','review')`, f.other)
 	var digest string
 	f.pool.QueryRow(context.Background(), `SELECT claim_digest FROM request_case_bindings WHERE binding_id=$1`, secondBinding).Scan(&digest)
-	body := fmt.Sprintf(`{"decision":"APPROVED","reason":"reuse","bindingId":%q,"claimDigest":%q}`, secondBinding, digest)
+	body := fmt.Sprintf(`{"decision":"APPROVED","reason":"reuse","bindingId":%q,"claimDigest":%q,"evidenceHash":%q}`, secondBinding, digest, evidenceDigest([]byte("a")))
 	path := "/v1/cases/case-b/checks/employment.company_and_dates/evidence/" + init.Uploads[0].UploadID + "/review"
 	evidenceStatus(t, reviewRequest(f, f.other, "POST", path, body), 404)
 	if r := prepareBinding(t, f, second, nil); r.EvidenceReady || r.Reason != "REQUIRED_EVIDENCE_MISSING" {
@@ -396,7 +428,7 @@ func TestRequestBindingLegacySigningCannotBypass(t *testing.T) {
 		for _, kind := range []string{"FULL_MATCH", "PARTIAL_MATCH"} {
 			response := employerCall(engine, token, "POST", "/v1/employer/requests/"+request+"/attest", `{"employer_id":"binding-employer","response_type":"`+kind+`"}`)
 			evidenceStatus(t, response, 409)
-			if !strings.Contains(response.Body.String(), "evidence_backed_signing_not_enabled") {
+			if !strings.Contains(response.Body.String(), "positive_decision_requires_evidence_review") {
 				t.Fatal(response.Body.String())
 			}
 		}
@@ -643,21 +675,9 @@ func TestRequestBindingMigrationAtomicFailure(t *testing.T) {
 	evidenceStatus(t, reviewRequest(f, f.other, "POST", path, `{"decision":"APPROVED","reason":"still standalone"}`), 200)
 }
 
-func TestRequestBindingUnboundLegacyRemainsFunctional(t *testing.T) {
+func TestRequestBindingUnboundLegacyPositiveDenied(t *testing.T) {
 	f, _, _ := bindingSetup(t)
 	ctx := context.Background()
-	key, err := rsa.GenerateKey(rand.Reader, 3072)
-	if err != nil {
-		t.Fatal(err)
-	}
-	filename := filepath.Join(t.TempDir(), "binding-unbound-fixture.pem")
-	if err = os.WriteFile(filename, pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}), 0600); err != nil {
-		t.Fatal(err)
-	}
-	signer, err := evt.NewAttestationSignerFromPEMPath(filename)
-	if err != nil {
-		t.Fatal(err)
-	}
 	request := uuid.NewString()
 	evidenceExec(t, f.pool, `INSERT INTO evt_requests(request_id,candidate_personid,employer_id,status) VALUES($1,$2,'binding-employer','ATTESTATION_PENDING')`, request, f.principal)
 	evidenceExec(t, f.pool, `GRANT INSERT ON evt_request_events TO `+pgx.Identifier{f.runtime}.Sanitize())
@@ -667,9 +687,9 @@ func TestRequestBindingUnboundLegacyRemainsFunctional(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback(ctx)
-	repo := &evt.Repo{Signer: signer}
+	repo := &evt.Repo{}
 	result, err := repo.EmployerAttestServerSigned(ctx, tx, request, "binding-employer", f.other, "FULL_MATCH", json.RawMessage(`{"synthetic":true}`))
-	if err != nil || !result.AttestationPresent || result.Status != "ATTESTED" {
+	if !errors.Is(err, evt.ErrPositiveAttestationRequiresEvidence) || result.AttestationPresent {
 		t.Fatal(result, err)
 	}
 	if err = tx.Commit(ctx); err != nil {

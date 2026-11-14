@@ -3,17 +3,18 @@ package evt
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
-	"fmt"
-	"log"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/employeraccess"
-"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/requestbinding"
-
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db"
 )
+
 type AttestResult struct {
 	Status            string
 	AttestationPresent bool
@@ -330,118 +331,43 @@ func (r *Repo) EmployerAttestServerSigned(
 		return AttestResult{}, err
 	}
 
-	var curStatus string
-	err := tx.QueryRow(ctx, `
-		SELECT status
-		FROM evt_requests
-		WHERE request_id=$1 AND employer_id=$2
-		FOR UPDATE
-	`, requestID, employerID).Scan(&curStatus)
+	var curStatus, subject string
+	err := tx.QueryRow(ctx, `SELECT status,candidate_personid FROM evt_requests WHERE request_id=$1 AND employer_id=$2 FOR UPDATE`, requestID, employerID).Scan(&curStatus, &subject)
+	if err == pgx.ErrNoRows {
+		return AttestResult{}, db.ErrNotFound
+	}
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return AttestResult{}, db.ErrNotFound
-		}
 		return AttestResult{}, err
 	}
-
+	if responseType == "FULL_MATCH" || responseType == "PARTIAL_MATCH" {
+		return AttestResult{}, ErrPositiveAttestationRequiresEvidence
+	}
+	if responseType != "REJECTED_NO_RECORD" && responseType != "REJECTED_POLICY" {
+		return AttestResult{}, db.ErrConflict
+	}
+	if subject == employerHRPersonID {
+		return AttestResult{}, db.ErrNotFound
+	}
 	if curStatus != "ATTESTATION_PENDING" {
 		return AttestResult{}, db.ErrConflict
 	}
-
-	// Decide new status based on enum (matches DB employer_response_type)
-	toStatus := "ATTESTED"
-	if responseType == "REJECTED_NO_RECORD" || responseType == "REJECTED_POLICY" {
-		toStatus = "REJECTED"
-	}
-
-	// Normalize body
 	if len(responseBody) == 0 {
 		responseBody = json.RawMessage(`{}`)
 	}
-
-	// Only generate JWS for ATTESTED (FULL_MATCH, PARTIAL_MATCH)
-	var (
-		jws     string
-		kid     string
-		jwsBytes int
-		present bool
-	)
-
-	if toStatus == "ATTESTED" {
-		if responseType != "FULL_MATCH" && responseType != "PARTIAL_MATCH" {
-			// Anything else trying to become ATTESTED is invalid
-			return AttestResult{}, db.ErrConflict
-		}
-		bound, err := requestbinding.IsBound(ctx, tx, employerHRPersonID, requestID, employerID)
-		if err != nil {
-			return AttestResult{}, err
-		}
-		if bound {
-			return AttestResult{}, requestbinding.ErrSigningDeferred
-		}
-		if r.Signer == nil {
-			return AttestResult{}, errSignerNotConfigured()
-		}
-
-		// IMPORTANT: The signer sets header kid that matches trust/jwks.json
-		jws, kid, err = r.Signer.SignAttestationJWS(AttestationClaims{
-			RequestID:      requestID,
-			EmployerID:     employerID,
-			HRPersonID:     employerHRPersonID,
-			ResponseType:   responseType,
-			ResponseBody:   responseBody,
-			IssuedAtUnix:   time.Now().UTC().Unix(),
-		})
-		if err != nil {
-			return AttestResult{}, err
-		}
-		jwsBytes = len(jws)
-		present = true
-
-		_, err = tx.Exec(ctx, `
-			UPDATE evt_requests
-			SET status='ATTESTED',
-			    employer_response_type=$1::employer_response_type,
-			    employer_response=COALESCE($2::jsonb, '{}'::jsonb),
-			    attestation_jws=$3,
-			    attested_at=now(),
-			    version=version+1
-			WHERE request_id=$4
-		`, responseType, string(responseBody), jws, requestID)
-		if err != nil {
-			return AttestResult{}, err
-		}
-
-	} else {
-		// REJECTED path: no JWS stored
-		_, err = tx.Exec(ctx, `
-			UPDATE evt_requests
-			SET status='REJECTED',
-			    employer_response_type=$1::employer_response_type,
-			    employer_response=COALESCE($2::jsonb, '{}'::jsonb),
-			    attested_at=now(),
-			    version=version+1
-			WHERE request_id=$3
-		`, responseType, string(responseBody), requestID)
-		if err != nil {
-			return AttestResult{}, err
-		}
+	_, err = tx.Exec(ctx, `UPDATE evt_requests SET status='REJECTED',employer_response_type=$1::employer_response_type,
+        employer_response=$2::jsonb,attested_at=now(),version=version+1 WHERE request_id=$3`, responseType, string(responseBody), requestID)
+	if err != nil {
+		return AttestResult{}, err
 	}
-
 	actor := employerHRPersonID
-	_ = insertEvent(ctx, tx, requestID, "employer_hr", &actor, "HR_ATTESTED", &curStatus, &toStatus, map[string]any{
-		"response_type": responseType,
-		"attestation_present": present,
-		"kid": kid,
-	})
-
-	return AttestResult{
-		Status:             toStatus,
-		AttestationPresent: present,
-		KID:                kid,
-		JWSBytes:           jwsBytes,
-	}, nil
+	if err = insertEvent(ctx, tx, requestID, "employer_hr", &actor, "HR_ATTESTED", &curStatus, ptr("REJECTED"), map[string]any{"response_type": responseType, "attestation_present": false, "kid": ""}); err != nil {
+		return AttestResult{}, err
+	}
+	return AttestResult{Status: "REJECTED"}, nil
 }
+
+// No positive legacy decision may reach a signer, even for an unbound request.
+var ErrPositiveAttestationRequiresEvidence = errors.New("positive_decision_requires_evidence_review")
 
 func (r *Repo) EmployerList(ctx context.Context, tx pgx.Tx, employerID, principalID string, limit int) ([]HRQueueRow, error) {
 	if err := employeraccess.Authorize(ctx, tx, principalID, employerID); err != nil {

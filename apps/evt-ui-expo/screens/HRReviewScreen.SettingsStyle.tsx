@@ -623,14 +623,6 @@ const onPullRefresh = React.useCallback(async () => {
   setRequestPickerOpen(false);
   try { await employerReview.refresh(); } finally { setRefreshing(false); }
 }, [employerReview]);
-async function attest(responseType: EmployerResponseType) {
-  const result = await employerReview.attest(responseType);
-  if (result) {
-    Alert.alert("Attested", `Status: ${result}`);
-    await employerReview.refresh();
-  }
-}
-
   useLayoutEffect(() => {
   navigation.setOptions({
     title: "HR Review",
@@ -680,47 +672,6 @@ useFocusEffect(
     return employerReview.clear;
   }, [employerReview])
 );
-
-function handleReject() {
-  if (!selected) {
-    Alert.alert("No request selected");
-    return;
-  }
-
-  if (Platform.OS === "ios") {
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        title: "Reject reason",
-        options: [
-          "Cancel",
-          "No record found",
-          "Policy restriction",
-        ],
-        cancelButtonIndex: 0,
-      },
-      (idx) => {
-        if (idx === 1) void attest("REJECTED_NO_RECORD");
-        if (idx === 2) void attest("REJECTED_POLICY");
-      }
-    );
-  } else {
-    Alert.alert(
-      "Reject reason",
-      undefined,
-      [
-        {
-          text: "No record found",
-          onPress: () => void attest("REJECTED_NO_RECORD"),
-        },
-        {
-          text: "Policy restriction",
-          onPress: () => void attest("REJECTED_POLICY"),
-        },
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
-  }
-}
 
   return (
     <View
@@ -1027,22 +978,12 @@ function handleReject() {
           </> 
         ) : null}
           <View style={{ height: 24 + 88 + insets.bottom }} />
-          <DecisionBar
-            bottomInset={insets.bottom}
-            onApprove={() => void attest("FULL_MATCH")}
-            onReject={handleReject}
-            disabled={loading || !!attesting || !selected || isEmpty || !!employerError}
-            disabledReason={
-              attesting
-                ? "Decision in progress"
-                : !selected
-                ? "No request selected"
-                : isEmpty
-                ? "No requests waiting for review"
-                : null
-            }
-            attesting={attesting}
-          />
+          <Pressable accessibilityRole="button" disabled={loading || !selected || !!employerError}
+            onPress={() => selected && navigation.navigate("EvidenceReview", { requestId: selected.request_id })}
+            className="rounded-xl bg-sky-700 p-4">
+            <Text className="text-center font-semibold text-white">Review claim-bound evidence</Text>
+          </Pressable>
+          <Text className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Review requires separate case access and records an unsigned receipt. This screen does not attest or issue credentials.</Text>
           </View>
       </ScrollView>
     </View>
@@ -1166,68 +1107,3 @@ function Footnote({ text }: { text: string }) {
 }
 
 /* ===================== Sticky Decision Bar ===================== */
-function DecisionBar({
-  bottomInset,
-  onApprove,
-  onReject,
-  disabled,
-  disabledReason,
-  attesting
-}: {
-  bottomInset: number;
-  onApprove: () => void;
-  onReject: () => void;
-  disabled?: boolean;
-  disabledReason?: string | null;
-  attesting: EmployerResponseType | null;
-}) {
-  return (
-    <View
-      className="absolute left-0 right-0 bottom-0 bg-white dark:bg-zinc-800 border-t border-zinc-200 dark:border-zinc-700 px-4 pt-3"
-      style={{ paddingBottom: bottomInset + 16 }}
-    >
-      <View className="flex-row gap-3">
-        <Pressable
-          disabled={!!disabled}
-          className={[
-            "flex-1 rounded-xl py-3 items-center",
-            disabled ? "bg-zinc-300" : "bg-zinc-200",
-          ].join(" ")}
-          onPress={onReject}
-          >
-          {attesting === "REJECTED_NO_RECORD" || attesting === "REJECTED_POLICY" ? (
-          <View className="flex-row items-center gap-2">
-            <ActivityIndicator />
-            <Text className="text-sm font-semibold text-zinc-900">Rejecting…</Text>
-          </View>
-        ) : (
-          <Text className="text-sm font-semibold text-zinc-900">Reject</Text>
-        )}
-        </Pressable>
-
-        <Pressable
-          disabled={!!disabled}
-          className={[
-            "flex-1 rounded-xl py-3 items-center",
-            disabled ? "bg-zinc-500" : "bg-zinc-700",
-          ].join(" ")}
-          onPress={onApprove}
-        >
-         {attesting === "FULL_MATCH" || attesting === "PARTIAL_MATCH" ? (
-          <View className="flex-row items-center gap-2">
-            <ActivityIndicator />
-            <Text className="text-sm font-semibold text-white">Approving…</Text>
-          </View>
-        ) : (
-          <Text className="text-sm font-semibold text-white">Approve</Text>
-        )}
-        </Pressable>
-      </View>
-      {disabled && disabledReason ? (
-        <Text className="text-xs text-zinc-500 dark:text-zinc-400 text-center mt-2">
-          {disabledReason}
-        </Text>
-      ) : null}
-    </View>
-  );
-};

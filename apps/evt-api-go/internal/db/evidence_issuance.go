@@ -145,6 +145,13 @@ func (e *IssuanceEngine) Issue(ctx context.Context, principal, request, employer
 		if err := pinIssuanceSchema(ctx, tx); err != nil {
 			return err
 		}
+		var integrity bool
+		if err := tx.QueryRow(ctx, `SELECT to_regprocedure('guard_claim_review_issuance(uuid,uuid,text)') IS NOT NULL`).Scan(&integrity); err != nil {
+			return err
+		}
+		if !integrity {
+			return ec.ErrUnavailable
+		}
 		var raw []byte
 		if err := tx.QueryRow(ctx, `SELECT prepare_bound_issuance($1,$2,$3,$4)`, principal, request, employer, e.Signer.KeyID()).Scan(&raw); err != nil {
 			return err
