@@ -222,3 +222,56 @@ A pre-commit migration error rolls back the atomic apply. After classified
 reviews exist, keep the safety schema and history; do not drop it to roll back UI
 or restore a signing-enabled API. Any rollback/recovery requires its own reviewed
 plan and authority. No deletion, revocation, key changes or replay is implied.
+
+## Claim-only simulated review (000021)
+
+The immutable structured claim is the review subject; resume extraction is
+optional. Migration `000021_claim_only_simulated_review.sql` extends the existing
+review records with explicit `CLAIM_ONLY` or `UPLOADED_EVIDENCE` basis. Historical
+reviews retain their upload relationships. A claim-only review has no upload or
+evidence hash and must reference an existing binding/check; a deferred constraint
+trigger requires its immutable claim-digest context and independent reviewer.
+The existing review/context immutability triggers remain in effect.
+
+The narrow server-controlled permission is: a valid, required check in an
+operator-classified `SIMULATED_UAT` binding, with an active case-review grant and
+a reviewer distinct from the claimant. It is not a general employer document
+policy or permission for authoritative claim-only issuance. Existing simulated
+cases, bindings, grants and classifications need no changes.
+
+`GET /v1/cases/{caseId}/checks/{checkId}/evidence` adds binding fields
+`claimOnlyAllowed` and `claimOnlyReview` (the durable recorded receipt or null).
+`POST /v1/cases/{caseId}/checks/{checkId}/evidence/review` accepts:
+
+```json
+{"reviewBasis":"CLAIM_ONLY","decision":"APPROVED","reason":"Reviewer rationale","bindingId":"<existing UUID>","claimDigest":"<frozen SHA-256>","requestVersion":3}
+```
+
+The version must be the binding's frozen version. The server rechecks scope,
+active grant, canonical identity separation, classification, snapshot digest and
+version transactionally. The case lock and unique binding/check index serialize
+concurrent decisions. Exact retries return the same receipt; changed decisions,
+rationales or reviewers conflict. Revoked access and stale context fail even on
+retry. Review and digest context commit together or neither persists.
+
+The receipt remains `UNSIGNED_EVIDENCE_REVIEW_RECEIPT`, adds
+`reviewBasis: CLAIM_ONLY`, and carries null `uploadId` and `evidenceHash`.
+Existing attachment endpoints, received-file/hash checks and uploader separation
+are unchanged. Simulated reviews cannot satisfy production issuance or promote
+request state to ATTESTED/VERIFIED; all 000020 signing restrictions remain.
+
+For release, take the existing backup and apply 000021 transactionally as the
+schema owner after 000020, then deploy backend and frontend. The migration copies
+only existing bound-review EXECUTE recipients to the new mutation and strips
+helper/default PUBLIC privileges; no new operator grant is necessary. Old
+frontends retain attachment review; new frontends hide claim-only actions when
+old backends omit permission. An old backend can continue attachment review after
+migration. Before migration commit, use transaction rollback on failure; after
+commit, application rollback retains the additive schema and all receipts. Do not
+drop the migration, weaken 000020, or discard recorded reviews for rollback.
+
+Tara UAT: open the existing case in Evidence Reviews, read the complete claim,
+acknowledge the frozen binding/version/digest, select **Approve claim (simulated
+UAT)**, enter a rationale, confirm, and verify the unsigned receipt survives
+refresh. No new request, document, grant or classification is needed. This is an
+unsigned simulated review completion, not authoritative employer verification.

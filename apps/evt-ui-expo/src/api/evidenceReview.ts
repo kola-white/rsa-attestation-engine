@@ -2,7 +2,7 @@ import { EvidenceCheck, EvidenceScope, EvidenceRequestError, listEvidenceChecks,
 
 export type Decision = "APPROVED" | "REJECTED";
 export type ReviewContext = "SIMULATED_UAT" | "AUTHORITATIVE" | "UNCLASSIFIED";
-export type ReviewReceipt = { kind: "UNSIGNED_EVIDENCE_REVIEW_RECEIPT"; reviewContext: ReviewContext; requestId: string; bindingId: string; caseId: string; checkId: string; requestVersion: number; claimDigest: string; evidenceHash: string; reviewId: string; uploadId: string; reviewerId: string; decision: Decision; reason: string; reviewedAt: string };
+export type ReviewReceipt = { kind: "UNSIGNED_EVIDENCE_REVIEW_RECEIPT"; reviewContext: ReviewContext; requestId: string; bindingId: string; caseId: string; checkId: string; requestVersion: number; claimDigest: string; evidenceHash: string | null; reviewId: string; uploadId: string | null; reviewBasis?: "UPLOADED_EVIDENCE" | "CLAIM_ONLY"; reviewerId: string; decision: Decision; reason: string; reviewedAt: string };
 export type ReviewItem = {
   uploadId: string; name: string; mimeType: string; size: number; evidence_hash: string;
   status: "RECEIVED"; scanStatus: string; reviewStatus: "PENDING" | Decision;
@@ -14,6 +14,7 @@ export type Binding = {
   reviewContext: ReviewContext; reviewerEligible: boolean; requestVersion: number;
   claimType: string; claimDigest: string; contextValid: boolean; requiredCheck: boolean;
   claimSnapshot: Record<string, unknown> | null;
+  claimOnlyAllowed?: boolean; claimOnlyReview?: ReviewReceipt | null;
 };
 export type ReviewListing = EvidenceScope & { evidence: ReviewItem[]; binding: Binding | null };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -21,6 +22,16 @@ const digest = /^[0-9a-f]{64}$/;
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const decision = (v: unknown): v is Decision => v === "APPROVED" || v === "REJECTED";
 const timestamp = (v: unknown): v is string => typeof v === "string" && Number.isFinite(Date.parse(v));
+function validClaimReceipt(r: unknown, scope: EvidenceScope, binding: Binding): r is ReviewReceipt {
+  return object(r) && r.kind === "UNSIGNED_EVIDENCE_REVIEW_RECEIPT" && r.reviewBasis === "CLAIM_ONLY"
+    && r.reviewContext === "SIMULATED_UAT" && binding.reviewContext === "SIMULATED_UAT"
+    && r.uploadId === null && r.evidenceHash === null && r.requestId === binding.requestId
+    && r.bindingId === binding.bindingId && r.caseId === scope.caseId && r.checkId === scope.checkId
+    && r.requestVersion === binding.requestVersion && r.claimDigest === binding.claimDigest
+    && typeof r.reviewId === "string" && uuid.test(r.reviewId) && typeof r.reviewerId === "string" && uuid.test(r.reviewerId)
+    && r.reviewerId !== binding.subjectId && decision(r.decision) && typeof r.reason === "string"
+    && validRationale(r.reason) && timestamp(r.reviewedAt);
+}
 export function validRationale(value: string): boolean {
   const reason = value.trim();
   // Hermes compatibility: do not require a global TextEncoder.
@@ -116,7 +127,26 @@ export class EvidenceReviewClient {
       if (!["SIMULATED_UAT", "AUTHORITATIVE", "UNCLASSIFIED"].includes(String(b.reviewContext)) || typeof b.reviewerEligible !== "boolean"
         || !Number.isSafeInteger(b.requestVersion) || (b.requestVersion as number) < 1) throw new ReviewError(502);
     }
+    if (object(b)) {
+      if (b.claimOnlyAllowed !== undefined && typeof b.claimOnlyAllowed !== "boolean") throw new ReviewError(502);
+      if (b.claimOnlyAllowed === true && (b.reviewContext !== "SIMULATED_UAT" || !b.contextValid || !b.requiredCheck || !b.reviewerEligible)) throw new ReviewError(502);
+      if (b.claimOnlyReview != null && !validClaimReceipt(b.claimOnlyReview, scope, b as Binding)) throw new ReviewError(502);
+    }
     return { ...scope, evidence: data.evidence as ReviewItem[], binding: (b ?? null) as Binding | null };
+  }
+  async submitClaim(scope: EvidenceScope, binding: Binding, selected: Decision, rationale: string, reviewer: string): Promise<ReviewReceipt> {
+    const reason = rationale.trim();
+    if (binding.claimOnlyAllowed !== true || binding.reviewContext !== "SIMULATED_UAT" || !binding.contextValid
+      || !binding.requiredCheck || !binding.reviewerEligible || reviewer === binding.subjectId || binding.claimOnlyReview
+      || !decision(selected) || !validRationale(reason)) throw new ReviewError(400);
+    const response = await this.request(this.path(scope) + "/review", {
+      reviewBasis: "CLAIM_ONLY", decision: selected, reason, bindingId: binding.bindingId,
+      claimDigest: binding.claimDigest, requestVersion: binding.requestVersion,
+    });
+    let r: unknown;
+    try { r = await response.json(); } catch { throw new ReviewError(502, true); }
+    if (!validClaimReceipt(r, scope, binding) || r.reviewerId !== reviewer || r.decision !== selected || r.reason !== reason) throw new ReviewError(502, true);
+    return r;
   }
   async download(scope: EvidenceScope, item: ReviewItem, sha256: (bytes: Uint8Array) => Promise<string>): Promise<Uint8Array> {
     const response = await this.request(this.path(scope, item.uploadId) + "/download");

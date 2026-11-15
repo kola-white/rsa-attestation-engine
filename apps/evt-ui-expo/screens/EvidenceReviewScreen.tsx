@@ -23,12 +23,60 @@ function ClaimContext({ binding }: { binding: Binding | null }) {
     <Text className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Employment claim</Text>
     <Text className="text-base font-semibold text-amber-800 dark:text-amber-300">{binding.reviewContext === "SIMULATED_UAT" ? "Simulated UAT — evidence review only. Not an employer-authorized verification." : binding.reviewContext === "AUTHORITATIVE" ? "Authoritative review context — review alone does not issue or verify a credential." : "Unclassified context — decisions are disabled."}</Text>
     <Text selectable className="text-base text-zinc-800 dark:text-zinc-200">Employer: {binding.employerId}{"\n"}Claim: {binding.claimType}{"\n"}Issuer: {binding.issuerId}</Text>
-    <Text className="text-sm text-zinc-600 dark:text-zinc-300">Read the complete asserted facts below and compare them with each attachment.</Text>
+    <Text className="text-sm text-zinc-600 dark:text-zinc-300">Read the complete submitted claim below. Where supporting documents are present, compare them with the claim.</Text>
     <Text selectable className="text-sm text-zinc-900 dark:text-zinc-100">{JSON.stringify(binding.claimSnapshot, null, 2)}</Text>
     <Text selectable className="text-xs text-zinc-600 dark:text-zinc-300">Frozen claim version: {binding.requestVersion}{"\n"}Claim SHA-256: {binding.claimDigest}</Text>
     <Button label={details ? "Hide request identifiers" : "Show request identifiers and integrity details"} onPress={() => setDetails(!details)} />
     {details ? <Text selectable className="text-xs text-zinc-600 dark:text-zinc-300">Subject: {binding.subjectId}{"\n"}Request: {binding.requestId}{"\n"}Binding: {binding.bindingId}{"\n"}Frozen request version: {binding.requestVersion}{"\n"}Claim SHA-256: {binding.claimDigest}</Text> : null}
     {!binding.contextValid || !binding.requiredCheck ? <Text className="text-base text-red-700 dark:text-red-400">This request context is no longer eligible. Decisions are disabled.</Text> : null}
+  </View>;
+}
+
+function ClaimOnlyReview({ listing, client, principal, refresh, gate }: {
+  listing: ReviewListing; client: EvidenceReviewClient; principal: string; refresh: () => void; gate: ReviewSubmissionGate;
+}) {
+  const [acknowledged, setAcknowledged] = useState(false), [reason, setReason] = useState("");
+  const [selected, setSelected] = useState<Decision | null>(null), [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false), [error, setError] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<ReviewReceipt | null>(listing.binding?.claimOnlyReview ?? null);
+  const alive = useRef(true), active = useRef(false);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const binding = listing.binding!;
+  const key = `${principal}/${binding.bindingId}/${listing.checkId}/CLAIM_ONLY`;
+  const valid = binding.claimOnlyAllowed === true && binding.reviewContext === "SIMULATED_UAT" && binding.contextValid
+    && binding.requiredCheck && binding.reviewerEligible && binding.subjectId !== principal && !receipt && !gate.has(key);
+  const canSubmit = valid && acknowledged && !!selected && validRationale(reason) && !busy;
+  async function submit() {
+    if (!canSubmit || !confirming || !selected || active.current) return;
+    active.current = true; setBusy(true); setError(null);
+    try {
+      const result = await gate.run(key, () => client.submitClaim(listing, binding, selected, reason, principal));
+      if (alive.current) { setReceipt(result); setConfirming(false); }
+    } catch (e) { if (alive.current) {
+      setError(errorMessage(e)); setConfirming(false); setAcknowledged(false);
+      if (e instanceof ReviewError && [401, 403, 404, 409].includes(e.status)) refresh();
+    } } finally { active.current = false; if (alive.current) setBusy(false); }
+  }
+  return <View className="gap-3 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-700">
+    <Text className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Review the submitted claim (simulated UAT)</Text>
+    <Text className="text-base text-zinc-700 dark:text-zinc-300">This simulated review permits a decision on the immutable claim above without a document. It creates an unsigned receipt, not an employer verification or credential.</Text>
+    {receipt ? <Text selectable accessibilityLiveRegion="polite" className="text-base text-zinc-900 dark:text-zinc-100">Unsigned claim review recorded: {receipt.decision}{"\n"}{receipt.reason}{"\n"}Reviewer: {receipt.reviewerId}{"\n"}Recorded: {receipt.reviewedAt}{"\n"}Receipt: {receipt.reviewId}</Text> : <>
+      <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: acknowledged, disabled: !valid || busy }} disabled={!valid || busy}
+        onPress={() => { setAcknowledged(!acknowledged); setConfirming(false); }} className="min-h-12 rounded-xl border border-zinc-300 p-3">
+        <Text className="text-base text-zinc-900 dark:text-zinc-100">{acknowledged ? "☑" : "☐"} I reviewed the complete submitted claim and acknowledge its frozen version, binding and claim SHA-256 shown above.</Text>
+      </Pressable>
+      {(["APPROVED", "REJECTED"] as const).map(d => <Button key={d} label={d === "APPROVED" ? "Approve claim (simulated UAT)" : "Reject claim (simulated UAT)"} selected={selected === d} disabled={!valid || busy} onPress={() => { setSelected(d); setConfirming(false); }} />)}
+      <TextInput accessibilityLabel="Claim review rationale" multiline editable={valid && !busy} value={reason} maxLength={1000}
+        onChangeText={v => { setReason(v); setConfirming(false); }} placeholder="Explain your decision on the submitted employment claim."
+        className="min-h-28 rounded-xl border border-zinc-300 p-3 text-base text-zinc-900 dark:text-zinc-100" />
+      <Text className="text-sm text-zinc-600 dark:text-zinc-300">Rationale required; maximum 1,000 UTF-8 bytes.</Text>
+      {confirming ? <>
+        <Text className="text-base text-zinc-900 dark:text-zinc-100">Record {selected} with this rationale? No credential will be issued.{"\n"}{reason.trim()}</Text>
+        <Button label="Confirm and record claim decision" disabled={!canSubmit} onPress={() => void submit()} />
+        <Button label="Go back" disabled={busy} onPress={() => setConfirming(false)} />
+      </> : <Button label="Review claim decision before submitting" disabled={!canSubmit} onPress={() => setConfirming(true)} />}
+    </>}
+    {error ? <Text accessibilityLiveRegion="polite" className="text-base text-red-700 dark:text-red-400">{error}</Text> : null}
   </View>;
 }
 
@@ -163,7 +211,8 @@ function ReviewSession({ principal, token, requestId }: { principal: string; tok
         {listing ? <>
           <ClaimContext binding={listing.binding} />
           <Text accessibilityRole="header" className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{listing.binding?.requiredCheck ? "Required check" : "Assigned check"}: {listing.checkId}</Text>
-          {listing.evidence.length === 0 ? <Text className="text-base text-zinc-700 dark:text-zinc-300">No received evidence is available for this check. No decision can be recorded.</Text> : null}
+          {listing.binding && (listing.binding.claimOnlyAllowed || listing.binding.claimOnlyReview) ? <ClaimOnlyReview key={`${revision}/${listing.caseId}/${listing.checkId}/claim`} listing={listing} client={client} principal={principal} refresh={refresh} gate={gate} /> : null}
+          {listing.evidence.length === 0 && !listing.binding?.claimOnlyAllowed ? <Text className="text-base text-zinc-700 dark:text-zinc-300">No received evidence is available for this check. No decision can be recorded.</Text> : null}
           {listing.evidence.map(item => <Attachment key={`${revision}/${listing.caseId}/${listing.checkId}/${item.uploadId}`} item={item} listing={listing} client={client} principal={principal} refresh={refresh} gate={gate} />)}
         </> : null}
       </View>
