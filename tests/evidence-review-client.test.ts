@@ -191,3 +191,41 @@ test("request-filtered review discovery includes only granted cases bound to tha
   assert.deepEqual(await c.assignmentsForRequest(binding.requestId),[cases[0]]);
   await assert.rejects(()=>c.assignmentsForRequest("not-a-request"),ReviewError);
 });
+
+test("claim-only simulated review submits a frozen claim without an artifact and validates receipt", async () => {
+  const b = { ...binding, claimOnlyAllowed: true };
+  const claimReceipt = { ...receipt, reviewBasis: "CLAIM_ONLY", uploadId: null, evidenceHash: null };
+  const c = client((url, init) => {
+    assert.equal(url, base + `/v1/cases/${scope.caseId}/checks/${scope.checkId}/evidence/review`);
+    const body = JSON.parse(String(init!.body));
+    assert.deepEqual(body, { reviewBasis: "CLAIM_ONLY", decision: "APPROVED", reason: claimReceipt.reason, bindingId: b.bindingId, claimDigest: b.claimDigest, requestVersion: b.requestVersion });
+    assert.equal(body.uploadId, undefined); assert.equal(body.evidenceHash, undefined);
+    return json(claimReceipt);
+  });
+  assert.deepEqual(await c.submitClaim(scope, b, "APPROVED", claimReceipt.reason, reviewer), claimReceipt);
+});
+
+test("claim-only decisions fail closed for missing permission, authoritative context, self review and stale receipts", async () => {
+  let calls = 0;
+  const claimReceipt = { ...receipt, reviewBasis: "CLAIM_ONLY", uploadId: null, evidenceHash: null };
+  const c = client(() => { calls++; return json(claimReceipt); });
+  for (const b of [binding, { ...binding, claimOnlyAllowed: true, reviewContext: "AUTHORITATIVE" as const },
+    { ...binding, claimOnlyAllowed: true, subjectId: reviewer }, { ...binding, claimOnlyAllowed: true, contextValid: false }]) {
+    await assert.rejects(c.submitClaim(scope, b, "APPROVED", claimReceipt.reason, reviewer), ReviewError);
+  }
+  assert.equal(calls, 0);
+  for (const change of [{ claimDigest: "0".repeat(64) }, { requestVersion: 999 }, { evidenceHash: item.evidence_hash }, { uploadId: item.uploadId }, { reviewContext: "AUTHORITATIVE" }]) {
+    const bad = client(() => json({ ...claimReceipt, ...change }));
+    await assert.rejects(bad.submitClaim(scope, { ...binding, claimOnlyAllowed: true }, "APPROVED", claimReceipt.reason, reviewer), (e: unknown) => e instanceof ReviewError && e.uncertain);
+  }
+});
+
+test("claim-only receipt survives empty attachment listing; legacy backend offers no claim-only action", async () => {
+  const claimReceipt = { ...receipt, reviewBasis: "CLAIM_ONLY", uploadId: null, evidenceHash: null };
+  const listing = { ...scope, evidence: [], binding: { ...binding, claimOnlyAllowed: true, claimOnlyReview: claimReceipt } };
+  const loaded = await client(() => json(listing)).listing(scope);
+  assert.deepEqual(loaded.binding!.claimOnlyReview, claimReceipt);
+  const legacy = await client(() => json({ ...scope, evidence: [], binding })).listing(scope);
+  assert.equal(legacy.binding!.claimOnlyAllowed, undefined);
+  await assert.rejects(client(() => json({ ...listing, binding: { ...listing.binding, claimOnlyReview: { ...claimReceipt, bindingId: item.uploadId } } })).listing(scope), ReviewError);
+});

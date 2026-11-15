@@ -133,6 +133,7 @@ func withReqLog(next http.Handler) http.Handler {
 }
 
 func (s *Server) registerEvidenceRoutes(mux *http.ServeMux) {
+	mux.Handle("POST /v1/cases/{caseId}/checks/{checkId}/evidence/review", RequireAuth(s.cfg.Auth, http.HandlerFunc(s.HandleClaimOnlyReview)))
 	mux.Handle("GET /v1/evidence/checks", RequireAuth(s.cfg.Auth, http.HandlerFunc(s.HandleEvidenceChecks)))
 	mux.Handle("GET /v1/cases/{caseId}/checks/{checkId}/evidence", RequireAuth(s.cfg.Auth, http.HandlerFunc(s.HandleEvidenceList)))
 	mux.Handle("GET /v1/cases/{caseId}/checks/{checkId}/evidence/{uploadId}/download", RequireAuth(s.cfg.Auth, http.HandlerFunc(s.HandleEvidenceDownload)))

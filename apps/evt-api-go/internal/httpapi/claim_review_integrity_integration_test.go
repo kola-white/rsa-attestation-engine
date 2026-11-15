@@ -330,6 +330,7 @@ func TestIntegrityMigrationPreservesHistoricalCredential(t *testing.T) {
 	}
 	// The migration preserves the original bytes and does not manufacture a context.
 	evidenceExec(t, x.f.pool, employerSQL(t, "../../migrations/000020_claim_bound_review_integrity.sql"))
+	evidenceExec(t, x.f.pool, employerSQL(t, "../../migrations/000021_claim_only_simulated_review.sql"))
 	actual, err := x.engine.SubjectCredential(ctx, x.f.principal, x.request)
 	if err != nil || actual != artifact {
 		t.Fatal("historical artifact changed", err)

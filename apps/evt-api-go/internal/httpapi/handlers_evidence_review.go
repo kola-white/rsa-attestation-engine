@@ -274,3 +274,48 @@ func (s *Server) HandleEvidenceReview(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "private, no-store")
 	writeJSON(w, 200, result)
 }
+
+// Claim-only decisions use the existing review receipt and case authorization model.
+func (s *Server) HandleClaimOnlyReview(w http.ResponseWriter, r *http.Request) {
+	if !evidenceReviewScope(w, r) {
+		return
+	}
+	var input struct {
+		Decision       string `json:"decision"`
+		Reason         string `json:"reason"`
+		ReviewBasis    string `json:"reviewBasis"`
+		BindingID      string `json:"bindingId"`
+		ClaimDigest    string `json:"claimDigest"`
+		RequestVersion int64  `json:"requestVersion"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if decoder.Decode(&input) != nil {
+		writeErr(w, 400, "invalid_review")
+		return
+	}
+	binding, err := uuid.Parse(input.BindingID)
+	input.Reason = strings.TrimSpace(input.Reason)
+	if err != nil || input.ReviewBasis != "CLAIM_ONLY" || len(input.ClaimDigest) != 64 || input.RequestVersion < 1 ||
+		(input.Decision != "APPROVED" && input.Decision != "REJECTED") || input.Reason == "" || len(input.Reason) > 1000 {
+		writeErr(w, 400, "invalid_review")
+		return
+	}
+	ctx, cancel, tx, principal, ok := s.evidenceAccessTx(w, r)
+	if !ok {
+		return
+	}
+	defer cancel()
+	defer tx.Rollback()
+	var result json.RawMessage
+	err = tx.QueryRowContext(ctx, `SELECT record_claim_only_review($1,$2,$3,$4,$5,$6,$7,$8)`, principal, r.PathValue("caseId"), r.PathValue("checkId"), input.Decision, input.Reason, binding.String(), input.ClaimDigest, input.RequestVersion).Scan(&result)
+	if err != nil {
+		evidenceReviewError(w, err)
+		return
+	}
+	if err = tx.Commit(); err != nil {
+		evidenceReviewError(w, err)
+		return
+	}
+	writeJSON(w, 200, result)
+}

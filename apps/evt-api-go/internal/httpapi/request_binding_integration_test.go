@@ -64,6 +64,7 @@ func bindingSetupContext(t *testing.T, integrity bool, mode string, snapshots ..
 		evidenceExec(t, f.pool, employerSQL(t, "../../migrations/000020_claim_bound_review_integrity.sql"))
 		apply("../../operations/evidence-issuance-privileges.sql")
 		apply("../../operations/claim-review-integrity-privileges.sql")
+		evidenceExec(t, f.pool, employerSQL(t, "../../migrations/000021_claim_only_simulated_review.sql"))
 	}
 	evidenceExec(t, f.pool, `INSERT INTO evt_employer_config(employer_id) VALUES('binding-employer')`)
 	request := uuid.NewString()
