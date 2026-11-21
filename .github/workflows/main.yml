@@ -37,12 +37,17 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      - name: Install existing Expo dependencies for UI tests
+        run: npm ci --prefix apps/evt-ui-expo
+
       - name: Run Node tests
         shell: bash
         run: |
           set -o pipefail
           mkdir -p .ci-evidence
           npm run test:ci 2>&1 | tee .ci-evidence/node-tests.txt
+          npm run test:requestor-review-ui 2>&1 | tee .ci-evidence/requestor-review-ui-tests.txt
+          npm run typecheck:expo
 
       - name: Set up Go
         uses: actions/setup-go@v5

@@ -10,7 +10,7 @@ import {
   Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
@@ -22,6 +22,8 @@ import type {
 import { useAuth } from "@/src/auth/AuthContext";
 import { fetchRequestorRequest } from "@/src/api/requestor";
 import { employmentDraftFromSnapshot, employmentSnapshot, employmentDraftNeedsSave } from "@/src/api/employmentClaim";
+import { fetchRequestorReviewOutcomes, type RequestorReviewOutcomes as ReviewOutcomes } from "@/src/api/requestorReviewOutcomes";
+import { RequestorReviewOutcomes } from "@/components/RequestorReviewOutcomes";
 
 type R = RouteProp<RequestorStackParamList, "RequestorRequestDetail">;
 type N = NativeStackNavigationProp<
@@ -58,6 +60,8 @@ export const RequestorRequestDetailScreen: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const loadedFor = useRef<string | null>(null);
   const [isRequestInfoOpen, setIsRequestInfoOpen] = useState(false);
+  const [reviewState, setReviewState] = useState<{ identity: string; data: ReviewOutcomes | null; loading: boolean; error: string | null } | null>(null);
+  const [reviewRevision, setReviewRevision] = useState(0);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -75,6 +79,17 @@ export const RequestorRequestDetailScreen: React.FC = () => {
   const canCancel = canEdit;
 
   const apiUrl = useMemo(() => API_BASE_URL.replace(/\/$/, ""), []);
+  useFocusEffect(React.useCallback(() => {
+    let current = true;
+    setReviewState({ identity: requestIdentity, data: null, loading: true, error: null });
+    if (!accessToken || !user || !apiUrl) return () => { current = false; };
+    void fetchRequestorReviewOutcomes(apiUrl, accessToken, request_id).then(data => {
+      if (current) setReviewState({ identity: requestIdentity, data, loading: false, error: null });
+    }).catch(() => {
+      if (current) setReviewState({ identity: requestIdentity, data: null, loading: false, error: "Could not load review outcomes. Try again." });
+    });
+    return () => { current = false; };
+  }, [accessToken, apiUrl, request_id, requestIdentity, user?.id, reviewRevision]));
   useEffect(() => {
     let current = true;
     // Normal access-token renewal must not discard unsaved edits for the same requestor/request.
@@ -349,6 +364,13 @@ export const RequestorRequestDetailScreen: React.FC = () => {
             {displayStatus}
           </Text>
         </View>
+
+        {storedClaim !== null && loadedFor.current === requestIdentity ? <RequestorReviewOutcomes
+          data={reviewState?.identity === requestIdentity && reviewState.data?.requestVersion === expectedVersion ? reviewState.data : null}
+          loading={reviewState?.identity !== requestIdentity || reviewState.loading}
+          error={reviewState?.identity === requestIdentity ? reviewState.error ?? (reviewState.data && reviewState.data.requestVersion !== expectedVersion ? "Reopen this claim to load its current review outcome." : null) : null}
+          onRetry={() => setReviewRevision(v => v + 1)}
+        /> : null}
 
         <Text className="text-[12px] text-zinc-600 dark:text-zinc-400 mt-6 mb-2">
           Claims
