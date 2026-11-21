@@ -56,6 +56,7 @@ func (m *Module) Register(v1 *gin.RouterGroup) {
 	{
 		req.GET("/requests", m.Candidate.List)
 		req.GET("/requests/:request_id", m.Candidate.Get)
+		req.GET("/requests/:request_id/review-outcomes", m.Candidate.ReviewOutcomes)
  req.GET("/requests/:request_id/credential", m.Candidate.Credential)
 
 		req.POST("/requests", m.Candidate.CreateDraft)
