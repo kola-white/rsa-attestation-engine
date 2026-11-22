@@ -3,10 +3,12 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
 
+	evtdb "github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/db"
 	ec "github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/evidencecredential"
 	"github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/verification"
 	"time"
@@ -75,8 +77,17 @@ func TestClaimOnlyReviewReceiptAndRetry(t *testing.T) {
 	evidenceStatus(t, reviewRequest(f, f.other, "POST", claimReviewPath, body), 404)
 }
 func TestClaimOnlyReviewDenials(t *testing.T) {
+	cases := []struct{ kind, decision string }{}
 	for _, kind := range []string{"unauthenticated", "unauthorized", "revoked", "claimant", "authoritative", "unclassified", "binding", "digest", "version", "stale", "rationale", "basis", "artifact-injection", "check", "inactive"} {
-		t.Run(kind, func(t *testing.T) {
+		cases = append(cases, struct{ kind, decision string }{kind, "APPROVED"})
+	}
+	// Deny a first REJECTED submission before any immutable decision exists.
+	for _, kind := range []string{"unauthorized", "revoked", "inactive"} {
+		cases = append(cases, struct{ kind, decision string }{kind, "REJECTED"})
+	}
+	for _, tc := range cases {
+		kind := tc.kind
+		t.Run(kind+"/"+tc.decision, func(t *testing.T) {
 			mode := "SIMULATED_UAT"
 			if kind == "authoritative" {
 				mode = "AUTHORITATIVE"
@@ -87,7 +98,7 @@ func TestClaimOnlyReviewDenials(t *testing.T) {
 			f, request, binding := bindingSetupContext(t, true, mode)
 			grantClaimReviewer(t, f)
 			actor := f.other
-			body := claimReviewBody(t, f, binding)
+			body := strings.Replace(claimReviewBody(t, f, binding), "APPROVED", tc.decision, 1)
 			path := claimReviewPath
 			want := 400
 			var b map[string]any
@@ -181,23 +192,48 @@ func TestClaimOnlyConcurrentAndRollback(t *testing.T) {
 	evidenceStatus(t, reviewRequest(g, g.other, "POST", claimReviewPath, claimReviewBody(t, g, b)), 200)
 }
 func TestClaimOnlyIssuanceDenial(t *testing.T) {
-	x := issuanceSetupContext(t, "SIMULATED_UAT") // Includes independently reviewed documentary evidence and valid fixture issuer authority.
-	evidenceStatus(t, reviewRequest(x.f, x.f.other, "POST", claimReviewPath, claimReviewBody(t, x.f, x.binding)), 200)
-	spy := &countedIntegritySigner{Signer: x.engine.Signer}
-	x.engine.Signer = spy
-	if _, err := x.engine.Issue(context.Background(), x.f.other, x.request, "binding-employer"); err == nil || spy.count.Load() != 0 {
-		t.Fatal("claim-only simulated review reached signer", err)
+	for _, decision := range []string{"APPROVED", "REJECTED"} {
+		t.Run(decision, func(t *testing.T) {
+			x := issuanceSetupContext(t, "SIMULATED_UAT") // Includes independently reviewed documentary evidence and valid fixture issuer authority.
+			// The legacy fixture intentionally has a partial status enum. Include
+			// VERIFIED here so its denial must come from the real promotion guard,
+			// rather than an invalid fixture enum label.
+			evidenceExec(t, x.f.pool, `ALTER TYPE evt_request_status ADD VALUE 'VERIFIED'`)
+			receipt := reviewRequest(x.f, x.f.other, "POST", claimReviewPath, strings.Replace(claimReviewBody(t, x.f, x.binding), "APPROVED", decision, 1))
+			evidenceStatus(t, receipt, 200)
+			spy := &countedIntegritySigner{Signer: x.engine.Signer}
+			x.engine.Signer = spy
+			if _, err := x.engine.Issue(context.Background(), x.f.other, x.request, "binding-employer"); err == nil || spy.count.Load() != 0 {
+				t.Fatal("claim-only simulated review reached signer", err)
+			}
+			for _, stmt := range []string{`SELECT prepare_bound_issuance($1,$2,'binding-employer','fixture')`, `SELECT commit_bound_issuance($1,$2,'binding-employer','fixture','fake','{}'::jsonb)`} {
+				if _, err := x.f.s.db.Exec(stmt, x.f.other, x.request); err == nil {
+					t.Fatal("issuance bypass")
+				}
+			}
+			for _, stmt := range []string{
+				`UPDATE evt_requests SET status='VERIFIED' WHERE request_id=$1`,
+				`UPDATE evt_requests SET status='ATTESTED' WHERE request_id=$1`,
+				`UPDATE evt_requests SET attestation_jws='fake' WHERE request_id=$1`,
+			} {
+				_, err := x.f.pool.Exec(context.Background(), stmt, x.request)
+				expectEmployerSQLState(t, err, "23514")
+			}
+			// The persisted unsigned receipt must not become trusted through either
+			// the credential verifier or the legacy verification-outcome route.
+			outcome := ec.Verify(context.Background(), receipt.Body.String(), x.f.principal, ec.Policy, time.Now().UTC(), &evtdb.IssuanceEngine{DB: x.engine.DB})
+			if outcome.Decision == verification.VerificationVerified || outcome.Claim != nil {
+				t.Fatal("unsigned claim receipt verified", outcome)
+			}
+			w := httptest.NewRecorder()
+			body, _ := json.Marshal(map[string]string{"jwsCompact": receipt.Body.String()})
+			x.f.s.HandleVerificationOutcome(w, httptest.NewRequest("POST", "/v1/verification/outcome", strings.NewReader(string(body))))
+			if w.Code != 200 || strings.Contains(w.Body.String(), `"trust":"trusted"`) {
+				t.Fatal("claim receipt promoted to trusted outcome", w.Body.String())
+			}
+			assertNoIntegrityIssuance(t, x.f, x.request)
+		})
 	}
-	for _, stmt := range []string{`SELECT prepare_bound_issuance($1,$2,'binding-employer','fixture')`, `SELECT commit_bound_issuance($1,$2,'binding-employer','fixture','fake','{}'::jsonb)`} {
-		if _, err := x.f.s.db.Exec(stmt, x.f.other, x.request); err == nil {
-			t.Fatal("issuance bypass")
-		}
-	}
-	_, err := x.f.pool.Exec(context.Background(), `UPDATE evt_requests SET status='VERIFIED' WHERE request_id=$1`, x.request)
-	if err == nil {
-		t.Fatal("simulated review promoted request")
-	}
-	assertNoIntegrityIssuance(t, x.f, x.request)
 }
 func TestClaimOnlyMigrationRollbackACLAndReplay(t *testing.T) {
 	f, _, _ := bindingSetupVersion(t, false)
