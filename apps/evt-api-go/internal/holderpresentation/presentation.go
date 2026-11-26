@@ -84,7 +84,7 @@ func Hash(s string) string {
 }
 func public(s string) (*rsa.PublicKey, error) {
 	p, r := pem.Decode([]byte(s))
-	if p == nil || p.Type != "PUBLIC KEY" || strings.TrimSpace(string(r)) != "" {
+	if !strings.HasPrefix(s, "-----BEGIN PUBLIC KEY-----\n") || p == nil || p.Type != "PUBLIC KEY" || strings.TrimSpace(string(r)) != "" {
 		return nil, errors.New("SPKI required")
 	}
 	v, e := x509.ParsePKIXPublicKey(p.Bytes)
@@ -288,7 +288,7 @@ func Present(in Input, k *rsa.PrivateKey) (string, Result, error) {
 		return "", r, errors.New("disclosure denied")
 	}
 	hk, e := holderKey(in.Base.Credential)
-	if e != nil || k == nil || hk.N.Cmp(k.N) != 0 || hk.E != k.E {
+	if e != nil || k == nil || k.N == nil || hk.N.Cmp(k.N) != 0 || hk.E != k.E {
 		return "", r, errors.New("holder key mismatch")
 	}
 	m, _, _ := authenticate(in)
@@ -362,7 +362,7 @@ func Verify(in Input, s *Store) Result {
 // The caller supplies already-authorized claims and issuer-owned challenge state.
 // Possession is established before the callback can sign issuer-protected cnf.
 func IssueBound(claims jwt.MapClaims, intended *rsa.PublicKey, proof string, issuer, nonce string, now, expires int64, store *Store, sign func(jwt.MapClaims) (string, error)) (string, error) {
-	if intended == nil || intended.N.BitLen() < 3072 || intended.E != 65537 || now <= 0 || expires <= now || expires-now > 300 || len(nonce) < 22 || issuer == "" || claims["iss"] != issuer || store == nil || sign == nil {
+	if intended == nil || intended.N == nil || intended.N.BitLen() < 3072 || intended.E != 65537 || now <= 0 || expires <= now || expires-now > 300 || len(nonce) < 22 || issuer == "" || claims["iss"] != issuer || store == nil || sign == nil {
 		return "", errors.New("issuer context")
 	}
 	p, e := verify(proof, intended, "openid4vci-proof+jwt", "")

@@ -10,20 +10,21 @@
   "newMaterialInspection": "PASS: no PEM private keys or newly tracked raw signed JWTs; local inspection only, not remote GitGuardian",
   "unchangedStage4BAndProductionProfileFiles": true,
   "nativeAndNode20CaseResultsMatch": true,
-  "remoteCI": "NOT EXECUTED; push not authorized",
+  "remoteCI": "Pending authorized integration; prior local validation passed",
   "temporaryRegressionDatabase": "stopped after successful tests; no production data used",
   "sourceSha256": {
     ".github/workflows/main.yml": "084aafe1e1f78be71dd54aed26374175bfc2955be24a3636bb9c1ee885b0a1e3",
     "apps/evt-api-go/cmd/presentation-verify/main.go": "942207ff7138761d8405593a7edd852c26a24a6d93f083661f312b507ed62f73",
-    "apps/evt-api-go/internal/holderpresentation/presentation.go": "fdfbb57855c3a59311524cb668e0390831efc5951c4521f3f161f57fb8fcb685",
-    "apps/evt-api-go/internal/holderpresentation/presentation_test.go": "19cad6ac77b6390c4e12bb9922eabcc391a8e6b985dced8b5729d068daba5f8e",
+    "apps/evt-api-go/internal/holderpresentation/presentation.go": "40ebc2cf9d31e085486fa2c29f680c39d1b1be6fe1aa913fb123b4d6554c2fc6",
+    "apps/evt-api-go/internal/holderpresentation/presentation_test.go": "bdee0eb80ebbf76b8d083efd5af43d578d4e97bc75647842eaa6054bbafd9e68",
     "docs/architecture/adr/010-bounded-reciprocal-presentation.md": "20ce505aa8873fb624bd0b5b823c29f7030eb06ff3115961611ee52be8d15a06",
-    "docs/architecture/stage4c-holder-bound-presentation.md": "ffdd4d3ae3616870bcf57ce3a7b03772c2533282b81dc497ec4deeb6ee5e19ed",
+    "docs/architecture/stage4c-holder-bound-presentation.md": "8232585190d4c7ff51059f7a055967a158823cc490436264f5243e2d5a911701",
     "interoperability/stage4c/README.md": "2f45d7807517f3cd2d09204a388a4e8f276f6f50822b35560d604815bb432bb5",
-    "interoperability/stage4c/generate.mjs": "67dd747fc9a033cbae5fbea66d786790784a9e4551dd7e9eb52dce0b02feef5f",
+    "interoperability/stage4c/generate.mjs": "243ee18b2263a8780e48d026eeab5778bcc98b6c96d2ff1ac56af14feaf25b15",
     "interoperability/stage4c/run.py": "c5fbb1d8cffa487bf634e485690caf5884a636f43d12b6bdb75c221a1b6c8c56",
     "interoperability/stage4c/test.mjs": "2a9b759207f01adb820521cb88cc7675850e17f336e65dfa8b52c1886cbe7465",
     "interoperability/stage4c/verify.mjs": "7deaf5ef8634f446873885ece69a46ea098e7b49e1578587cbc223fa7b40e6b4",
     "package.json": "caa6f150705aade3fdf4fe86b984fbf6cf0fe9fc65f536c4b604336f6fcac909"
-  }
+  },
+  "integrationReviewAt": "2026-11-26T23:40:28.443479+00:00"
 }

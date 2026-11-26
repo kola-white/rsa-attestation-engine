@@ -302,6 +302,11 @@
       "evaluations": 2
     },
     {
+      "name": "leading-verifier-root",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
       "name": "malformed-verifier-root",
       "result": "PASS",
       "evaluations": 2
@@ -377,7 +382,7 @@
       "evaluations": 2
     }
   ],
-  "evaluations": 154,
+  "evaluations": 156,
   "issuanceNegativeChecks": 6,
   "holderSigningDenialChecks": 23,
   "isolation": "native child processes with minimal environment; use --isolated for enforced network isolation"

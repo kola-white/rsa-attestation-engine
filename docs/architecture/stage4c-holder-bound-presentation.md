@@ -222,7 +222,7 @@ successful issuances. Summary evidence contains case names and results only.
 The previous GitGuardian exception is not extended to Stage 4C.
 
 Durable evidence and the 21-criterion scorecard are in
-[`docs/validation/stage4c`](../validation/stage4c). Remote CI is not yet executed:
-this authorization permits a feature branch and local commits, not push or merge.
+[`docs/validation/stage4c`](../validation/stage4c). Local validation artifacts precede final integration authorization. Remote CI and
+release verification are recorded in the integration pull request closure record.
 The workflow addition runs the same isolated Node 20 test and archives its result
 when subsequently authorized for integration.

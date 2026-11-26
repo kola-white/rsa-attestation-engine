@@ -416,6 +416,13 @@ override.base.status.jws = await status(901, "GOOD", {
   maxStatusAgeSeconds: 999999,
 });
 add("untrusted-status-policy-override", override, deny);
+const leadingRoot = structuredClone(ia);
+leadingRoot.verifiers[0].key =
+  "unexpected leading bytes\n" + leadingRoot.verifiers[0].key;
+add("leading-verifier-root", leadingRoot, {
+  overall: "DENIED",
+  verifierAuthentication: "INVALID",
+});
 const malformedRoot = structuredClone(ia);
 malformedRoot.verifiers[0].key += "unexpected trailing bytes";
 add("malformed-verifier-root", malformedRoot, {

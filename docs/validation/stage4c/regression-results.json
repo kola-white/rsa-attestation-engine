@@ -25,8 +25,8 @@
     "legacyDiagnostic": "unchanged"
   },
   "stage4c": {
-    "scenarios": 74,
-    "evaluations": 154,
+    "scenarios": 75,
+    "evaluations": 156,
     "issuances": 1,
     "issuerNegativeChecks": 6,
     "holderSigningDenialChecks": 23,
@@ -45,5 +45,12 @@
     "cvera-stage4c-race.log": "0d45e83f0a5dcacefd997492a7532a5f9fb6494759f314b0e0242e01ff4a2c78",
     "cvera-stage4c-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
-  "apiBinarySha256": "98774cb5bc0f24a89ea83c6752d6855b964ec5f54b7b5fdf203fe0bbd6e4fbf4"
+  "apiBinarySha256": "98774cb5bc0f24a89ea83c6752d6855b964ec5f54b7b5fdf203fe0bbd6e4fbf4",
+  "integrationReview": {
+    "remediation": "Reject leading text before pinned verifier PEM; reject nil RSA modulus without panic",
+    "targetedRaceTest": "PASS",
+    "vet": "PASS",
+    "interoperability": "75 scenarios,156 matching evaluations on isolated Node20 and native Node",
+    "fullGoResults": "Existing recorded 547-test baseline retained; final remote CI reruns all tests including additions"
+  }
 }

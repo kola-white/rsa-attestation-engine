@@ -138,6 +138,12 @@ func TestReciprocalPresentation(t *testing.T) {
 			t.Fatal("old verifier acquired assurance")
 		}
 	})
+	t.Run("malformed-holder-private-key", func(t *testing.T) {
+		out, _, err := Present(in, &rsa.PrivateKey{})
+		if err == nil || out != "" {
+			t.Fatal("malformed key released presentation")
+		}
+	})
 	t.Run("wrong-holder-private-key", func(t *testing.T) {
 		out, _, err := Present(in, wrong)
 		if err == nil || out != "" {
@@ -196,4 +202,10 @@ func TestReciprocalPresentation(t *testing.T) {
 			t.Fatal("private JWK accepted")
 		}
 	})
+}
+
+func TestMalformedIntendedKey(t *testing.T) {
+	if _, err := IssueBound(jwt.MapClaims{}, &rsa.PublicKey{}, "", "", "", 1, 2, NewStore(), nil); err == nil {
+		t.Fatal("malformed intended key accepted")
+	}
 }

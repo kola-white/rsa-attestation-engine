@@ -89,7 +89,7 @@
       "id": "AC-15",
       "result": "PASS",
       "criterion": "Independent implementations agree",
-      "evidence": "154 matching evaluations; Go jwt/v5 and JS JOSE; only unchanged per-language Stage4B layer reused"
+      "evidence": "156 matching evaluations; Go jwt/v5 and JS JOSE; only unchanged per-language Stage4B layer reused"
     },
     {
       "id": "AC-16",

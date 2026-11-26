@@ -2,11 +2,12 @@
 
 Local implementation acceptance: **21/21 PASS**, limited to the documented
 synthetic library/CLI execution model. This is not final integration closure or
-production readiness. No push, merge, deployment or production access occurred.
+production readiness. These artifacts record local validation before integration. Subsequent remote CI
+and release results are published in the integration PR closure record.
 
 - [Acceptance scorecard](acceptance.json): every criterion, evidence and limitations.
-- [Isolated interoperability](isolated-interoperability.json): 74 scenarios,
-  154 matching Go/JS evaluations, Node 20.20.2, one successful issuance, two
+- [Isolated interoperability](isolated-interoperability.json): 75 scenarios,
+  156 matching Go/JS evaluations, Node 20.20.2, one successful issuance, two
   distinct verifier presentations of the same credential. Includes six issuer
   negative checks and 23 holder-side no-presentation-on-denial checks.
 - [Native interoperability](native-interoperability.json): same outcomes on the
@@ -26,4 +27,5 @@ Signed fixtures and private keys are generated only at runtime. They are not
 tracked here. Source hashes and final quality results are in
 [quality results](quality-results.json). No existing production v1 issuance,
 verification, authorization, schema or protected-record implementation changed.
-Remote CI and integration remain subject to separate authorization.
+Final integration authorization was subsequently granted; its results are recorded
+in the integration PR closure record.
