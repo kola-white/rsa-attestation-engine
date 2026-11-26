@@ -5,5 +5,5 @@
   "negativeSignatures": "mutated fixture JWTs only; no additional issuance workflow calls",
   "privateKeysWritten": false,
   "synthetic": true,
-  "vectors": 37
+  "vectors": 39
 }

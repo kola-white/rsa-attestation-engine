@@ -1442,5 +1442,83 @@
       "eligibleWithoutHolder": false,
       "overall": "INDETERMINATE"
     }
+  },
+  {
+    "name": "status-null-crit",
+    "input": {
+      "credential": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImxvY2FsLW9ubHktZml4dHVyZSIsInR5cCI6ImRjK3NkLWp3dCJ9.eyJpc3MiOiJodHRwczovL2N2ZXJhLmFwcCIsInN1YiI6IjM3ZDJiNGMxLWE0OWItNDVlMy04OTkzLWI2NmMxMWJkNDIxYyIsImV4cCI6MTgwMDAwMTgwMCwibmJmIjoxODAwMDAwMDAwLCJpYXQiOjE4MDAwMDAwMDAsImp0aSI6ImZjNTRhMjE4LTYyM2QtNDdkMC1hZjRmLTFmYjNhMzgzOTA2YyIsInZjdCI6Imh0dHBzOi8vY3ZlcmEuYXBwL2NyZWRlbnRpYWxzL2VtcGxveW1lbnQtcm9sZS92MSIsImNsYWltX3R5cGUiOiJlbXBsb3ltZW50LnJvbGUiLCJlbXBsb3ltZW50Ijp7ImVtcGxveWVyX2lkIjoiZW1wbG95ZXIiLCJ0aXRsZSI6IkVuZ2luZWVyIn0sImV2aWRlbmNlX2JpbmRpbmciOnsicmVxdWVzdF9pZCI6IjBmZWRhNzcyLTA0YWItNDRhMy05M2Y4LTk3YzQ3YjNhYWUyYiIsImJpbmRpbmdfaWQiOiI3OTMzYzNiZS00MGY4LTQzMTUtYjRhNS05Njc2NmNmNjRlYzAiLCJjYXNlX2lkIjoibG9jYWwtY2FzZSIsImVtcGxveWVyX2lkIjoiZW1wbG95ZXIiLCJzdWJqZWN0X2lkIjoiMzdkMmI0YzEtYTQ5Yi00NWUzLTg5OTMtYjY2YzExYmQ0MjFjIiwicmVxdWVzdF92ZXJzaW9uIjoxLCJzbmFwc2hvdF9zaGEyNTYiOiIxNmEwZWViMDc5MWI2YzkyNDUxZmQyODRkZDlmNTk5ZTBhN2RiZTdmNmViZWE2ZTJkMmQwNmM3Zjc0YWVjMTEyIiwibWFuaWZlc3RfaWQiOiJlZGQyYjg2Yi1hYTFiLTQwZDgtOGQ2YS1mZThlZThiM2I1MmMiLCJtYW5pZmVzdF9zaGEyNTYiOiJhNmQ2OGUwMDBlOWU4NjQ5MTY3MThmMGMyNGI1MDExOTE4ODhhNWZlNjliZjUzYmE3YzZkOGYxNTBmMDAwN2M0IiwibWFudWFsX3BvbGljeSI6Ik1BTlVBTF9SRVZJRVdfUElMT1RfVjEiLCJhdXRob3JpdHlfZ3JhbnRfaWQiOiI5OTE5MjI4Ni0wNWUyLTRkMDEtODVlZC1iNjM5MGM3ZmM5YmM6ZTk0MzhjMGEtMmFhYS00Yjc3LTk3NTMtMWVmNzYzYzNkYTJhIiwiYXV0aG9yaXR5X3JlY29yZGluZ19wb3NpdGlvbiI6NX0sInZlcmlmaWNhdGlvbl9wb2xpY3kiOiJlbXBsb3ltZW50LmF1dGhvcml0YXRpdmUvbWFudWFsLWV2aWRlbmNlLXBpbG90L3YxIiwiY3JlZGVudGlhbF9zcGtpX3NoYTI1NiI6IjUxMmNlNGJiZTU3MGE5MTRkOWUwYTQzZTc1ODJhNjVlOTFjYzljOTY1MDM3ODRiMjkwMGIyZGUzMTgwM2VjZmEifQ.obgr0xTQOIhYyq_4ZONoaMDNnp7C0TW4pnaNin9O-nw2rMXI26gcyr13PuEqT7sqGov-9lHUZSwZzoHKJAsP52M6RuW_D7TZpFqgkkbYsiO3PW99h8BtiSpzld9tQpyvPxUOMgptUD21OdsruWp1-tVcols_A-8HpxgCmZuYSTOqjgBVEnVPAN8PaeWKQPVxqVCu2D3zEEZoCVETxZor7kaGbD8GI6Un7fNIGShd4BmD7gw5p9P2hPyLOBgdFwnncjKq8Og_HvMh2A85hJkj_wqGenrjxAIvNPCmTzXI4-3-qNIXhgMUm8faA66yHgpGxZl0mKxkRAQTp0QF3SNT9LeTj-Jyws_KpJ8Rb-Dl-wOA2eOWUpe7RaMHBMSAzlGaXwSSwloCOz9dlKT_NJas7RGQggvYXCLZbDg8HIY5UDUAO5VEo3lFNyqRqRHLpLvBwEgqWwDxLhri7sIAF0QJPh3QKYy1Rgz5iHDNelTdpvrZZ13X6le83D-kxPuRVE9A~",
+      "trust": {
+        "issuer": "https://cvera.app",
+        "kid": "local-only-fixture",
+        "publicKey": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAv8fuGtM5gJ3p5u1GqULQ\nqJ1inMHy69ouZYvh3p60UiGNBtorW2oFeuVvGvuhiFgD/2M9OtupuPt9/vtQMw8+\nEofnpibwxYgpQGlY7dtLpB4CEOzhLpHv7dLdqk7sI+6szyRCs7csG7BQ+1es1y6b\nQf63Nl/6h+qRTvETKn/VFmcVjatKq1lGQwzGzHRzmTtoS2TCMYIn5RXlAzN+dpC9\n4kbRNqk/TbmgpL6SMGVIObb//+9RqfiUsb+MdqykfqEO/B808L8Jhv8WO/eJ10b9\nmAyIlpQ1CcI3RW2CnlwAQvRZr7YWHMjUN3t1eHES1Oq265TNuSKnvD7AHEPWOALD\nrWGufV5Nd3A8GSN5jX2vec9jtqtXSVVWb92jxZfwlen5Vkgemg06ILvWSLxFHWft\nsqbhkE1BP6o00cvzUvUD3z6/KCCU/LAP4u51Dx7shgwI/4HeUmquUjpNUn8IOVHG\n0L+Uh/VeaVz+K1tL1ApLnoTshObAebqj5KVmDWRaSQ/rAgMBAAE=\n-----END PUBLIC KEY-----\n",
+        "authorityIssuer": "urn:cvera:synthetic-authority",
+        "authorityKid": "local-authority",
+        "authorityKey": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAsed6pK0Pe/adxEu/BksE\n3dQFxPkaptTiJOGRHtjw7NYD3LwCLNWuL92R/cYVnePRrPuqGnHZmDUW3uYPgH/U\njSEbn86BYL09iRkZpyc45bVJRQZIqP3fKuqVIoq4gTOZVx0qS88yLYsNJZ4xXToY\nzjOGpE4YGcmD2bFG9EmIrpUQeCwZa4i1+5k8yqF0DVhE2J/VYnRQLFDOirvjY+MQ\nw8mFVpqcGnMY7lvjuY4wsb7WvJrOx6PxR767uDrMREcaudP7+HiUnzBCeNX0+sge\noEP15uBrihZuSvqPgabox5Bp6y0aMzSvWeEl9w/HCNB+YxsEC1vAnEMLc5k7UgCL\ncSVPnH7zHMfC79hXjc8aeZXou3cHZ30WJq24mFTjMK+i4K1haMigfzGal2EFaSdV\nm4lTjLCnJDaAVJXmDBhnfnYbkoxhM9Mu6oM104Bnk5XJIyCsAA/78r5RxP1dxpOa\ncyZOQewTdFEZUiPSXmG99w10JAxCsOHIWWMznDHDzI+PAgMBAAE=\n-----END PUBLIC KEY-----\n",
+        "statusIssuer": "urn:cvera:synthetic-status",
+        "statusKid": "local-status",
+        "statusKey": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAxWs5+zg0zrbC31EUdfgw\nE43c5kS4Kbjeb+2TLKdetPKNP+pR6R/dqzst3LGNde/yfCreAtToKII4ctErZdDI\nqx1KHe1b0NKUY3jgEriOZfL1MI2QI8NQ9YH6Je2jI6RHYKVIHwauu/PrVex4Upwl\nTOJ7sSBVmzq2+a+TS12gNIEut4jHJ1Uj2/kcIIKbVnTj6uGThXsFAoosjcBEsiMr\nqxONcSi2XP/9q8tkrb8DPQ+MvV+CD7QsKIffELkyJWBsS1hK7fN4WcDUIAzyJKNr\nj91eJEQ8ifUXxncD7RKXJ352f+lD7biuwU2jGIiR8l7qrBRmyHnIzUKmc1LcdM0y\nLqYWqTptqJuaIDZ2gP32mx5SNx3WD7WSggUAmjDb9jotX79QXK5x/56kJNlQLuuD\nEi8KO0yMdI75InJgy7rdDdjpd4BtKOBs5/hq6iJAHMQTxomyyh3fL9dtDpuyiZVY\nEJcDlenrj8/fqqCTdZoBdexuRlMP9xil3C7LPJO2Ij4HAgMBAAE=\n-----END PUBLIC KEY-----\n",
+        "synthetic": true
+      },
+      "policy": {
+        "now": 1800000000,
+        "expectedSubject": "37d2b4c1-a49b-45e3-8993-b66c11bd421c"
+      },
+      "authorityJws": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImxvY2FsLWF1dGhvcml0eSIsInR5cCI6ImN2ZXJhLXN0YWdlNGItZml4dHVyZS1hdXRob3JpdHkrand0In0.eyJjbGFpbV90eXBlIjoiZW1wbG95bWVudC5yb2xlIiwiY3JlZGVudGlhbF9zaGEyNTYiOiJlNTk5OWRiODIxOGFmYjAxMzlhMGJkMjQ0OWFiMjY2ODA4OTg5YTdkZmY2M2IyMzQyNWE0Y2FlMGNlOTE3YzBmIiwiZGVjaXNpb24iOiJBVVRIT1JJWkVEIiwiZW1wbG95ZXJfaWQiOiJlbXBsb3llciIsImV4cCI6MTgwMDAwNzIwMCwiaWF0IjoxNzk5OTk2NDAwLCJpc3MiOiJ1cm46Y3ZlcmE6c3ludGhldGljLWF1dGhvcml0eSIsImlzc3VlciI6Imh0dHBzOi8vY3ZlcmEuYXBwIiwic3ludGhldGljIjp0cnVlfQ.j1UzYudw2YBUs0LNpSZkRrgsgPtGu5wwDQzEEOSK42SCxdF9Z7wZ_Fr5SfEb6jBXjW56wSQbWDbNRIpPPtDlEloC52vO3laMehhXeuOEAv6QRUntsPfFBXXDEN9f8o0BJZbP0a39lKPuQXGmbptkqdPMpXQ48UT9TDM4cpB8cGyjo4Qb34cgrQDz-akxFYbX2kMx1zSs-6shTkb6FerUQgXE5N1isHVzjd1IQBllx0iH9kL6rhdia3MzVXi4TCCvjM9ukhfwBFI0pLQ52xKKrryiNlW9jO_Wrp0z2R03wlAwrKJyApGtOtWR9qnXQ3zABD0JSR-mzi5ap-uskSCt8IotschrYKvmIMmlAPlr8K6y1y3Z3iJbUHfIi1aG8ae_DzqmCYvjqe_PAFo_vfLykHzXhby1bjmt1lg0dCfqfL5lm9UZTu_R18BStdq7QkA_YRSvmhSohPU24Tp7UKruDSH44EHuvozISKGsXEcWSIJhHIlO-mh3fowvAJpo-0Qy",
+      "status": {
+        "availability": "AVAILABLE",
+        "jws": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImxvY2FsLXN0YXR1cyIsInR5cCI6ImN2ZXJhLXN0YWdlNGItZml4dHVyZS1zdGF0dXMrand0IiwiY3JpdCI6bnVsbH0.eyJjcmVkZW50aWFsX3NoYTI1NiI6ImU1OTk5ZGI4MjE4YWZiMDEzOWEwYmQyNDQ5YWIyNjY4MDg5ODlhN2RmZjYzYjIzNDI1YTRjYWUwY2U5MTdjMGYiLCJlbnRyaWVzIjpbeyJjcmVkZW50aWFsX2lkIjoiZmM1NGEyMTgtNjIzZC00N2QwLWFmNGYtMWZiM2EzODM5MDZjIiwic3RhdGUiOiJHT09EIn1dLCJpYXQiOjE4MDAwMDAwMDAsImlzcyI6InVybjpjdmVyYTpzeW50aGV0aWMtc3RhdHVzIiwic3ludGhldGljIjp0cnVlfQ.UMlua5S93z1IBDekVEGNFObFwwVIWJVarwRwGXJGapxcacmW__kczN31WUMpQtIfqogwwSEJXKpSFENpwJ7mm4fjsysctgMF3QuZM2vohza7VYBtkYZbGMVF_WjlKx85P9DYpuhU2a43ycU0pK9LMO8raQnyae60sfGEae8lcE5Rt10g37QAIFgigDMwgNe9659D3lR6EKyhAgYwjjWyXsU7rlZv4_VBPwsvB-0b0vN2kXZngxZmg9AwEXVoFl-6ZI5p5BLKyUiDEP_ouQ-48tuTwbGoKF_yrVuR0xGz2V-eyjiZQ6xBL8vCjADSY3r0TLg3txU_2KfTnKPbkQEq4F4K-Ca9qLqXpyrkiogIBslXixwK-Hc22fzmLkFt2TPvTR82rRNAngA1d9cD-ZGvAH9qgN-I9ZGOWmMhFaJmizbfgOQRUYj2bDTUP9-EjtrXK5OXKyrqP0L4SwNRFNvMxAyWjAZe4DS9ghKDU7rAAFkLP_y8sWy_RiKcpedhCkLf"
+      }
+    },
+    "expected": {
+      "contract": "cvera.stage4b.portable-verification.v1",
+      "synthetic": true,
+      "cryptographicIntegrity": "VALID",
+      "claimBinding": "VALID",
+      "temporalValidity": "VALID",
+      "issuerAuthority": "AUTHORIZED",
+      "credentialStatus": "INVALID",
+      "holderAssurance": "UNKNOWN",
+      "eligibleWithoutHolder": false,
+      "overall": "REJECTED"
+    }
+  },
+  {
+    "name": "status-null-b64",
+    "input": {
+      "credential": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImxvY2FsLW9ubHktZml4dHVyZSIsInR5cCI6ImRjK3NkLWp3dCJ9.eyJpc3MiOiJodHRwczovL2N2ZXJhLmFwcCIsInN1YiI6IjM3ZDJiNGMxLWE0OWItNDVlMy04OTkzLWI2NmMxMWJkNDIxYyIsImV4cCI6MTgwMDAwMTgwMCwibmJmIjoxODAwMDAwMDAwLCJpYXQiOjE4MDAwMDAwMDAsImp0aSI6ImZjNTRhMjE4LTYyM2QtNDdkMC1hZjRmLTFmYjNhMzgzOTA2YyIsInZjdCI6Imh0dHBzOi8vY3ZlcmEuYXBwL2NyZWRlbnRpYWxzL2VtcGxveW1lbnQtcm9sZS92MSIsImNsYWltX3R5cGUiOiJlbXBsb3ltZW50LnJvbGUiLCJlbXBsb3ltZW50Ijp7ImVtcGxveWVyX2lkIjoiZW1wbG95ZXIiLCJ0aXRsZSI6IkVuZ2luZWVyIn0sImV2aWRlbmNlX2JpbmRpbmciOnsicmVxdWVzdF9pZCI6IjBmZWRhNzcyLTA0YWItNDRhMy05M2Y4LTk3YzQ3YjNhYWUyYiIsImJpbmRpbmdfaWQiOiI3OTMzYzNiZS00MGY4LTQzMTUtYjRhNS05Njc2NmNmNjRlYzAiLCJjYXNlX2lkIjoibG9jYWwtY2FzZSIsImVtcGxveWVyX2lkIjoiZW1wbG95ZXIiLCJzdWJqZWN0X2lkIjoiMzdkMmI0YzEtYTQ5Yi00NWUzLTg5OTMtYjY2YzExYmQ0MjFjIiwicmVxdWVzdF92ZXJzaW9uIjoxLCJzbmFwc2hvdF9zaGEyNTYiOiIxNmEwZWViMDc5MWI2YzkyNDUxZmQyODRkZDlmNTk5ZTBhN2RiZTdmNmViZWE2ZTJkMmQwNmM3Zjc0YWVjMTEyIiwibWFuaWZlc3RfaWQiOiJlZGQyYjg2Yi1hYTFiLTQwZDgtOGQ2YS1mZThlZThiM2I1MmMiLCJtYW5pZmVzdF9zaGEyNTYiOiJhNmQ2OGUwMDBlOWU4NjQ5MTY3MThmMGMyNGI1MDExOTE4ODhhNWZlNjliZjUzYmE3YzZkOGYxNTBmMDAwN2M0IiwibWFudWFsX3BvbGljeSI6Ik1BTlVBTF9SRVZJRVdfUElMT1RfVjEiLCJhdXRob3JpdHlfZ3JhbnRfaWQiOiI5OTE5MjI4Ni0wNWUyLTRkMDEtODVlZC1iNjM5MGM3ZmM5YmM6ZTk0MzhjMGEtMmFhYS00Yjc3LTk3NTMtMWVmNzYzYzNkYTJhIiwiYXV0aG9yaXR5X3JlY29yZGluZ19wb3NpdGlvbiI6NX0sInZlcmlmaWNhdGlvbl9wb2xpY3kiOiJlbXBsb3ltZW50LmF1dGhvcml0YXRpdmUvbWFudWFsLWV2aWRlbmNlLXBpbG90L3YxIiwiY3JlZGVudGlhbF9zcGtpX3NoYTI1NiI6IjUxMmNlNGJiZTU3MGE5MTRkOWUwYTQzZTc1ODJhNjVlOTFjYzljOTY1MDM3ODRiMjkwMGIyZGUzMTgwM2VjZmEifQ.obgr0xTQOIhYyq_4ZONoaMDNnp7C0TW4pnaNin9O-nw2rMXI26gcyr13PuEqT7sqGov-9lHUZSwZzoHKJAsP52M6RuW_D7TZpFqgkkbYsiO3PW99h8BtiSpzld9tQpyvPxUOMgptUD21OdsruWp1-tVcols_A-8HpxgCmZuYSTOqjgBVEnVPAN8PaeWKQPVxqVCu2D3zEEZoCVETxZor7kaGbD8GI6Un7fNIGShd4BmD7gw5p9P2hPyLOBgdFwnncjKq8Og_HvMh2A85hJkj_wqGenrjxAIvNPCmTzXI4-3-qNIXhgMUm8faA66yHgpGxZl0mKxkRAQTp0QF3SNT9LeTj-Jyws_KpJ8Rb-Dl-wOA2eOWUpe7RaMHBMSAzlGaXwSSwloCOz9dlKT_NJas7RGQggvYXCLZbDg8HIY5UDUAO5VEo3lFNyqRqRHLpLvBwEgqWwDxLhri7sIAF0QJPh3QKYy1Rgz5iHDNelTdpvrZZ13X6le83D-kxPuRVE9A~",
+      "trust": {
+        "issuer": "https://cvera.app",
+        "kid": "local-only-fixture",
+        "publicKey": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAv8fuGtM5gJ3p5u1GqULQ\nqJ1inMHy69ouZYvh3p60UiGNBtorW2oFeuVvGvuhiFgD/2M9OtupuPt9/vtQMw8+\nEofnpibwxYgpQGlY7dtLpB4CEOzhLpHv7dLdqk7sI+6szyRCs7csG7BQ+1es1y6b\nQf63Nl/6h+qRTvETKn/VFmcVjatKq1lGQwzGzHRzmTtoS2TCMYIn5RXlAzN+dpC9\n4kbRNqk/TbmgpL6SMGVIObb//+9RqfiUsb+MdqykfqEO/B808L8Jhv8WO/eJ10b9\nmAyIlpQ1CcI3RW2CnlwAQvRZr7YWHMjUN3t1eHES1Oq265TNuSKnvD7AHEPWOALD\nrWGufV5Nd3A8GSN5jX2vec9jtqtXSVVWb92jxZfwlen5Vkgemg06ILvWSLxFHWft\nsqbhkE1BP6o00cvzUvUD3z6/KCCU/LAP4u51Dx7shgwI/4HeUmquUjpNUn8IOVHG\n0L+Uh/VeaVz+K1tL1ApLnoTshObAebqj5KVmDWRaSQ/rAgMBAAE=\n-----END PUBLIC KEY-----\n",
+        "authorityIssuer": "urn:cvera:synthetic-authority",
+        "authorityKid": "local-authority",
+        "authorityKey": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAsed6pK0Pe/adxEu/BksE\n3dQFxPkaptTiJOGRHtjw7NYD3LwCLNWuL92R/cYVnePRrPuqGnHZmDUW3uYPgH/U\njSEbn86BYL09iRkZpyc45bVJRQZIqP3fKuqVIoq4gTOZVx0qS88yLYsNJZ4xXToY\nzjOGpE4YGcmD2bFG9EmIrpUQeCwZa4i1+5k8yqF0DVhE2J/VYnRQLFDOirvjY+MQ\nw8mFVpqcGnMY7lvjuY4wsb7WvJrOx6PxR767uDrMREcaudP7+HiUnzBCeNX0+sge\noEP15uBrihZuSvqPgabox5Bp6y0aMzSvWeEl9w/HCNB+YxsEC1vAnEMLc5k7UgCL\ncSVPnH7zHMfC79hXjc8aeZXou3cHZ30WJq24mFTjMK+i4K1haMigfzGal2EFaSdV\nm4lTjLCnJDaAVJXmDBhnfnYbkoxhM9Mu6oM104Bnk5XJIyCsAA/78r5RxP1dxpOa\ncyZOQewTdFEZUiPSXmG99w10JAxCsOHIWWMznDHDzI+PAgMBAAE=\n-----END PUBLIC KEY-----\n",
+        "statusIssuer": "urn:cvera:synthetic-status",
+        "statusKid": "local-status",
+        "statusKey": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAxWs5+zg0zrbC31EUdfgw\nE43c5kS4Kbjeb+2TLKdetPKNP+pR6R/dqzst3LGNde/yfCreAtToKII4ctErZdDI\nqx1KHe1b0NKUY3jgEriOZfL1MI2QI8NQ9YH6Je2jI6RHYKVIHwauu/PrVex4Upwl\nTOJ7sSBVmzq2+a+TS12gNIEut4jHJ1Uj2/kcIIKbVnTj6uGThXsFAoosjcBEsiMr\nqxONcSi2XP/9q8tkrb8DPQ+MvV+CD7QsKIffELkyJWBsS1hK7fN4WcDUIAzyJKNr\nj91eJEQ8ifUXxncD7RKXJ352f+lD7biuwU2jGIiR8l7qrBRmyHnIzUKmc1LcdM0y\nLqYWqTptqJuaIDZ2gP32mx5SNx3WD7WSggUAmjDb9jotX79QXK5x/56kJNlQLuuD\nEi8KO0yMdI75InJgy7rdDdjpd4BtKOBs5/hq6iJAHMQTxomyyh3fL9dtDpuyiZVY\nEJcDlenrj8/fqqCTdZoBdexuRlMP9xil3C7LPJO2Ij4HAgMBAAE=\n-----END PUBLIC KEY-----\n",
+        "synthetic": true
+      },
+      "policy": {
+        "now": 1800000000,
+        "expectedSubject": "37d2b4c1-a49b-45e3-8993-b66c11bd421c"
+      },
+      "authorityJws": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImxvY2FsLWF1dGhvcml0eSIsInR5cCI6ImN2ZXJhLXN0YWdlNGItZml4dHVyZS1hdXRob3JpdHkrand0In0.eyJjbGFpbV90eXBlIjoiZW1wbG95bWVudC5yb2xlIiwiY3JlZGVudGlhbF9zaGEyNTYiOiJlNTk5OWRiODIxOGFmYjAxMzlhMGJkMjQ0OWFiMjY2ODA4OTg5YTdkZmY2M2IyMzQyNWE0Y2FlMGNlOTE3YzBmIiwiZGVjaXNpb24iOiJBVVRIT1JJWkVEIiwiZW1wbG95ZXJfaWQiOiJlbXBsb3llciIsImV4cCI6MTgwMDAwNzIwMCwiaWF0IjoxNzk5OTk2NDAwLCJpc3MiOiJ1cm46Y3ZlcmE6c3ludGhldGljLWF1dGhvcml0eSIsImlzc3VlciI6Imh0dHBzOi8vY3ZlcmEuYXBwIiwic3ludGhldGljIjp0cnVlfQ.j1UzYudw2YBUs0LNpSZkRrgsgPtGu5wwDQzEEOSK42SCxdF9Z7wZ_Fr5SfEb6jBXjW56wSQbWDbNRIpPPtDlEloC52vO3laMehhXeuOEAv6QRUntsPfFBXXDEN9f8o0BJZbP0a39lKPuQXGmbptkqdPMpXQ48UT9TDM4cpB8cGyjo4Qb34cgrQDz-akxFYbX2kMx1zSs-6shTkb6FerUQgXE5N1isHVzjd1IQBllx0iH9kL6rhdia3MzVXi4TCCvjM9ukhfwBFI0pLQ52xKKrryiNlW9jO_Wrp0z2R03wlAwrKJyApGtOtWR9qnXQ3zABD0JSR-mzi5ap-uskSCt8IotschrYKvmIMmlAPlr8K6y1y3Z3iJbUHfIi1aG8ae_DzqmCYvjqe_PAFo_vfLykHzXhby1bjmt1lg0dCfqfL5lm9UZTu_R18BStdq7QkA_YRSvmhSohPU24Tp7UKruDSH44EHuvozISKGsXEcWSIJhHIlO-mh3fowvAJpo-0Qy",
+      "status": {
+        "availability": "AVAILABLE",
+        "jws": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImxvY2FsLXN0YXR1cyIsInR5cCI6ImN2ZXJhLXN0YWdlNGItZml4dHVyZS1zdGF0dXMrand0IiwiYjY0IjpudWxsfQ.eyJjcmVkZW50aWFsX3NoYTI1NiI6ImU1OTk5ZGI4MjE4YWZiMDEzOWEwYmQyNDQ5YWIyNjY4MDg5ODlhN2RmZjYzYjIzNDI1YTRjYWUwY2U5MTdjMGYiLCJlbnRyaWVzIjpbeyJjcmVkZW50aWFsX2lkIjoiZmM1NGEyMTgtNjIzZC00N2QwLWFmNGYtMWZiM2EzODM5MDZjIiwic3RhdGUiOiJHT09EIn1dLCJpYXQiOjE4MDAwMDAwMDAsImlzcyI6InVybjpjdmVyYTpzeW50aGV0aWMtc3RhdHVzIiwic3ludGhldGljIjp0cnVlfQ.nfpRHgBqOF_ZVP4T-Vzg0SLQZ6tj8FgUAhEv67a8o_dP-dpeGifM8MbcvBUmI2ekv7oJgifHgAYJYkHWeGR_TaK2-AvLqQyFHcgclPXyhozm8VCpHTFun2mPHWLOmU_Mnsk5Y7a24GoRi8iGm1kDldN6ppW3m9cEBwdEKeKiGu1f0NBsvJ4gFH4FPImax7LK9OrdaeVQwMSeIPvflfBHjWZ6HcgrXk0HN7xoQPf8U_gFKpuQDVZ4HBzt3Wz7py159IqKfs7nOfXpuH-cxpTPC80anRkzDO_venoUwlcQEmrzyAn3vmNxobrA-hVSdq-wPAbw-VS8SlYQ8qKig0T1Qc15nDj1AUm77539HDidl8H0J25kdAWPQasDfi7EEDI7qXaTDOfyRGcY7OMPas_q1DXUrWu6oWlisneLmwawJJpc9tv5fGj_pX9GHUlDgjdAXaCxwoz3IJ9cHu13jQo3xq5nZ2cEUcpsW-NexXPd1Kj5moo3fwFwiNAaSVH99j9o"
+      }
+    },
+    "expected": {
+      "contract": "cvera.stage4b.portable-verification.v1",
+      "synthetic": true,
+      "cryptographicIntegrity": "VALID",
+      "claimBinding": "VALID",
+      "temporalValidity": "VALID",
+      "issuerAuthority": "AUTHORIZED",
+      "credentialStatus": "INVALID",
+      "holderAssurance": "UNKNOWN",
+      "eligibleWithoutHolder": false,
+      "overall": "REJECTED"
+    }
   }
 ]

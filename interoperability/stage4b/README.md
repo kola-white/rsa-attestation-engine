@@ -5,7 +5,7 @@ See the [contract](../../docs/api/portable-verification-stage4b.md) for normativ
 inputs, outcome semantics, trust boundaries and the approved freshness policy.
 
 - `fixtures/manifest.json`: one existing synthetic issuance call and base digest.
-- `fixtures/vectors.json`: 37 public cases, explicit expectations and public roots.
+- `fixtures/vectors.json`: 39 public cases, explicit expectations and public roots.
 - `verify.mjs`: independent JavaScript JOSE verifier; no Go/Cvera client imports.
 - `test.mjs`: invokes two separate processes, checks results and unchanged reuse.
 - `run.py`: builds Go runner; optionally enforces inspected network-free isolation.

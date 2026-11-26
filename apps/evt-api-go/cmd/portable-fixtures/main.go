@@ -194,6 +194,22 @@ func main() {
 			}
 		})
 	}
+
+	for _, field := range []string{"crit", "b64"} {
+		field := field
+		add("status-null-"+field, func(v *pv.Input) {
+			payload, err := base64.RawURLEncoding.DecodeString(strings.Split(v.Status.JWS, ".")[1])
+			must(err)
+			var claims jwt.MapClaims
+			must(json.Unmarshal(payload, &claims))
+			token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+			token.Header["kid"] = base.Trust.StatusKID
+			token.Header["typ"] = "cvera-stage4b-fixture-status+jwt"
+			token.Header[field] = nil
+			v.Status.JWS, err = token.SignedString(sk)
+			must(err)
+		}, func(r *pv.Result) { r.Status = "INVALID" })
+	}
 	for _, age := range []int64{60, 61} {
 		age := age
 		add(fmt.Sprint("configured-60-age-", age), func(v *pv.Input) { x := int64(60); v.Policy.MaxStatusAge = &x; status(v, age, "GOOD", false) }, func(r *pv.Result) {

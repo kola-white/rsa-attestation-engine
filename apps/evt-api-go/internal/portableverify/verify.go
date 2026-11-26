@@ -102,13 +102,21 @@ func decode(raw string) (map[string]any, error) {
 	e = json.Unmarshal(b, &m)
 	return m, e
 }
+
+// Presence matters: JSON null must not silently disable a protected-header guard.
+func unsupportedHeaders(h map[string]any) bool {
+	_, critical := h["crit"]
+	_, encoding := h["b64"]
+	return critical || encoding
+}
+
 func assertion(raw, pub, issuer, kid, typ string) (jwt.MapClaims, error) {
 	k, e := key(pub)
 	if e != nil {
 		return nil, e
 	}
 	t, e := jwt.Parse(raw, func(t *jwt.Token) (any, error) {
-		if t.Header["crit"] != nil || t.Header["b64"] != nil || t.Header["typ"] != typ || t.Header["kid"] != kid {
+		if unsupportedHeaders(t.Header) || t.Header["typ"] != typ || t.Header["kid"] != kid {
 			return nil, errors.New("header mismatch")
 		}
 		return k, nil
@@ -167,7 +175,7 @@ func Verify(in Input) (Result, error) {
 		r.Crypto = "INVALID"
 		return finish()
 	}
-	if h["crit"] != nil || h["b64"] != nil {
+	if unsupportedHeaders(h) {
 		r.Crypto = "INVALID"
 		return finish()
 	}

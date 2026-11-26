@@ -9,7 +9,7 @@
     {
       "id": "AC-02",
       "result": "PASS",
-      "evidence": "37 public vectors independently match expected crypto outcomes in Go and JOSE"
+      "evidence": "39 public vectors independently match expected crypto outcomes in Go and JOSE"
     },
     {
       "id": "AC-03",

@@ -30,6 +30,8 @@ for (const required of [
   "status-wrong-binding",
   "status-revoked",
   "status-future",
+  "status-null-crit",
+  "status-null-b64",
   "configured-60-age-60",
   "configured-60-age-61",
   "untrusted-credential-freshness-override",
