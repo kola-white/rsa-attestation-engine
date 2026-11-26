@@ -1,0 +1,23 @@
+{
+  "scope": "synthetic local diagnostic of existing legacy TypeScript verifier only; not the database-backed SD-JWT verifier",
+  "production_accessed": false,
+  "invalid_payload_hash_was_supplied": true,
+  "observations": {
+    "fresh_known": {
+      "ok": true,
+      "code": "VALID"
+    },
+    "stale_known": {
+      "ok": true,
+      "code": "VALID"
+    },
+    "missing_serial": {
+      "ok": true,
+      "code": "VALID"
+    },
+    "explicit_revoked": {
+      "ok": false,
+      "code": "REVOKED"
+    }
+  }
+}

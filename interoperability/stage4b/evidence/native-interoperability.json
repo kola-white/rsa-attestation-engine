@@ -1,0 +1,16 @@
+{
+  "contract": "cvera.stage4b.portable-verification.v1",
+  "passed": true,
+  "node": "v24.15.0",
+  "vectorCount": 39,
+  "verifierProcesses": 2,
+  "evaluations": 84,
+  "invalidPolicyProbes": 8,
+  "issuanceCalls": 1,
+  "credentialSha256": "e5999db8218afb0139a0bd2449ab266808989a7dff63b23425a4cae0ce917c0f",
+  "unchangedCredentialRepetitionsPerVerifier": 3,
+  "privateKeysAvailable": false,
+  "authority": "SYNTHETIC ONLY; no real-world mandate",
+  "holderProof": "NOT IMPLEMENTED; overall never VERIFIED",
+  "isolation": "native child processes with minimal environment; use --isolated for enforced network isolation"
+}

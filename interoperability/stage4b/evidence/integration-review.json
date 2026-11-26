@@ -1,0 +1,26 @@
+{
+  "recordedAt": "2026-11-26T17:36:29.860464+00:00",
+  "initialFeatureCommit": "2721511e50d8dc8e4ad869044b0c6f81d27c25e9",
+  "baseMain": "e44afff1d121afb03b74e37cb241e48ad3c00d27",
+  "review": "Completed source/security/scope review; production v1 behavior untouched",
+  "remediation": {
+    "finding": "Go checked unsupported protected header values rather than presence; signed crit:null status incorrectly returned GOOD while JS rejected",
+    "before": "Native regression failed status-null-crit/go, confirming mismatch",
+    "fix": "Reject protected crit/b64 presence including explicit null; same helper covers credential and fixture assertion headers",
+    "coverage": "Two added public signed malformed-header status vectors; generator and mandatory coverage updated",
+    "after": "Go/JS both reject both variants; 39 vectors /84 evaluations /8 invalid-policy probes pass in Node20 network-none/read-only container and native Node24",
+    "credentialDigestUnchanged": "e5999db8218afb0139a0bd2449ab266808989a7dff63b23425a4cae0ce917c0f"
+  },
+  "localChecks": {
+    "affectedGoCryptoSuites": "PASS",
+    "goVet": "PASS",
+    "generatorRegeneration": "PASS, one synthetic issuance per isolated generated fixture set, 39 expected cases; does not replace/reissue committed base credential",
+    "priorFullRegressionEvidence": "Original full Go/PostgreSQL and Node20 frontend evidence retained; remote full suite pending"
+  },
+  "mergeGate": {
+    "status": "BLOCKED pending separate authorization for automatic production workflows",
+    "source": ".github/workflows/main.yml deploy job runs after validated push to main; .github/workflows/publish.yml publishes on main push",
+    "noBypass": "No workflow suppression, deploy-disable configuration change, auto-merge or admin bypass permitted/performed"
+  },
+  "productionOperations": false
+}

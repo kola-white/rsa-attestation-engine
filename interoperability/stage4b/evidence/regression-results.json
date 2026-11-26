@@ -1,0 +1,39 @@
+{
+  "recordedAt": "2026-11-26T17:21:24.511298+00:00",
+  "baseline": "e44afff1d121afb03b74e37cb241e48ad3c00d27",
+  "goVersion": "1.26.10",
+  "postgresVersion": "16; isolated local tmpfs and loopback-only port",
+  "goTopLevelTests": {
+    "pass": 249
+  },
+  "goTestsIncludingSubtests": {
+    "pass": 531
+  },
+  "goFinalPortableAfterHardening": "PASS; 37 vectors",
+  "goVet": "PASS",
+  "node20Regression": {
+    "node": "20.20.2",
+    "existingNodeTests": 48,
+    "requestorUiTests": 4,
+    "ExpoDiagnostics": 0,
+    "install": "existing root and Expo lockfiles in temporary local container; no host credentials"
+  },
+  "nativeNode": "24.15.0; interoperability also PASS",
+  "trackedProductionBehaviorFilesChanged": false,
+  "productionAccessed": false,
+  "newDependencies": false,
+  "limitations": [
+    "Remote CI not run yet; local CI-equivalent checks completed",
+    "Synthetic PostgreSQL legacy workflow scaffolding; not a production-schema clone",
+    "Root TypeScript configuration limitations remain unchanged; established Expo gate used",
+    "Holder proof, real authority, production status and lifetime validity are not established"
+  ],
+  "logSha256": {
+    "cvera-stage4b-go-regression.jsonl": "355cf488c0ddab0738ab6edbdd7841fd6d5c5762251772d626b12545dfc1d5e4",
+    "cvera-stage4b-portable-final.log": "86cc61d3bc48452978c886e97d2d9e077beaeb2a29bf5b336891af29d2673af8",
+    "cvera-stage4b-vet-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cvera-stage4b-node20-regression.log": "38dec1bc63a0c99de37e0ccbfc11fda7e697523031c8cab24e0b76b16c73e6b7"
+  },
+  "disposableDatabaseCleanup": "Stopped only assessment-created PostgreSQL container after successful tests",
+  "finalSyntaxAndIntegrity": "Python AST, Node syntax, JSON schema on all 37 inputs, public-key-only fixture scan and git diff --check PASS"
+}
