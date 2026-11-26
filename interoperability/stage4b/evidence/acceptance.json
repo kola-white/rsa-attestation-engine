@@ -1,0 +1,117 @@
+{
+  "disposition": "Stage4B COMPLETE within synthetic interoperability scope",
+  "criteria": [
+    {
+      "id": "AC-01",
+      "result": "PASS",
+      "evidence": "Committed manifest: issuanceCalls=1; same base credential SHA-256 reused by both processes"
+    },
+    {
+      "id": "AC-02",
+      "result": "PASS",
+      "evidence": "37 public vectors independently match expected crypto outcomes in Go and JOSE"
+    },
+    {
+      "id": "AC-03",
+      "result": "PASS",
+      "evidence": "Explicit locally pinned public SPKI roots; authority/status fixture signatures and credential bindings checked"
+    },
+    {
+      "id": "AC-04",
+      "result": "PASS",
+      "evidence": "Go uses CredentialProfile; JavaScript has independent JOSE/claim/status logic and never invokes Go"
+    },
+    {
+      "id": "AC-05",
+      "result": "PASS",
+      "evidence": "No account or authentication-token inputs; minimal child environments"
+    },
+    {
+      "id": "AC-06",
+      "result": "PASS",
+      "evidence": "Inspected Docker network=none; no application or database mounts"
+    },
+    {
+      "id": "AC-07",
+      "result": "PASS",
+      "evidence": "Only public fixtures and runners mounted; keys generated ephemerally and never persisted"
+    },
+    {
+      "id": "AC-08",
+      "result": "PASS",
+      "evidence": "Separate crypto, temporal, authority, status, holder and binding results"
+    },
+    {
+      "id": "AC-09",
+      "result": "PASS",
+      "evidence": "899/900 eligible, 901 stale under default 900; both runners pass"
+    },
+    {
+      "id": "AC-10",
+      "result": "PASS",
+      "evidence": "Configured threshold 60; signed credential/status override attempts stay STALE"
+    },
+    {
+      "id": "AC-11",
+      "result": "PASS",
+      "evidence": "Fresh/missing/unavailable/no-entry/invalid/bound/revoked/future cases pass both runners"
+    },
+    {
+      "id": "AC-12",
+      "result": "PASS",
+      "evidence": "UNKNOWN/STALE unresolved and INVALID/REVOKED negative; never unqualified VERIFIED"
+    },
+    {
+      "id": "AC-13",
+      "result": "PASS",
+      "evidence": "Holder missing/unsupported/unresolved/asserted-VALID remain UNKNOWN or UNSUPPORTED"
+    },
+    {
+      "id": "AC-14",
+      "result": "PASS",
+      "evidence": "Tampering, wrong issuer/key/subject, malformed binding, unsupported alg/vct/format and temporal negatives pass"
+    },
+    {
+      "id": "AC-15",
+      "result": "PASS",
+      "evidence": "Base unchanged SHA-256 checked across three additional evaluations per verifier, no issuance during verification"
+    },
+    {
+      "id": "AC-16",
+      "result": "PASS",
+      "evidence": "No production v1 authority/issuance/verification implementation changes; existing regression tests pass"
+    },
+    {
+      "id": "AC-17",
+      "result": "PASS",
+      "evidence": "Full PG-enabled Go, Node20 existing tests/UI/Expo and vet pass"
+    },
+    {
+      "id": "AC-18",
+      "result": "PASS",
+      "evidence": "Isolated runners and full frontend regression suite pass on CI Node20; Go1.26.10 matches CI"
+    },
+    {
+      "id": "AC-19",
+      "result": "PASS",
+      "evidence": "Contract, public vectors, generator, harness and durable execution summaries included; CI step added"
+    },
+    {
+      "id": "AC-20",
+      "result": "PASS",
+      "evidence": "Legacy reproducer and observed limitations/results preserved, legacy code unchanged"
+    },
+    {
+      "id": "AC-21",
+      "result": "PASS",
+      "evidence": "No production calls, mutations, keys, genuine issuance, deployments or Stage4C/D implementation"
+    }
+  ],
+  "notEstablished": [
+    "holder possession",
+    "real-world issuer authority",
+    "production status publishing",
+    "genuine issuance",
+    "lifetime validity"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "credentialSha256": "e5999db8218afb0139a0bd2449ab266808989a7dff63b23425a4cae0ce917c0f",
+  "deterministicNow": 1800000000,
+  "issuanceCalls": 1,
+  "negativeSignatures": "mutated fixture JWTs only; no additional issuance workflow calls",
+  "privateKeysWritten": false,
+  "synthetic": true,
+  "vectors": 37
+}
