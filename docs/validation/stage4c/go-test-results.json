@@ -1,0 +1,3284 @@
+[
+  {
+    "package": "internal/authority",
+    "test": "TestEvaluator_AuthorityDecisions/matching_active_grant_authorizes_issuer",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224576-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestEvaluator_AuthorityDecisions/valid_from_boundary_is_inclusive",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22459-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestEvaluator_AuthorityDecisions/valid_until_boundary_is_inclusive",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.2246-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestEvaluator_AuthorityDecisions/current_active_grant_takes_precedence_over_current_inactive_grant",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224624-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestEvaluator_AuthorityDecisions/expired_inactive_grant_does_not_establish_unauthorized",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224634-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestEvaluator_AuthorityDecisions/matching_inactive_grant_is_unauthorized",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22465-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestEvaluator_AuthorityDecisions/no_grants_requires_review",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224666-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestEvaluator_AuthorityDecisions/wrong_issuer_does_not_establish_authority",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224675-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestEvaluator_AuthorityDecisions/wrong_claim_type_does_not_establish_authority",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224686-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestEvaluator_AuthorityDecisions/wrong_authority_subject_does_not_establish_authority",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224695-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestEvaluator_AuthorityDecisions/not_yet_valid_grant_does_not_establish_authority",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224708-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestEvaluator_AuthorityDecisions/expired_grant_does_not_establish_authority",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224719-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestEvaluator_AuthorityDecisions",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224724-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestProjectGrantInterval/bounded_interval_converts_exclusive_end_exactly",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224755-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestProjectGrantInterval/unbounded_interval_has_no_end",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224765-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestProjectGrantInterval/zero_length_rejected",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224774-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestProjectGrantInterval/reversed_interval_rejected",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224783-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestProjectGrantInterval/submicrosecond_start_rejected",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224802-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestProjectGrantInterval/submicrosecond_end_rejected",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224811-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestProjectGrantInterval/non_UTC_location_rejected",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22482-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestProjectGrantInterval/zero_timestamp_rejected",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22483-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestProjectGrantInterval",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224834-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestProjectGrantInterval_AdjacentBoundaries",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224849-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_AppendPreservesOriginalEvents",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224859-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_CorrectionPreservesProvenance",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224869-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_DeterministicReplay",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224877-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RejectsIncompleteAndContradictoryHistory/missing_event_identity",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224894-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RejectsIncompleteAndContradictoryHistory/duplicate_event_identity",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224903-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RejectsIncompleteAndContradictoryHistory/correction_target_missing",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224913-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RejectsIncompleteAndContradictoryHistory/invalid_lifecycle_sequence",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224943-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RejectsIncompleteAndContradictoryHistory",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224948-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RejectsUnestablishedTransition",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224958-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RequiresCorrectionProvenance/missing_reason",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224976-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RequiresCorrectionProvenance/missing_corrected_field",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224985-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RequiresCorrectionProvenance/complete_correction_provenance",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224995-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RequiresCorrectionProvenance",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.224999-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RejectsRecordedTimeRegression",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225009-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_CorrectionPreservesRecordedTimeHistory",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225023-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_CorrectionChangesEffectiveViewOnlyAfterRecording",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225036-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RejectsContradictoryEffectiveHistory",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225046-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RejectsZeroDurationAuthorityInterval",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225058-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_AcceptsOneMicrosecondAuthorityInterval",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225068-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_CorrectionCannotCollapseAuthorityInterval",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225081-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RejectsCrossAuthorizationCorrection",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22509-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_ActiveWithoutAdjudicationCannotProduceGrant",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225102-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_AffirmativeAdjudicationProducesActiveGrant",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225113-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RejectsAdjudicationRecordedAfterApproval",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225122-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RejectsAdjudicationDecisionAfterRecording",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225132-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_SuspensionPreservesHistoricalGrant",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225147-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_ReinstatementPreservesSeparateGrantIntervals",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225161-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RevocationPreservesHistoricalGrant/historical_active_authority",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225176-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RevocationPreservesHistoricalGrant/last_microsecond_before_revocation",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225191-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RevocationPreservesHistoricalGrant/exact_revocation_boundary",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225201-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RevocationPreservesHistoricalGrant/after_revocation",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22521-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RevocationPreservesHistoricalGrant",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225215-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_ExpirationPreservesHistoricalGrant/historical_active_authority",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225231-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_ExpirationPreservesHistoricalGrant/last_microsecond_before_expiration",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22524-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_ExpirationPreservesHistoricalGrant/exact_expiration_boundary",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225255-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_ExpirationPreservesHistoricalGrant/after_expiration",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225264-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_ExpirationPreservesHistoricalGrant",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225271-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_RevocationFromSuspendedPreservesHistory",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225281-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_ExpirationFromSuspendedPreservesHistory",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225291-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_CorrectionUpdatesHistoricalGrantBoundary",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225302-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_GrantIDsAreDistinctAndStableAcrossReinstatement",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225318-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_FutureEffectiveActivationDoesNotAuthorizeEarly/before_activation",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225334-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_FutureEffectiveActivationDoesNotAuthorizeEarly/at_activation",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225347-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_FutureEffectiveActivationDoesNotAuthorizeEarly/after_activation",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225357-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_FutureEffectiveActivationDoesNotAuthorizeEarly",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225362-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_SuspensionDoesNotRetroactivelyRemoveAuthority",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225373-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_ReinstatementRestoresAuthorityWithoutRewritingHistory/historical_active_authority_remains_authorized",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225389-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_ReinstatementRestoresAuthorityWithoutRewritingHistory/suspended_authority_remains_unauthorized",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225401-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_ReinstatementRestoresAuthorityWithoutRewritingHistory/reinstatement_boundary_restores_authority",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22541-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_ReinstatementRestoresAuthorityWithoutRewritingHistory/authority_remains_active_after_reinstatement",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22542-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestAuthorizationJournal_ReinstatementRestoresAuthorityWithoutRewritingHistory",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225425-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestSnapshotAuthorityResolver_RequiresCompleteSnapshot",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225438-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestSnapshotAuthorityResolver_CompleteEmptySnapshot",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225451-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestSnapshotAuthorityResolver_ProjectsMatchingAuthorization",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225461-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestSnapshotAuthorityResolver_RejectsEventsBeyondSnapshotBoundary",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22547-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestSnapshotAuthorityResolver_RejectsMissingSnapshotBoundary",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22548-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestSnapshotAuthorityResolver_ReturnsDefensiveCopies",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225492-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestSnapshotAuthorityResolver_RejectsDuplicateAuthorizationIDs",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225501-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestSnapshotAuthorityResolver_RejectsCanceledContext",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225511-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestSnapshotAuthorityResolver_RetrievesAllMatchingEmployers",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225531-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestSnapshotAuthorityResolver_PreservesHistoricalIntervals",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22554-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_PermittedTransitions/requested_submit_pending",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225555-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_PermittedTransitions/pending_approve_approved",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225569-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_PermittedTransitions/pending_reject_rejected",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225578-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_PermittedTransitions/approved_activate_active",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22559-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_PermittedTransitions/active_suspend_suspended",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225603-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_PermittedTransitions/suspended_reinstate_active",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225615-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_PermittedTransitions/active_expire_expired",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225625-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_PermittedTransitions/suspended_expire_expired",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225634-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_PermittedTransitions/active_revoke_revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225643-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_PermittedTransitions/suspended_revoke_revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225654-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_PermittedTransitions",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22566-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_UnsatisfiedConditionsRejectEveryPermittedTransition",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225669-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_CompleteNegativeSpace",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225679-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_TerminalStatesHaveNoOutgoingTransitions",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.22569-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_UnknownStateFailsClosed",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.2257-08:00"
+  },
+  {
+    "package": "internal/authority",
+    "test": "TestStateMachine_UnknownEventFailsClosed",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.225709-08:00"
+  },
+  {
+    "package": "internal/auth",
+    "test": "TestAccessTokenValidation/valid",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.267849-08:00"
+  },
+  {
+    "package": "internal/auth",
+    "test": "TestAccessTokenValidation/wrong_issuer",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.267862-08:00"
+  },
+  {
+    "package": "internal/auth",
+    "test": "TestAccessTokenValidation/wrong_audience",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.267873-08:00"
+  },
+  {
+    "package": "internal/auth",
+    "test": "TestAccessTokenValidation/wrong_type",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.267889-08:00"
+  },
+  {
+    "package": "internal/auth",
+    "test": "TestAccessTokenValidation/expired",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.267902-08:00"
+  },
+  {
+    "package": "internal/auth",
+    "test": "TestAccessTokenValidation/missing_expiry",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.267912-08:00"
+  },
+  {
+    "package": "internal/auth",
+    "test": "TestAccessTokenValidation/missing_subject",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.267926-08:00"
+  },
+  {
+    "package": "internal/auth",
+    "test": "TestAccessTokenValidation/wrong_algorithm",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.267953-08:00"
+  },
+  {
+    "package": "internal/auth",
+    "test": "TestAccessTokenValidation",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.267981-08:00"
+  },
+  {
+    "package": "internal/credential/legacyjws",
+    "test": "TestLegacyJWS_GoldenValid_NormalizesToValidEvidence",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.282436-08:00"
+  },
+  {
+    "package": "internal/credential/sdjwtvc",
+    "test": "TestSDJWTVC_EndToEnd_MetadataSignatureDisclosureNormalization",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.286453-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/all_mandatory_evidence_positive",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.295723-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/invalid_signature",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.295764-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/unknown_signature",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.295786-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/invalid_validity",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.295801-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/unknown_validity",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.295814-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/invalid_status",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.29583-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/unknown_status",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.295843-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/invalid_subject_binding",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.295857-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/unknown_subject_binding",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.29587-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/issuer_unauthorized",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.295883-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/authority_review",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.295896-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/negative_outranks_indeterminate",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.29591-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/all_indeterminate",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.295924-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/all_definitive_failures",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.295948-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases/current_SD-JWT_state_cannot_verify",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.295967-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalCases",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.295973-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorRejectsOutrankUnknownsAcrossEveryDimension/signature_negative",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.295995-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorRejectsOutrankUnknownsAcrossEveryDimension/validity_negative",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296012-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorRejectsOutrankUnknownsAcrossEveryDimension/status_negative",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296025-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorRejectsOutrankUnknownsAcrossEveryDimension/subject_negative",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296038-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorRejectsOutrankUnknownsAcrossEveryDimension/authority_negative",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296051-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorRejectsOutrankUnknownsAcrossEveryDimension",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296058-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorUnrecognizedValuesFailClosedToReview/unrecognized_signature",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296078-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorUnrecognizedValuesFailClosedToReview/unrecognized_validity",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296092-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorUnrecognizedValuesFailClosedToReview/unrecognized_status",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296104-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorUnrecognizedValuesFailClosedToReview/unrecognized_subject",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296117-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorUnrecognizedValuesFailClosedToReview/unrecognized_authority",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.29613-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorUnrecognizedValuesFailClosedToReview",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296137-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorCanonicalStateSpace",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296153-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestEvaluatorKnownNegativeOutranksUnrecognized",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296167-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestServiceMatchingActiveGrantProducesVerified",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296183-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestServiceSuccessfulEmptyResolutionProducesReview",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296196-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestServiceAuthorityResolutionFailureRemainsIndeterminate",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296214-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestServiceMatchingInactiveGrantProducesRejected",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296228-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestServiceExpiredGrantProducesReview",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296241-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestServiceAuthorizedCurrentSDJWTShapeStillProducesReview",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296253-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestServiceResolverReceivesNormalizedIssuerAndClaimType",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296268-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestServiceUsesExplicitEvaluationTime",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296285-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestServiceResultPreservesNormalizedEvidence",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.2963-08:00"
+  },
+  {
+    "package": "internal/verification",
+    "test": "TestServiceResolverErrorTakesPrecedenceOverReturnedGrants",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.296322-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/fresh",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.306499-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-age-899",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.306833-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-age-900",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.307086-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-age-901",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.307337-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-age-86400",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.307609-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-missing",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.307838-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-unavailable",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.30801-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-missing-entry",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.308279-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.308536-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-future",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.308776-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-invalid-state",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.309256-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-invalid-signature",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.309685-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-untrusted-key",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.309973-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-wrong-binding",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.310318-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/configured-60-age-60",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.310669-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/configured-60-age-61",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.311047-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/holder-UNSUPPORTED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.311422-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/holder-UNRESOLVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.311758-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/holder-VALID",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.312086-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/authority-missing",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.312313-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/authority-UNKNOWN",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.312646-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/authority-UNAUTHORIZED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.31297-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/authority-INVALID",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.313296-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/authority-untrusted-key",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.313604-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/credential-tampered-payload",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.31363-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/credential-wrong-key",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.313722-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/credential-wrong-issuer",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.313739-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/credential-invalid-signature",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.313792-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/credential-unsupported-serialization",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.313813-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/malformed-binding",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.31405-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/wrong-subject-binding",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.314279-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/expired",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.314866-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/not-yet-valid",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.315133-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/unsupported-vct",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.315232-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/unsupported-algorithm",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.31525-08:00"
+  },
+  {
+    "package": "internal/credential/sdjwtvc",
+    "test": "TestSDJWTVC_IssuerMetadataMismatchFailsKeyResolution",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.315268-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/untrusted-credential-freshness-override",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.315477-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/untrusted-status-freshness-override",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.315719-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-null-crit",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.315899-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors/status-null-b64",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.31608-08:00"
+  },
+  {
+    "package": "internal/portableverify",
+    "test": "TestSharedPublicVectors",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.316088-08:00"
+  },
+  {
+    "package": "internal/credential/legacyjws",
+    "test": "TestLegacyJWS_GoldenRevoked_NormalizesStatusInvalid",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.318023-08:00"
+  },
+  {
+    "package": "internal/storage",
+    "test": "TestEvidenceObjectReadAndSeal/content-length",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.331324-08:00"
+  },
+  {
+    "package": "internal/storage",
+    "test": "TestEvidenceObjectReadAndSeal/chunked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.332347-08:00"
+  },
+  {
+    "package": "internal/storage",
+    "test": "TestEvidenceObjectReadAndSeal",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.332365-08:00"
+  },
+  {
+    "package": "internal/credential/sdjwtvc",
+    "test": "TestSDJWTVC_InvalidIssuerSignatureProducesInvalidCryptoEvidence",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.35755-08:00"
+  },
+  {
+    "package": "internal/credential/legacyjws",
+    "test": "TestLegacyJWS_GoldenNotYetValid_NormalizesValidityInvalid",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.359243-08:00"
+  },
+  {
+    "package": "internal/credential/sdjwtvc",
+    "test": "TestSDJWTVC_TamperedDisclosureIsRejected",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.375467-08:00"
+  },
+  {
+    "package": "internal/credential/legacyjws",
+    "test": "TestLegacyJWS_GoldenExpired_NormalizesValidityInvalid",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.383344-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryPostgresConnection",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.408905-08:00"
+  },
+  {
+    "package": "internal/credential/sdjwtvc",
+    "test": "TestSDJWTVC_UndisclosedRequiredEmploymentClaimDoesNotNormalize",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.417033-08:00"
+  },
+  {
+    "package": "internal/credential/legacyjws",
+    "test": "TestLegacyJWS_GoldenInvalidSignature_NormalizesSignatureInvalid",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.435508-08:00"
+  },
+  {
+    "package": "internal/credential/sdjwtvc",
+    "test": "TestSDJWTVC_ExpiredCredentialProducesInvalidTemporalEvidence",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.45786-08:00"
+  },
+  {
+    "package": "internal/credential/sdjwtvc",
+    "test": "TestSDJWTVC_WrongVCTIsRejectedByProfile",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.485056-08:00"
+  },
+  {
+    "package": "internal/evt",
+    "test": "TestAssignedEmployersPreservesOpaqueIDsAndEmptyArray",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.490059-08:00"
+  },
+  {
+    "package": "internal/evt",
+    "test": "TestAssignedEmployersPropagatesDatabaseFailure",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.490077-08:00"
+  },
+  {
+    "package": "internal/evt",
+    "test": "TestEmployerDiscoveryRequiresAuthenticatedHRRole",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.490607-08:00"
+  },
+  {
+    "package": "internal/credential/legacyjws",
+    "test": "TestLegacyJWS_GoldenInvalidLiveness_NormalizesValidityInvalid",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.502332-08:00"
+  },
+  {
+    "package": "internal/credential/legacyjws",
+    "test": "TestLegacyJWS_GoldenInvalidSchema_ProducesSchemaEvidenceError",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.514525-08:00"
+  },
+  {
+    "package": "internal/credential/legacyjws",
+    "test": "TestLegacyJWS_KeyResolutionFailure_DoesNotAuthorizeByImplication",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.545946-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryCreateAuthorization",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.575719-08:00"
+  },
+  {
+    "package": "internal/holderpresentation",
+    "test": "TestReciprocalPresentation/signer-failure-no-artifact-no-retry",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.686616-08:00"
+  },
+  {
+    "package": "internal/holderpresentation",
+    "test": "TestReciprocalPresentation/issuance-replay-no-sign",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.686704-08:00"
+  },
+  {
+    "package": "internal/holderpresentation",
+    "test": "TestReciprocalPresentation/issuance-missing",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.692584-08:00"
+  },
+  {
+    "package": "internal/holderpresentation",
+    "test": "TestReciprocalPresentation/issuance-wrong-key",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.692612-08:00"
+  },
+  {
+    "package": "internal/holderpresentation",
+    "test": "TestReciprocalPresentation/issuance-wrong-nonce",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.692661-08:00"
+  },
+  {
+    "package": "internal/holderpresentation",
+    "test": "TestReciprocalPresentation/issuance-expired",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.692734-08:00"
+  },
+  {
+    "package": "internal/holderpresentation",
+    "test": "TestReciprocalPresentation/valid-go-presentation",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.701147-08:00"
+  },
+  {
+    "package": "internal/holderpresentation",
+    "test": "TestReciprocalPresentation/wrong-holder-private-key",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.701477-08:00"
+  },
+  {
+    "package": "internal/holderpresentation",
+    "test": "TestReciprocalPresentation/consent-denied-no-key-needed",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.701795-08:00"
+  },
+  {
+    "package": "internal/holderpresentation",
+    "test": "TestReciprocalPresentation/invalid-proof-does-not-consume",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.702508-08:00"
+  },
+  {
+    "package": "internal/holderpresentation",
+    "test": "TestReciprocalPresentation/concurrent-exactly-one",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.710903-08:00"
+  },
+  {
+    "package": "internal/holderpresentation",
+    "test": "TestReciprocalPresentation/cnf-not-subject-identity",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.712727-08:00"
+  },
+  {
+    "package": "internal/holderpresentation",
+    "test": "TestReciprocalPresentation/reject-private-jwk",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.712747-08:00"
+  },
+  {
+    "package": "internal/holderpresentation",
+    "test": "TestReciprocalPresentation",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.712753-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryRejectsDuplicateAuthorization",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.731769-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/valid",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.73852-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/bad-signature",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.738626-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/signature-only",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.738638-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/authority-unavailable",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.738737-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/authority-revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.73884-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/wrong-employer-authority",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.738929-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/issuer-mismatch",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.738948-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/subject-mismatch",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739022-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/key-revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739042-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/wrong-key",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739063-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/claim-revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739151-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/status-unknown",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739241-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/binding-revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739332-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/changed-claims",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739426-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/manifest-mismatch",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739502-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/snapshot-mismatch",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.73959-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/expired",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739678-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/unknown-policy",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739688-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/token-mismatch",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739779-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/issue-revoked-authority",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739925-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/issue-unavailable-authority",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739943-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/issue-stale-snapshot",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739955-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/issue-stale-manifest",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739968-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification/issue-invalid-key",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739989-08:00"
+  },
+  {
+    "package": "internal/evidencecredential",
+    "test": "TestBoundCredentialIndependentVerification",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.739994-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewReceiptAndRetry",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.880699-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryCreateApprovedAdjudication",
+    "result": "pass",
+    "time": "2026-11-26T15:31:08.887758-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryAppendSubmitEvent",
+    "result": "pass",
+    "time": "2026-11-26T15:31:09.045352-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryRejectsInvalidTransitionWithoutWriting",
+    "result": "pass",
+    "time": "2026-11-26T15:31:09.226046-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/unauthenticated/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:09.270029-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryRollsBackAfterInsert",
+    "result": "pass",
+    "time": "2026-11-26T15:31:09.411105-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryAuthorizationImmutability",
+    "result": "pass",
+    "time": "2026-11-26T15:31:09.577456-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/unauthorized/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:09.682126-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryAdjudicationImmutability",
+    "result": "pass",
+    "time": "2026-11-26T15:31:09.751077-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryJournalImmutability",
+    "result": "pass",
+    "time": "2026-11-26T15:31:09.922168-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/revoked/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:10.072543-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryRejectsMismatchedAdjudicationScope/issuer",
+    "result": "pass",
+    "time": "2026-11-26T15:31:10.073171-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryRejectsMismatchedAdjudicationScope/subject",
+    "result": "pass",
+    "time": "2026-11-26T15:31:10.075842-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryRejectsMismatchedAdjudicationScope/claim-type",
+    "result": "pass",
+    "time": "2026-11-26T15:31:10.077691-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryRejectsMismatchedAdjudicationScope",
+    "result": "pass",
+    "time": "2026-11-26T15:31:10.083738-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryRejectsCrossAuthorizationCorrection",
+    "result": "pass",
+    "time": "2026-11-26T15:31:10.2478-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositorySerializesConcurrentSubmit",
+    "result": "pass",
+    "time": "2026-11-26T15:31:10.451499-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/claimant/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:10.455403-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryAuthorizationRowLockContention",
+    "result": "pass",
+    "time": "2026-11-26T15:31:10.635305-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/authoritative/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:10.830576-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/unclassified/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:11.192216-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryAppendRespectsHeldAuthorizationLock",
+    "result": "pass",
+    "time": "2026-11-26T15:31:11.329823-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositorySnapshotTransactionProperties",
+    "result": "pass",
+    "time": "2026-11-26T15:31:11.449665-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/binding/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:11.569766-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositorySnapshotRemainsStableAcrossConcurrentInsert",
+    "result": "pass",
+    "time": "2026-11-26T15:31:11.636333-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryHistoricalJournalCutoff",
+    "result": "pass",
+    "time": "2026-11-26T15:31:11.793022-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryHistoricalAdjudicationMissingFailsClosed",
+    "result": "pass",
+    "time": "2026-11-26T15:31:11.94418-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/digest/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:11.946074-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryHistoricalAdjudicationSingleDecision",
+    "result": "pass",
+    "time": "2026-11-26T15:31:12.125468-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryHistoricalAdjudicationExcludesLaterDecision",
+    "result": "pass",
+    "time": "2026-11-26T15:31:12.315018-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/version/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:12.437968-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryHistoricalAdjudicationMultipleDecisionsFailClosed",
+    "result": "pass",
+    "time": "2026-11-26T15:31:12.52123-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryLoadAuthorizationRecords",
+    "result": "pass",
+    "time": "2026-11-26T15:31:12.671752-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/stale/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:12.837838-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositorySnapshotAssemblyFailsOnMissingAdjudication",
+    "result": "pass",
+    "time": "2026-11-26T15:31:12.846375-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryAuthorizationRecordingBoundaryCommitAndRollback",
+    "result": "pass",
+    "time": "2026-11-26T15:31:13.022223-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryAdjudicationRecordingBoundaryCommitAndRollback",
+    "result": "pass",
+    "time": "2026-11-26T15:31:13.247108-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/rationale/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:13.264836-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryJournalRecordingBoundaryCommitAndRollback",
+    "result": "pass",
+    "time": "2026-11-26T15:31:13.435022-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/basis/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:13.624729-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryConcurrentJournalAndAdjudicationRecording",
+    "result": "pass",
+    "time": "2026-11-26T15:31:13.666902-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryAcceptsBackdatedAdjudicationRecordedAt",
+    "result": "pass",
+    "time": "2026-11-26T15:31:13.83355-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryIsolatedSnapshotSchema",
+    "result": "pass",
+    "time": "2026-11-26T15:31:14.009553-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/artifact-injection/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:14.02933-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryAssemblesCompleteSnapshotEntries",
+    "result": "pass",
+    "time": "2026-11-26T15:31:14.264918-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRecordingEnforcementRejectsDirectSQLBypass",
+    "result": "pass",
+    "time": "2026-11-26T15:31:14.429113-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/check/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:14.498289-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRecordingEnforcementRejectsCrossTableDuplication",
+    "result": "pass",
+    "time": "2026-11-26T15:31:14.590924-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRecordingEnforcementRejectsForeignTransactionPosition",
+    "result": "pass",
+    "time": "2026-11-26T15:31:14.752055-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/inactive/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:14.89097-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRecordingEnforcementRejectsUnallocatedPosition",
+    "result": "pass",
+    "time": "2026-11-26T15:31:14.90339-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositorySnapshotRecordingBoundaryVisibility",
+    "result": "pass",
+    "time": "2026-11-26T15:31:15.08355-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/unauthorized/REJECTED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:15.257212-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositorySnapshotRecordingBoundaryRemainsStable",
+    "result": "pass",
+    "time": "2026-11-26T15:31:15.266958-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryAuthorizationRecordingPositionFiltering",
+    "result": "pass",
+    "time": "2026-11-26T15:31:15.426618-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryAdjudicationRecordingPositionFiltering",
+    "result": "pass",
+    "time": "2026-11-26T15:31:15.585745-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/revoked/REJECTED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:15.629906-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryJournalRecordingPositionFiltering",
+    "result": "pass",
+    "time": "2026-11-26T15:31:15.745634-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryAssemblesSnapshotAtRecordingPosition",
+    "result": "pass",
+    "time": "2026-11-26T15:31:15.914205-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials/inactive/REJECTED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:15.999414-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyReviewDenials",
+    "result": "pass",
+    "time": "2026-11-26T15:31:15.999459-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryRecordingCompleteness",
+    "result": "pass",
+    "time": "2026-11-26T15:31:16.078212-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryLoadAuthoritativeSnapshotEmpty",
+    "result": "pass",
+    "time": "2026-11-26T15:31:16.216878-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryLoadAuthoritativeSnapshotApproved",
+    "result": "pass",
+    "time": "2026-11-26T15:31:16.388011-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryLoadAuthoritativeSnapshotRejectsLegacyEvidence",
+    "result": "pass",
+    "time": "2026-11-26T15:31:16.527491-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryLoadAuthoritativeSnapshotRejectsFutureRecordedEvidence",
+    "result": "pass",
+    "time": "2026-11-26T15:31:16.694033-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyConcurrentAndRollback",
+    "result": "pass",
+    "time": "2026-11-26T15:31:16.780626-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositorySnapshotAssemblyStableAcrossConcurrentCommit",
+    "result": "pass",
+    "time": "2026-11-26T15:31:16.891402-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryAllocatorRestrictedRole",
+    "result": "pass",
+    "time": "2026-11-26T15:31:17.049865-08:00"
+  },
+  {
+    "package": "internal/db",
+    "test": "TestAuthorityRepositoryRestrictedRoleJournalInsert",
+    "result": "pass",
+    "time": "2026-11-26T15:31:17.216976-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyIssuanceDenial/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:17.370269-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyIssuanceDenial/REJECTED",
+    "result": "pass",
+    "time": "2026-11-26T15:31:18.012707-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyIssuanceDenial",
+    "result": "pass",
+    "time": "2026-11-26T15:31:18.012719-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyMigrationRollbackACLAndReplay",
+    "result": "pass",
+    "time": "2026-11-26T15:31:18.322296-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestClaimOnlyRequiresImmutableContextAtCommit",
+    "result": "pass",
+    "time": "2026-11-26T15:31:18.645443-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegritySimulatedReviewCannotIssueOrVerify",
+    "result": "pass",
+    "time": "2026-11-26T15:31:19.221993-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityContextClassificationAndReceipt",
+    "result": "pass",
+    "time": "2026-11-26T15:31:19.616717-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityClaimantReviewWithDifferentUploader",
+    "result": "pass",
+    "time": "2026-11-26T15:31:20.005158-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityClaimantIssuerDeniesBeforeSigner",
+    "result": "pass",
+    "time": "2026-11-26T15:31:20.773928-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityUnclassifiedAndAcknowledgementDenials/unclassified",
+    "result": "pass",
+    "time": "2026-11-26T15:31:21.152387-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityUnclassifiedAndAcknowledgementDenials/claim-digest",
+    "result": "pass",
+    "time": "2026-11-26T15:31:21.534617-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityUnclassifiedAndAcknowledgementDenials/evidence-digest",
+    "result": "pass",
+    "time": "2026-11-26T15:31:21.921074-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityUnclassifiedAndAcknowledgementDenials/missing-evidence-digest",
+    "result": "pass",
+    "time": "2026-11-26T15:31:22.294882-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityUnclassifiedAndAcknowledgementDenials/binding",
+    "result": "pass",
+    "time": "2026-11-26T15:31:22.678773-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityUnclassifiedAndAcknowledgementDenials/stale-version",
+    "result": "pass",
+    "time": "2026-11-26T15:31:23.065809-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityUnclassifiedAndAcknowledgementDenials/unauthorized",
+    "result": "pass",
+    "time": "2026-11-26T15:31:23.44121-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityUnclassifiedAndAcknowledgementDenials/old-signature",
+    "result": "pass",
+    "time": "2026-11-26T15:31:23.814184-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityUnclassifiedAndAcknowledgementDenials",
+    "result": "pass",
+    "time": "2026-11-26T15:31:23.814243-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityConcurrentDecisionsAndRollback",
+    "result": "pass",
+    "time": "2026-11-26T15:31:24.590219-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityRejectsStoredClaimantOrUploaderApproval/claimant",
+    "result": "pass",
+    "time": "2026-11-26T15:31:25.379984-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityRejectsStoredClaimantOrUploaderApproval/uploader",
+    "result": "pass",
+    "time": "2026-11-26T15:31:26.333374-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityRejectsStoredClaimantOrUploaderApproval",
+    "result": "pass",
+    "time": "2026-11-26T15:31:26.333387-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityMigrationPreservesHistoricalCredential",
+    "result": "pass",
+    "time": "2026-11-26T15:31:27.325195-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityMigrationRollbackAndPrivateHelpers",
+    "result": "pass",
+    "time": "2026-11-26T15:31:27.63574-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIntegrityClassificationIsOneTimeUnderConcurrency",
+    "result": "pass",
+    "time": "2026-11-26T15:31:28.087974-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerAuthorizationBoundaries",
+    "result": "pass",
+    "time": "2026-11-26T15:31:28.280924-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerAuthorizationCurrentIdentityAndFailClosed",
+    "result": "pass",
+    "time": "2026-11-26T15:31:28.472474-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerOperatorGrantRevokeAndRegrant",
+    "result": "pass",
+    "time": "2026-11-26T15:31:28.663385-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerRevocationSerializesWithAuthorization",
+    "result": "pass",
+    "time": "2026-11-26T15:31:28.92465-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerAssignmentsRestrictedRuntimeCannotAdminister",
+    "result": "pass",
+    "time": "2026-11-26T15:31:29.127946-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerMigrationConfirmedParentMetadata",
+    "result": "pass",
+    "time": "2026-11-26T15:31:29.294129-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerMigrationTransactionAndPreflight",
+    "result": "pass",
+    "time": "2026-11-26T15:31:29.496207-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerMigrationConstraintsAndOperatorBoundary",
+    "result": "pass",
+    "time": "2026-11-26T15:31:29.708095-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerPrivilegeBindingRejectsUnsafeRoles",
+    "result": "pass",
+    "time": "2026-11-26T15:31:29.902552-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerReadOnlyMetadataQuerySyntax",
+    "result": "pass",
+    "time": "2026-11-26T15:31:30.073064-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerCheckWithoutProfileWritesAndLegacyGrantCompatibility",
+    "result": "pass",
+    "time": "2026-11-26T15:31:30.273288-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerBoundedFunctionSearchPathIsolationAndRLS",
+    "result": "pass",
+    "time": "2026-11-26T15:31:30.478364-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerMigrationClearsInheritedCreationDefaults",
+    "result": "pass",
+    "time": "2026-11-26T15:31:30.677311-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerMigrationAtomicWithoutExternalRunner",
+    "result": "pass",
+    "time": "2026-11-26T15:31:30.862522-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerMigrationDDLTargetsIgnoreTemporaryCollisions",
+    "result": "pass",
+    "time": "2026-11-26T15:31:31.056455-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerVerifiedTableDefaultsRemainDeniedAfterBinding",
+    "result": "pass",
+    "time": "2026-11-26T15:31:31.274099-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerMigrationRerunRefusesWithoutChangingGrants",
+    "result": "pass",
+    "time": "2026-11-26T15:31:31.473161-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEmployerDiscoveryAssignmentsAndRevocation",
+    "result": "pass",
+    "time": "2026-11-26T15:31:31.750025-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceAuthorizationBothRoutes",
+    "result": "pass",
+    "time": "2026-11-26T15:31:32.060213-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceRevocationStatesAndFilePolicy",
+    "result": "pass",
+    "time": "2026-11-26T15:31:32.384481-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceRuntimeAndPublicPrivileges",
+    "result": "pass",
+    "time": "2026-11-26T15:31:32.652237-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceAuthorizationMutationConcurrency/revoke/mutation_first_false",
+    "result": "pass",
+    "time": "2026-11-26T15:31:32.984237-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceAuthorizationMutationConcurrency/revoke/mutation_first_true",
+    "result": "pass",
+    "time": "2026-11-26T15:31:33.331604-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceAuthorizationMutationConcurrency/case/mutation_first_false",
+    "result": "pass",
+    "time": "2026-11-26T15:31:33.67388-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceAuthorizationMutationConcurrency/case/mutation_first_true",
+    "result": "pass",
+    "time": "2026-11-26T15:31:34.025769-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceAuthorizationMutationConcurrency/check/mutation_first_false",
+    "result": "pass",
+    "time": "2026-11-26T15:31:34.368301-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceAuthorizationMutationConcurrency/check/mutation_first_true",
+    "result": "pass",
+    "time": "2026-11-26T15:31:34.715586-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceAuthorizationMutationConcurrency/principal/mutation_first_false",
+    "result": "pass",
+    "time": "2026-11-26T15:31:35.044899-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceAuthorizationMutationConcurrency/principal/mutation_first_true",
+    "result": "pass",
+    "time": "2026-11-26T15:31:35.383647-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceAuthorizationMutationConcurrency",
+    "result": "pass",
+    "time": "2026-11-26T15:31:35.383684-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceMigrationAtomicityAndPrerequisites/rollback",
+    "result": "pass",
+    "time": "2026-11-26T15:31:35.566243-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceMigrationAtomicityAndPrerequisites/late_failure",
+    "result": "pass",
+    "time": "2026-11-26T15:31:35.575357-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceMigrationAtomicityAndPrerequisites/wrong_parent_type",
+    "result": "pass",
+    "time": "2026-11-26T15:31:35.578782-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceMigrationAtomicityAndPrerequisites",
+    "result": "pass",
+    "time": "2026-11-26T15:31:35.588333-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceMigrationOwnerPathsAndGrantIntegrity",
+    "result": "pass",
+    "time": "2026-11-26T15:31:35.897533-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionSealsBytesAndRetries",
+    "result": "pass",
+    "time": "2026-11-26T15:31:36.203927-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionAuthorizationAndExpiry/other-principal",
+    "result": "pass",
+    "time": "2026-11-26T15:31:36.497436-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionAuthorizationAndExpiry/wrong-path",
+    "result": "pass",
+    "time": "2026-11-26T15:31:36.792664-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionAuthorizationAndExpiry/revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:37.091733-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionAuthorizationAndExpiry/closed",
+    "result": "pass",
+    "time": "2026-11-26T15:31:37.388378-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionAuthorizationAndExpiry/inactive",
+    "result": "pass",
+    "time": "2026-11-26T15:31:37.684205-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionAuthorizationAndExpiry/expired",
+    "result": "pass",
+    "time": "2026-11-26T15:31:37.980633-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionAuthorizationAndExpiry/foreign-upload",
+    "result": "pass",
+    "time": "2026-11-26T15:31:38.27668-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionAuthorizationAndExpiry",
+    "result": "pass",
+    "time": "2026-11-26T15:31:38.276718-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionStorageValidation/missing",
+    "result": "pass",
+    "time": "2026-11-26T15:31:38.580276-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionStorageValidation/size",
+    "result": "pass",
+    "time": "2026-11-26T15:31:38.875684-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionStorageValidation/mime",
+    "result": "pass",
+    "time": "2026-11-26T15:31:39.175387-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionStorageValidation/oversized",
+    "result": "pass",
+    "time": "2026-11-26T15:31:39.475891-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionStorageValidation/seal-failure",
+    "result": "pass",
+    "time": "2026-11-26T15:31:39.775037-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionStorageValidation/hash",
+    "result": "pass",
+    "time": "2026-11-26T15:31:40.079354-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionStorageValidation",
+    "result": "pass",
+    "time": "2026-11-26T15:31:40.079371-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionDedupAndReservations",
+    "result": "pass",
+    "time": "2026-11-26T15:31:40.4053-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionRevocationWaitsForInFlightAcceptance",
+    "result": "pass",
+    "time": "2026-11-26T15:31:40.819866-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionConcurrentReservations",
+    "result": "pass",
+    "time": "2026-11-26T15:31:41.303979-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionPrivilegesAndMigration",
+    "result": "pass",
+    "time": "2026-11-26T15:31:41.755562-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceLifecycleFailsClosedWithoutPersistenceAndIgnoresTempShadow",
+    "result": "pass",
+    "time": "2026-11-26T15:31:42.061952-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceInitPathIdentifiersAndBatchAtomicity",
+    "result": "pass",
+    "time": "2026-11-26T15:31:42.369835-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceDeletionOwnerOnlyFreezeAndRedaction",
+    "result": "pass",
+    "time": "2026-11-26T15:31:42.718108-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceSealedKeysAreCaseAttributable",
+    "result": "pass",
+    "time": "2026-11-26T15:31:43.028494-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceTrustedIntegratedPath",
+    "result": "pass",
+    "time": "2026-11-26T15:31:44.010596-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceCurrentAuthorityAndEvidence/authority-revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:44.740352-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceCurrentAuthorityAndEvidence/authority-unavailable",
+    "result": "pass",
+    "time": "2026-11-26T15:31:45.583305-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceCurrentAuthorityAndEvidence/binding-revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:46.207686-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceCurrentAuthorityAndEvidence/snapshot-changed",
+    "result": "pass",
+    "time": "2026-11-26T15:31:46.817405-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceCurrentAuthorityAndEvidence/scan-infected",
+    "result": "pass",
+    "time": "2026-11-26T15:31:47.446694-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceCurrentAuthorityAndEvidence/key-revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:48.229741-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceCurrentAuthorityAndEvidence/cross-employer",
+    "result": "pass",
+    "time": "2026-11-26T15:31:48.963089-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceCurrentAuthorityAndEvidence/cross-user",
+    "result": "pass",
+    "time": "2026-11-26T15:31:49.657015-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceCurrentAuthorityAndEvidence",
+    "result": "pass",
+    "time": "2026-11-26T15:31:49.65703-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuancePrivilegesAndAtomicMigration",
+    "result": "pass",
+    "time": "2026-11-26T15:31:50.508709-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceRevocationConcurrency/authority/issue",
+    "result": "pass",
+    "time": "2026-11-26T15:31:51.201177-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceRevocationConcurrency/authority/revoke",
+    "result": "pass",
+    "time": "2026-11-26T15:31:51.860792-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceRevocationConcurrency/binding/issue",
+    "result": "pass",
+    "time": "2026-11-26T15:31:52.578249-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceRevocationConcurrency/binding/revoke",
+    "result": "pass",
+    "time": "2026-11-26T15:31:53.795409-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceRevocationConcurrency/credential/issue",
+    "result": "pass",
+    "time": "2026-11-26T15:31:54.452335-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceRevocationConcurrency/credential/revoke",
+    "result": "pass",
+    "time": "2026-11-26T15:31:55.296906-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceRevocationConcurrency",
+    "result": "pass",
+    "time": "2026-11-26T15:31:55.296922-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceHTTPAndEligibility",
+    "result": "pass",
+    "time": "2026-11-26T15:31:56.027476-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationCurrentFacts/binding-revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:56.693845-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationCurrentFacts/case-closed",
+    "result": "pass",
+    "time": "2026-11-26T15:31:57.485774-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationCurrentFacts/scan-infected",
+    "result": "pass",
+    "time": "2026-11-26T15:31:58.168441-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationCurrentFacts/key-revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:59.082137-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationCurrentFacts/authority-revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:31:59.742873-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationCurrentFacts/authority-unavailable",
+    "result": "pass",
+    "time": "2026-11-26T15:32:00.476076-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationCurrentFacts/request-changed",
+    "result": "pass",
+    "time": "2026-11-26T15:32:01.122173-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationCurrentFacts/required-check-added",
+    "result": "pass",
+    "time": "2026-11-26T15:32:01.957951-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationCurrentFacts",
+    "result": "pass",
+    "time": "2026-11-26T15:32:01.957972-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceCommitFailureDoesNotPublish",
+    "result": "pass",
+    "time": "2026-11-26T15:32:02.635833-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationRevocationConcurrency/authority/verify",
+    "result": "pass",
+    "time": "2026-11-26T15:32:03.274269-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationRevocationConcurrency/authority/revoke",
+    "result": "pass",
+    "time": "2026-11-26T15:32:03.946793-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationRevocationConcurrency/claim/verify",
+    "result": "pass",
+    "time": "2026-11-26T15:32:04.772062-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationRevocationConcurrency/claim/revoke",
+    "result": "pass",
+    "time": "2026-11-26T15:32:05.545848-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationRevocationConcurrency/credential/verify",
+    "result": "pass",
+    "time": "2026-11-26T15:32:06.188795-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationRevocationConcurrency/credential/revoke",
+    "result": "pass",
+    "time": "2026-11-26T15:32:06.977818-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceVerificationRevocationConcurrency",
+    "result": "pass",
+    "time": "2026-11-26T15:32:06.977839-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceNormalRequestToPortableClaim",
+    "result": "pass",
+    "time": "2026-11-26T15:32:07.613702-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceIssuanceRequiresExplicitCredentialActivation",
+    "result": "pass",
+    "time": "2026-11-26T15:32:08.444265-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestNorStarManualDispatchDoesNotGrantOrIssue",
+    "result": "pass",
+    "time": "2026-11-26T15:32:09.050233-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewExplicitGrantAndPrivateDownload",
+    "result": "pass",
+    "time": "2026-11-26T15:32:09.380885-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceManualReviewAttributionAndNoSelfReview",
+    "result": "pass",
+    "time": "2026-11-26T15:32:09.705356-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewRevocationStatesAndIntegrity/revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:32:10.023184-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewRevocationStatesAndIntegrity/inactive",
+    "result": "pass",
+    "time": "2026-11-26T15:32:10.339916-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewRevocationStatesAndIntegrity/case-closed",
+    "result": "pass",
+    "time": "2026-11-26T15:32:10.660562-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewRevocationStatesAndIntegrity/check-passed",
+    "result": "pass",
+    "time": "2026-11-26T15:32:10.978128-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewRevocationStatesAndIntegrity/unsafe-scan",
+    "result": "pass",
+    "time": "2026-11-26T15:32:11.300855-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewRevocationStatesAndIntegrity/tampered-sealed",
+    "result": "pass",
+    "time": "2026-11-26T15:32:11.615512-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewRevocationStatesAndIntegrity/missing-object",
+    "result": "pass",
+    "time": "2026-11-26T15:32:11.930986-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewRevocationStatesAndIntegrity",
+    "result": "pass",
+    "time": "2026-11-26T15:32:11.931041-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceScopeDiscoveryUsesExistingAssignments",
+    "result": "pass",
+    "time": "2026-11-26T15:32:12.252673-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewRuntimeAndOperatorPrivileges",
+    "result": "pass",
+    "time": "2026-11-26T15:32:12.568553-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewGrantConcurrency/false",
+    "result": "pass",
+    "time": "2026-11-26T15:32:12.937999-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewGrantConcurrency/true",
+    "result": "pass",
+    "time": "2026-11-26T15:32:13.324292-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewGrantConcurrency",
+    "result": "pass",
+    "time": "2026-11-26T15:32:13.324332-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewFailClosedConfigurationAndHeaders/missing-execute",
+    "result": "pass",
+    "time": "2026-11-26T15:32:13.633925-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewFailClosedConfigurationAndHeaders/rls",
+    "result": "pass",
+    "time": "2026-11-26T15:32:13.950176-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewFailClosedConfigurationAndHeaders/unsafe-filename",
+    "result": "pass",
+    "time": "2026-11-26T15:32:14.26235-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewFailClosedConfigurationAndHeaders",
+    "result": "pass",
+    "time": "2026-11-26T15:32:14.262389-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewConcurrentFinalDecisions",
+    "result": "pass",
+    "time": "2026-11-26T15:32:14.642967-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewMigrationRollbackAndExistingAPICompatibility",
+    "result": "pass",
+    "time": "2026-11-26T15:32:14.945425-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceReviewDownloadHoldsAuthorizationThroughStorageRead",
+    "result": "pass",
+    "time": "2026-11-26T15:32:15.287456-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingManifestAndUnavailableAuthority",
+    "result": "pass",
+    "time": "2026-11-26T15:32:15.694635-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingHTTPAndNoSigning",
+    "result": "pass",
+    "time": "2026-11-26T15:32:16.170187-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingContextStateAndCrossReuse/claim",
+    "result": "pass",
+    "time": "2026-11-26T15:32:16.559783-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingContextStateAndCrossReuse/version",
+    "result": "pass",
+    "time": "2026-11-26T15:32:16.948159-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingContextStateAndCrossReuse/null-version",
+    "result": "pass",
+    "time": "2026-11-26T15:32:17.335044-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingContextStateAndCrossReuse/subject",
+    "result": "pass",
+    "time": "2026-11-26T15:32:17.721194-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingContextStateAndCrossReuse/case",
+    "result": "pass",
+    "time": "2026-11-26T15:32:18.110115-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingContextStateAndCrossReuse/check",
+    "result": "pass",
+    "time": "2026-11-26T15:32:18.499074-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingContextStateAndCrossReuse/rejected",
+    "result": "pass",
+    "time": "2026-11-26T15:32:18.892185-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingContextStateAndCrossReuse/missing-scan",
+    "result": "pass",
+    "time": "2026-11-26T15:32:19.28488-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingContextStateAndCrossReuse/infected",
+    "result": "pass",
+    "time": "2026-11-26T15:32:19.67492-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingContextStateAndCrossReuse/error",
+    "result": "pass",
+    "time": "2026-11-26T15:32:20.066856-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingContextStateAndCrossReuse/pending-review",
+    "result": "pass",
+    "time": "2026-11-26T15:32:20.461151-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingContextStateAndCrossReuse/incomplete",
+    "result": "pass",
+    "time": "2026-11-26T15:32:20.857276-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingContextStateAndCrossReuse",
+    "result": "pass",
+    "time": "2026-11-26T15:32:21.257741-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingPrivilegesAndImmutability",
+    "result": "pass",
+    "time": "2026-11-26T15:32:21.661673-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingExactActiveAuthority/active",
+    "result": "pass",
+    "time": "2026-11-26T15:32:22.087864-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingExactActiveAuthority/wrong-issuer",
+    "result": "pass",
+    "time": "2026-11-26T15:32:22.514833-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingExactActiveAuthority/wrong-employer",
+    "result": "pass",
+    "time": "2026-11-26T15:32:22.943465-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingExactActiveAuthority/suspended",
+    "result": "pass",
+    "time": "2026-11-26T15:32:23.37017-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingExactActiveAuthority/revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:32:23.799582-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingExactActiveAuthority/expired",
+    "result": "pass",
+    "time": "2026-11-26T15:32:24.227594-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingExactActiveAuthority/approved-only",
+    "result": "pass",
+    "time": "2026-11-26T15:32:24.651852-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingExactActiveAuthority/incomplete-snapshot",
+    "result": "pass",
+    "time": "2026-11-26T15:32:25.070567-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingExactActiveAuthority",
+    "result": "pass",
+    "time": "2026-11-26T15:32:25.070592-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingLegacySigningCannotBypass",
+    "result": "pass",
+    "time": "2026-11-26T15:32:25.510651-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingRequiredChecksAndStandaloneReview",
+    "result": "pass",
+    "time": "2026-11-26T15:32:25.890236-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingConcurrencyAndDeletion/prepare",
+    "result": "pass",
+    "time": "2026-11-26T15:32:26.366034-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingConcurrencyAndDeletion/revoke",
+    "result": "pass",
+    "time": "2026-11-26T15:32:26.819094-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingConcurrencyAndDeletion/state",
+    "result": "pass",
+    "time": "2026-11-26T15:32:27.28279-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingConcurrencyAndDeletion/delete",
+    "result": "pass",
+    "time": "2026-11-26T15:32:27.672964-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingConcurrencyAndDeletion",
+    "result": "pass",
+    "time": "2026-11-26T15:32:27.673004-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingAuthorityRecordingLock/prepare",
+    "result": "pass",
+    "time": "2026-11-26T15:32:28.162669-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingAuthorityRecordingLock/revoke",
+    "result": "pass",
+    "time": "2026-11-26T15:32:28.729745-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingAuthorityRecordingLock",
+    "result": "pass",
+    "time": "2026-11-26T15:32:28.729759-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingRejectsStaleReviewContextAndFailureRollback",
+    "result": "pass",
+    "time": "2026-11-26T15:32:29.171058-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingMigrationAtomicFailure",
+    "result": "pass",
+    "time": "2026-11-26T15:32:29.516298-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBindingUnboundLegacyPositiveDenied",
+    "result": "pass",
+    "time": "2026-11-26T15:32:29.882062-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesClaimDecisionsAndReadOnlyBoundary/APPROVED",
+    "result": "pass",
+    "time": "2026-11-26T15:32:30.327528-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesClaimDecisionsAndReadOnlyBoundary/REJECTED",
+    "result": "pass",
+    "time": "2026-11-26T15:32:30.822581-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesClaimDecisionsAndReadOnlyBoundary",
+    "result": "pass",
+    "time": "2026-11-26T15:32:30.82262-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesOwnershipAndAccountAuthorization",
+    "result": "pass",
+    "time": "2026-11-26T15:32:31.228302-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesPendingEmptyStaleAndRevoked/pending",
+    "result": "pass",
+    "time": "2026-11-26T15:32:31.600606-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesPendingEmptyStaleAndRevoked/unbound",
+    "result": "pass",
+    "time": "2026-11-26T15:32:31.955903-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesPendingEmptyStaleAndRevoked/stale-version",
+    "result": "pass",
+    "time": "2026-11-26T15:32:32.373449-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesPendingEmptyStaleAndRevoked/stale-digest",
+    "result": "pass",
+    "time": "2026-11-26T15:32:32.791118-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesPendingEmptyStaleAndRevoked/revoked",
+    "result": "pass",
+    "time": "2026-11-26T15:32:33.209339-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesPendingEmptyStaleAndRevoked/deleted",
+    "result": "pass",
+    "time": "2026-11-26T15:32:33.625927-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesPendingEmptyStaleAndRevoked/unclassified",
+    "result": "pass",
+    "time": "2026-11-26T15:32:33.983079-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesPendingEmptyStaleAndRevoked",
+    "result": "pass",
+    "time": "2026-11-26T15:32:33.983133-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesAuthoritativeUploadedEvidence",
+    "result": "pass",
+    "time": "2026-11-26T15:32:34.433647-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesSQLReadOnly",
+    "result": "pass",
+    "time": "2026-11-26T15:32:34.748153-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestorOutcomesMissingReaderFailsClosed",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.082916-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestSecurityPostgresInactiveAccountCannotExchange",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.21113-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestSecurityPostgresRefreshRotationReuseAndLogout",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.348479-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestSecurityPostgresConcurrentRefreshLogout",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.54903-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestLegacyPositiveDeniedAndHistoricalSigningCompatibility",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.887911-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestExchangeRejectsInactiveKratosSession/native",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.888691-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestExchangeRejectsInactiveKratosSession/web",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.889258-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestExchangeRejectsInactiveKratosSession",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.889277-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIssuerDestinationPolicy",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.890185-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestCORSOrigins",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.890252-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceRoutesRequireAuthentication",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.890325-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceCompletionRequiresAuthenticatedSessionInput",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.890584-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestEvidenceArbitraryCaseDeniedWithoutAuthorization",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.890799-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestRequestBodyLimit",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.891339-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestGinProtectedRoleBoundary",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.891383-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestIssuerMetadataClientRejectsInternalIssuerBeforeTLS",
+    "result": "pass",
+    "time": "2026-11-26T15:32:35.891438-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestServiceAPIRuntimePrivilegesSupportAuthAndEmployerChecks",
+    "result": "pass",
+    "time": "2026-11-26T15:32:36.214226-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestServiceKratosPrivilegesAreBoundedToIdentityStore",
+    "result": "pass",
+    "time": "2026-11-26T15:32:36.429182-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestServiceAPIProfileRefusesOwnerAndUnreviewedRLS",
+    "result": "pass",
+    "time": "2026-11-26T15:32:36.615135-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestVerificationOutcome_ValidCryptoDoesNotImplyTrust",
+    "result": "pass",
+    "time": "2026-11-26T15:32:36.615202-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestVerificationOutcome_InvalidSignatureRemainsUntrusted",
+    "result": "pass",
+    "time": "2026-11-26T15:32:36.615246-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestVerificationOutcome_ExpiredCredentialMapsValidityWindow",
+    "result": "pass",
+    "time": "2026-11-26T15:32:36.615287-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestVerificationOutcome_LegacyJWSReturnsExplicitUnknown",
+    "result": "pass",
+    "time": "2026-11-26T15:32:36.615361-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestVerificationOutcome_InvalidJSONReturnsBadRequest",
+    "result": "pass",
+    "time": "2026-11-26T15:32:36.615402-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestVerificationOutcome_MissingCredentialReturnsBadRequest",
+    "result": "pass",
+    "time": "2026-11-26T15:32:36.615442-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestVerificationOutcome_RejectsUnknownJSONField",
+    "result": "pass",
+    "time": "2026-11-26T15:32:36.615492-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestVerificationOutcome_MethodGuard",
+    "result": "pass",
+    "time": "2026-11-26T15:32:36.615534-08:00"
+  },
+  {
+    "package": "internal/httpapi",
+    "test": "TestHandleVersion_ReturnsBuildGitSHA",
+    "result": "pass",
+    "time": "2026-11-26T15:32:36.615573-08:00"
+  }
+]

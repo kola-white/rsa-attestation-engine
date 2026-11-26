@@ -1,0 +1,384 @@
+{
+  "contract": "cvera.stage4c.presentation.v1",
+  "synthetic": true,
+  "node": "v24.15.0",
+  "issuanceCalls": 1,
+  "unchangedCredentialReuse": true,
+  "distinctVerifierPresentations": 2,
+  "cases": [
+    {
+      "name": "verifier-a",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "verifier-b",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "missing-proof",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "copied-credential",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "tampered-presentation",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "cross-verifier",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "missing-transaction",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "transaction-expired",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "transaction-substitution",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "unknown-verifier",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "verifier-key-mismatch",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "unauthorized-verifier",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "denied-disclosure-policy",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "missing-authority",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "missing-status",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "unavailable-status",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "credential-tamper",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "status-age-899",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "status-age-900",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "status-age-901",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "status-age-5000",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "status-age--1",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "revoked",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "missing-entry",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "wrong-status-binding",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "invalid-status-signature",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "missing-consent",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "denied-consent",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "expired-consent",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "wrong-consent-request",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "wrong-consent-credential",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "policy-denied-holder",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "unknown-holder-verifier",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "legacy-unbound-no-assurance",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "holder-authorized",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "missing-audience",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "wrong-audience",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "missing-nonce",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "wrong-nonce",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "future-proof",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "expired-proof",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "wrong-sd-hash",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "kb-expired-exp",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "kb-future-nbf",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "kb-malformed-exp",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "incorrect-holder-key",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "expired-request",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "future-request",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "excessive-disclosure",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "untrusted-metadata",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "wrong-response-uri",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "unsigned-request",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "critical-null",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "untrusted-header-key",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "replay-sequential",
+      "result": "PASS",
+      "evaluations": 4
+    },
+    {
+      "name": "concurrent-duplicate",
+      "result": "PASS",
+      "evaluations": 4
+    },
+    {
+      "name": "invalid-does-not-consume",
+      "result": "PASS",
+      "evaluations": 4
+    },
+    {
+      "name": "trusted-custom-status-policy",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "untrusted-status-policy-override",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "malformed-verifier-root",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "missing-verifier-registry",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "cross-transaction-replay",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "holder-gate-unknown-verifier",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "holder-gate-verifier-key-mismatch",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "holder-gate-unauthorized-verifier",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "holder-gate-denied-disclosure-policy",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "holder-gate-missing-authority",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "holder-gate-missing-status",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "holder-gate-unavailable-status",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "holder-gate-credential-tamper",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "invalid-trusted-policy",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "holder-invalid-trusted-policy",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "non-synthetic-trust",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "holder-non-synthetic-trust",
+      "result": "PASS",
+      "evaluations": 2
+    }
+  ],
+  "evaluations": 154,
+  "issuanceNegativeChecks": 6,
+  "holderSigningDenialChecks": 23,
+  "isolation": "native child processes with minimal environment; use --isolated for enforced network isolation"
+}
