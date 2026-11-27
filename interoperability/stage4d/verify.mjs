@@ -87,6 +87,16 @@ async function token(raw, j, typ) {
 }
 export class State {
   #entries = new Map();
+  retainStatus(tk, tr, sk, raw, v, at, floor) {
+    if (this.#entries.get(tk)?.raw !== tr) return "TRUST_CHANGED";
+    return this.retain(sk, raw, v, at, floor) ? "RETAINED" : "ROLLED_BACK";
+  }
+  matches(tk, tr, sk, sr) {
+    return [
+      this.#entries.get(tk)?.raw === tr,
+      this.#entries.get(sk)?.raw === sr,
+    ];
+  }
   cached(k) {
     return this.#entries.get(k)?.raw ?? "";
   }
@@ -245,6 +255,8 @@ export async function verify(i, state) {
     (i.anchor.synthetic && !p.allowSynthetic)
   )
     throw Error("invalid trusted policy");
+  const sc = scope(i);
+  let decisionTrust, decisionStatus, statusScope;
   const finish = () => {
     const b = r.credential;
     b.eligibleWithoutHolder =
@@ -255,6 +267,22 @@ export async function verify(i, state) {
       b.temporalValidity === "VALID" &&
       b.issuerAuthority === "AUTHORIZED" &&
       b.credentialStatus === "GOOD";
+    if (b.eligibleWithoutHolder) {
+      const [t, s] = state.matches(
+        sc + "/trust",
+        decisionTrust,
+        statusScope,
+        decisionStatus,
+      );
+      if (!t) {
+        r.trustMaterial = "ROLLED_BACK";
+        b.issuerAuthority = "UNKNOWN";
+        r.currentAuthority = "UNKNOWN";
+        r.issuanceAuthority = "UNKNOWN";
+      }
+      if (!s) b.credentialStatus = "INVALID";
+      b.eligibleWithoutHolder = t && s;
+    }
     if (b.eligibleWithoutHolder) r.overall = "ELIGIBLE_WITHOUT_HOLDER";
     else if (
       r.verificationKey === "INVALID" ||
@@ -269,12 +297,12 @@ export async function verify(i, state) {
     b.overall = r.overall === "REJECTED" ? "REJECTED" : "INDETERMINATE";
     return r;
   };
-  const sc = scope(i);
   let [raw, a] = artifact(i.trustMaterial, state, sc + "/trust");
   if (!raw) {
     r.trustMaterial = a;
     return finish();
   }
+  decisionTrust = raw;
   let m;
   try {
     m = await token(raw, i.anchor.key, "cvera-trust-material+jwt");
@@ -357,6 +385,8 @@ export async function verify(i, state) {
     r.credential.credentialStatus = available;
     return finish();
   }
+  decisionStatus = stRaw;
+  statusScope = sc + "/status/" + m.status.uri;
   let st, list;
   try {
     ({ st, list } = await readStatus(stRaw, m, i));
@@ -364,18 +394,27 @@ export async function verify(i, state) {
     r.credential.credentialStatus = "INVALID";
     return finish();
   }
-  if (
-    !state.retain(
-      sc + "/status/" + m.status.uri,
-      stRaw,
-      st.cvera_version,
-      st.iat,
-      p.minStatusVersion,
-    )
-  ) {
+  const retained = state.retainStatus(
+    sc + "/trust",
+    raw,
+    sc + "/status/" + m.status.uri,
+    stRaw,
+    st.cvera_version,
+    st.iat,
+    p.minStatusVersion,
+  );
+  if (retained === "TRUST_CHANGED") {
+    r.trustMaterial = "ROLLED_BACK";
+    r.credential.issuerAuthority = "UNKNOWN";
+    r.currentAuthority = "UNKNOWN";
+    r.issuanceAuthority = "UNKNOWN";
+    return finish();
+  }
+  if (retained === "ROLLED_BACK") {
     r.credential.credentialStatus = "INVALID";
     return finish();
   }
+
   if (ref.idx >= list.length * 8) {
     r.credential.credentialStatus = "UNKNOWN";
     return finish();

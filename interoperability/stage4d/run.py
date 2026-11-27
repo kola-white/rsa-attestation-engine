@@ -57,7 +57,7 @@ with tempfile.TemporaryDirectory(prefix='cvera-stage4d-') as d:
   (stage/'stage4d/generate.mjs').unlink();shutil.rmtree(stage/'stage4b/fixtures')
   name='cvera-stage4d-'+uuid.uuid4().hex
   try:
-   run(['docker','create','--name',name,'--label','cvera.scope=stage4c-local-test','--network','none','--read-only','--cap-drop','ALL','--security-opt','no-new-privileges','--user','65534:65534','--memory','384m','--cpus','2','--tmpfs','/tmp:rw,noexec,nosuid,size=16m','--mount',f'type=bind,source={stage},target=/work,readonly',args.node_image,'node','/work/stage4d/test.mjs','/work/go-verifier','/work/fixtures.json'],stdout=subprocess.DEVNULL)
+   run(['docker','create','--name',name,'--label','cvera.scope=stage4d-local-test','--network','none','--read-only','--cap-drop','ALL','--security-opt','no-new-privileges','--user','65534:65534','--memory','384m','--cpus','2','--tmpfs','/tmp:rw,noexec,nosuid,size=16m','--mount',f'type=bind,source={stage},target=/work,readonly',args.node_image,'node','/work/stage4d/test.mjs','/work/go-verifier','/work/fixtures.json'],stdout=subprocess.DEVNULL)
    info=json.loads(capture(['docker','inspect',name]))[0]
    if info['HostConfig']['NetworkMode']!='none' or not info['HostConfig']['ReadonlyRootfs'] or len(info['Mounts'])!=1 or info['Mounts'][0]['RW']:raise RuntimeError('isolation not established')
    result=json.loads(capture(['docker','start','-a',name]))

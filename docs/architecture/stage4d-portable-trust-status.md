@@ -1,7 +1,7 @@
 # Stage 4D — Portable trust and status
 
 Local implementation on baseline `a60ae37328de635029227c6503f6cfdabb0fe570`.
-Production publication, migrations, genuine issuance and key operations are not
+Stage 4D genuine publication, migrations, issuance and key operations are not
 performed. This is a production-intended artifact boundary validated using
 synthetic actors; it is not a production authority establishment exercise.
 
@@ -177,7 +177,11 @@ to the configured root/key, trust URI and credential issuer. Updates are checked
 atomically against known version, time and same-version content. Lower versions,
 backward issue times and same-version equivocation fail closed. Valid revocation
 updates cannot be replaced by an older good list. Invalid signatures/structures
-do not poison retained state. The Go store is mutex-protected; JS performs its
+do not poison retained state. Status retention also atomically requires the authenticating trust descriptor
+to remain current, preventing superseded work from poisoning status high-water
+marks. Positive decisions atomically recheck both captured artifacts against retained
+state; an evaluation superseded while in flight cannot finish positively.
+The Go store is mutex-protected; JS performs its
 atomic check-and-retain synchronously after cryptographic validation.
 
 State is verifier-owned **in-memory** retained state, not a holder-provided input.
@@ -244,7 +248,10 @@ or status hints. Their default Stage 4B entry points are unchanged.
 
 Stage 4C receives a **trusted code callback**, not a serializable evidence override.
 The Stage 4D adapter binds it to the exact credential, verification time and expected
-subject. Authenticated requests, separate disclosure permission, holder consent,
+subject. The trusted, read-only evaluator is rechecked immediately before
+presentation release and before nonce consumption; newly known revocation or
+supersession denies the operation without consuming the challenge.
+Authenticated requests, separate disclosure permission, holder consent,
 issuer-protected holder key, audience/nonce/hash, temporal checks and atomic replay
 remain enforced. The current demonstration adapter is synthetic only; no production
 presentation route or consent UI is introduced.
@@ -320,8 +327,8 @@ fixtures are test artifacts, not additional successful intended issuances.
 
 Durable [validation evidence](../validation/stage4d/README.md) records exact results,
 acceptance and rendering validation. Fixtures are generated at runtime; new JWTs
-and private keys are not tracked. Remote CI is not run under this local-only
-implementation authorization.
+and private keys are not tracked. Remote integration and release results are recorded in the integration PR closure;
+these local artifacts precede that phase.
 
 Before genuine use, separately authorize: public organizational scope publication,
 anchor provenance, accepted projection/export completeness, status-index allocation

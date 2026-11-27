@@ -760,6 +760,45 @@ add(
   { mode: "presentation", presentations: [substituted] },
 );
 
+// Inject a concurrent, already authenticated update after the old retain.
+let supersededStatusWrites = 0;
+class SupersedingTrust extends State {
+  retain(k, raw, v, at, floor) {
+    if (k.includes("/status/")) supersededStatusWrites++;
+    const ok = super.retain(k, raw, v, at, floor);
+    if (k.endsWith("/trust") && v === 1)
+      super.retain(k, t2.trustMaterial.jws, 2, at, floor);
+    return ok;
+  }
+}
+const superseded = await verify(canonical, new SupersedingTrust());
+assert.equal(superseded.overall, "REJECTED");
+assert.equal(superseded.trustMaterial, "ROLLED_BACK");
+assert.equal(
+  supersededStatusWrites,
+  0,
+  "superseded trust poisoned status cache",
+);
+add(
+  "revoked-during-presentation-verification",
+  canonical,
+  { overall: "DENIED", "credential.credentialStatus": "INVALID" },
+  {
+    mode: "presentation",
+    presentations: [presentations[0]],
+    updates: [revoked],
+  },
+);
+let finalCalls = 0;
+const changing = new State();
+await assert.rejects(() =>
+  present(presentations[0], holder.privateKey, async (base) => {
+    finalCalls++;
+    if (finalCalls === 2) await verify(revoked, changing);
+    return bindEvaluator(canonical, changing)(base);
+  }),
+);
+assert.equal(finalCalls, 2);
 // Real local publication + acquisition; no production namespace, API or credential.
 const dir = mkdtempSync(join(tmpdir(), "cvera-stage4d-publish-"));
 let distributionChecks = 0;
@@ -857,6 +896,34 @@ try {
   await publish(dir, revoked, anchor, policy);
   distributionResults.push({
     name: "idempotent-exact-publication",
+    result: "PASS",
+  });
+  distributionChecks = distributionResults.length;
+  const concurrent = await Promise.allSettled([
+    publish(dir, revoked, anchor, policy),
+    publish(dir, revoked, anchor, policy),
+  ]);
+  assert.equal(concurrent.filter((x) => x.status === "fulfilled").length, 1);
+  assert.equal(
+    concurrent.find((x) => x.status === "rejected").reason.code,
+    "EEXIST",
+  );
+  distributionResults.push({
+    name: "concurrent-publication-exclusive-lock",
+    result: "PASS",
+  });
+  distributionChecks = distributionResults.length;
+  const empty = await acquire(
+    { trustURL: trustURI, statusURL: listURI },
+    () =>
+      new Response(null, {
+        status: 204,
+        headers: { "Content-Type": "application/jwt" },
+      }),
+  );
+  assert.equal(empty.trustMaterial.availability, "INVALID");
+  distributionResults.push({
+    name: "empty-success-response-invalid",
     result: "PASS",
   });
   distributionChecks = distributionResults.length;
@@ -1014,6 +1081,7 @@ writeFileSync(
     {
       cases,
       issuanceCalls: issuances,
+      concurrentSnapshotCheck: "PASS",
       distributionChecks,
       distributionResults,
       unchangedCredential: true,

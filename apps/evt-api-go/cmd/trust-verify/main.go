@@ -8,11 +8,13 @@ import (
 
 	hp "github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/holderpresentation"
 	t "github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/portabletrust"
+	b "github.com/kola-white/rsa-attestation-engine/apps/evt-api-go/internal/portableverify"
 )
 
 type session struct {
 	Inputs        []t.Input  `json:"inputs"`
 	Presentations []hp.Input `json:"presentations"`
+	Updates       []t.Input  `json:"updates"`
 	Mode          string     `json:"mode"`
 }
 
@@ -37,11 +39,22 @@ func main() {
 				os.Exit(2)
 			}
 			c := s.Presentations[n]
+			calls := 0
+			resolved := t.BindEvaluator(in, state)
+			evaluate := func(base b.Input) (b.Result, error) {
+				calls++
+				if calls == 2 && n < len(s.Updates) {
+					if _, err := t.Verify(s.Updates[n], state); err != nil {
+						return b.Result{}, err
+					}
+				}
+				return resolved(base)
+			}
 			var r hp.Result
 			if s.Mode == "holder" {
-				r = hp.EvaluateHolderWithEvaluator(c, t.BindEvaluator(in, state))
+				r = hp.EvaluateHolderWithEvaluator(c, evaluate)
 			} else {
-				r = hp.VerifyWithEvaluator(c, replay, t.BindEvaluator(in, state))
+				r = hp.VerifyWithEvaluator(c, replay, evaluate)
 			}
 			out = append(out, r)
 		} else {

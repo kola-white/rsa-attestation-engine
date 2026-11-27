@@ -189,3 +189,29 @@ func TestCanonicalBase64AndState(t *testing.T) {
 		t.Fatal("rollback/equivocation")
 	}
 }
+
+func TestDecisionSnapshotMustStillBeCurrent(t *testing.T) {
+	s := NewState()
+	s.retain("trust", "trust1", 1, 1, 0)
+	s.retain("status", "status1", 1, 1, 0)
+	r := blank(Input{})
+	r.Material = "VALID"
+	r.Key = "AUTHENTICATED"
+	r.Credential.Crypto = "VALID"
+	r.Credential.Binding = "VALID"
+	r.Credential.Temporal = "VALID"
+	r.Credential.Authority = "AUTHORIZED"
+	r.Credential.Status = "GOOD"
+	if finalize(r, s, "trust", "trust1", "status", "status1").Overall != "ELIGIBLE_WITHOUT_HOLDER" {
+		t.Fatal("current snapshot denied")
+	}
+	s.retain("trust", "trust2", 2, 2, 0)
+	s.retain("status", "status2", 2, 2, 0)
+	if s.retainStatus("trust", "trust1", "status", "poison99", 99, 99, 0) != "TRUST_CHANGED" || s.cached("status") != "status2" {
+		t.Fatal("superseded descriptor poisoned status cache")
+	}
+	v := finalize(r, s, "trust", "trust1", "status", "status1")
+	if v.Credential.Eligible || v.Overall != "REJECTED" || v.Material != "ROLLED_BACK" || v.Credential.Status != "INVALID" {
+		t.Fatal("superseded positive decision", v)
+	}
+}

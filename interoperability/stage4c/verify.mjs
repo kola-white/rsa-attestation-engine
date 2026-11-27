@@ -250,6 +250,9 @@ export async function present(i, privateKey, evaluate = baseVerify) {
   })
     .setProtectedHeader({ alg: "RS256", typ: "kb+jwt" })
     .sign(privateKey);
+  const current = await evaluate(i.base);
+  if (!current.eligibleWithoutHolder)
+    throw Error("credential trust changed before release");
   return i.base.credential + kb;
 }
 // Synchronous check-and-mark occurs after all async validation; Promise.all
@@ -323,6 +326,11 @@ export async function verify(i, store, evaluate = baseVerify) {
       !store
     )
       return r;
+    r.credential = await evaluate(i.base);
+    if (!r.credential.eligibleWithoutHolder) {
+      r.transactionBinding = "UNKNOWN";
+      return r;
+    }
     if (!store.consume(t.verifier + "/" + t.nonce)) {
       r.transactionBinding = "REPLAYED";
       return r;

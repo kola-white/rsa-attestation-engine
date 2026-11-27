@@ -229,7 +229,8 @@ func authenticate(in Input) (jwt.MapClaims, Verifier, string) {
 	return m, v, "AUTHENTICATED"
 }
 
-// CredentialEvaluator is trusted integration code, never a serialized trust hint.
+// CredentialEvaluator is trusted, read-only integration code, never a serialized
+// trust hint. It may be called again immediately before release/acceptance.
 type CredentialEvaluator func(b.Input) (b.Result, error)
 
 // EvaluateHolder is an independent holder-side decision. Consent is a trusted
@@ -308,6 +309,12 @@ func PresentWithEvaluator(in Input, k *rsa.PrivateKey, evaluate CredentialEvalua
 	if e != nil {
 		return "", r, e
 	}
+	current, err := evaluate(in.Base)
+	r.Base = current
+	if err != nil || !current.Eligible {
+		r.Overall = "DENIED"
+		return "", r, errors.New("credential trust changed before release")
+	}
 	r.Possession = "VALID"
 	return in.Base.Credential + kb, r, nil
 }
@@ -358,6 +365,12 @@ func VerifyWithEvaluator(in Input, s *Store, evaluate CredentialEvaluator) Resul
 	r.Transaction = "INVALID"
 	tx := in.Transaction
 	if tx.Verifier != v.ID || tx.Nonce != str(m, "nonce") || tx.RequestHash != Hash(in.Request) || tx.Expires <= in.Base.Policy.Now || tx.Expires > num(m, "exp") || s == nil {
+		return r
+	}
+	current, err := evaluate(in.Base)
+	r.Base = current
+	if err != nil || !current.Eligible {
+		r.Transaction = "UNKNOWN"
 		return r
 	}
 	if !s.Consume(tx.Verifier + "/" + tx.Nonce) {

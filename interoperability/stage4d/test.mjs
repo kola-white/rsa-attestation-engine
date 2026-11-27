@@ -38,7 +38,13 @@ for (const c of fixtures.cases) {
     try {
       if (c.mode) {
         const ci = c.presentations[n],
-          evaluate = bindEvaluator(i, state);
+          resolved = bindEvaluator(i, state);
+        let calls = 0;
+        const evaluate = async (base) => {
+          calls++;
+          if (calls === 2 && c.updates?.[n]) await verify(c.updates[n], state);
+          return resolved(base);
+        };
         js.push(
           await (c.mode === "holder"
             ? authorize(ci, evaluate)
@@ -67,6 +73,7 @@ for (const c of fixtures.cases) {
   evaluations += 2 * js.length;
   outcomes.push({ name: c.name, result: "PASS", evaluations: 2 * js.length });
 }
+assert.equal(fixtures.concurrentSnapshotCheck, "PASS");
 assert.equal(fixtures.issuanceCalls, 1);
 assert.equal(fixtures.unchangedCredential, true);
 console.log(
@@ -77,6 +84,7 @@ console.log(
       node: process.version,
       issuanceCalls: 1,
       unchangedCredential: true,
+      concurrentSnapshotCheck: fixtures.concurrentSnapshotCheck,
       distributionChecks: fixtures.distributionChecks,
       distributionResults: fixtures.distributionResults,
       evaluations,

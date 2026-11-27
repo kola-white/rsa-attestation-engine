@@ -101,7 +101,7 @@
       "id": "AC-17",
       "result": "PASS",
       "criterion": "Independent Go/JS matching outcomes",
-      "evidence": "97 scenarios /218 matching evaluations; isolated Node20.20.2 and native run; per-language JOSE/jwt validation and independent stores"
+      "evidence": "98 scenarios /220 matching evaluations; isolated Node20.20.2 and native run; per-language JOSE/jwt validation and independent stores"
     },
     {
       "id": "AC-18",
@@ -119,7 +119,7 @@
       "id": "AC-20",
       "result": "PASS",
       "criterion": "Relevant regressions/build/integrity",
-      "evidence": "regression-results.json:556 Go tests/subtests,253 top-level; race,vet,API build,Node20 48+4,zero Expo diagnostics; final quality-results.json"
+      "evidence": "regression-results.json: final full Go/PostgreSQL suite, race, vet, API build, Node20 48+4, zero Expo diagnostics; final quality-results.json"
     },
     {
       "id": "AC-21",
@@ -137,6 +137,6 @@
     "Authenticated current status is not proof of lifetime truthful/irreversible lifecycle history; genuine source/index/reinstatement governance remains Stage4F",
     "Genuine publisher authorization, public-scope consent, source adapters, index allocation/uniqueness, custody, refresh availability and durable verifier state required before real use",
     "Stage4C synthetic presentation adapter and existing holder/replay/consent limitations retained",
-    "No remote CI, production inspection/deployment, genuine issuance or Stage4E work under this authorization"
+    "Local implementation evidence predates integration; no genuine production activation, data/key operations or Stage4E work"
   ]
 }

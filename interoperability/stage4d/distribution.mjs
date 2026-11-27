@@ -168,6 +168,7 @@ export async function acquire(config, fetcher = fetch) {
       if (!r.ok) return { availability: "UNAVAILABLE" };
       if (r.headers.get("content-type")?.split(";")[0] !== accept)
         throw Error("media type");
+      if (!r.body) throw Error("empty response body");
       let size = 0;
       const chunks = [];
       for await (const b of r.body) {

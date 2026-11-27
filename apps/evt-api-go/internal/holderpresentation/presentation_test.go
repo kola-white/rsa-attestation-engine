@@ -128,6 +128,42 @@ func TestReciprocalPresentation(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
+	t.Run("trust-change-before-release", func(t *testing.T) {
+		calls := 0
+		evaluate := func(in b.Input) (b.Result, error) {
+			r, e := b.Verify(in)
+			calls++
+			if calls > 1 {
+				r.Status = "REVOKED"
+				r.Eligible = false
+			}
+			return r, e
+		}
+		raw, _, err := PresentWithEvaluator(in, holder, evaluate)
+		if err == nil || raw != "" || calls != 2 {
+			t.Fatal("superseded trust released presentation")
+		}
+	})
+	t.Run("trust-change-before-acceptance-does-not-burn-nonce", func(t *testing.T) {
+		calls := 0
+		evaluate := func(in b.Input) (b.Result, error) {
+			r, e := b.Verify(in)
+			calls++
+			if calls > 1 {
+				r.Status = "REVOKED"
+				r.Eligible = false
+			}
+			return r, e
+		}
+		s := NewStore()
+		r := VerifyWithEvaluator(in, s, evaluate)
+		if r.Overall != "DENIED" || calls != 2 {
+			t.Fatal("superseded trust accepted")
+		}
+		if Verify(in, s).Overall != "ACCEPTED_SYNTHETIC_PRESENTATION" {
+			t.Fatal("denied trust consumed nonce")
+		}
+	})
 	t.Run("valid-go-presentation", func(t *testing.T) {
 		r := Verify(in, NewStore())
 		if r.Overall != "ACCEPTED_SYNTHETIC_PRESENTATION" || r.Consent != "NOT_OBSERVABLE" {

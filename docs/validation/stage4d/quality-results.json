@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-11-27T16:47:54.025003+00:00",
+  "recordedAt": "2026-11-27T17:25:13.466538+00:00",
   "PythonAST": "PASS",
   "JSONParse": "PASS",
   "NodeSyntax": "PASS",
@@ -17,27 +17,28 @@
     "localRendering": "PASS; rendered with existing Chrome and visually inspected",
     "sourceSHA256": "d6cf8dbb57fe9bd6153dbe613b6d398237e891d6327417c1abf76c4435362084",
     "PNG_SHA256": "fb859ba173a5147056def093e9b5ec70e5597affd9ee2356983f35d98aba20c1",
-    "GitHubPreview": "Not accessed; no push authorized. Uses ordinary GitHub-compatible flowchart syntax."
+    "GitHubPreview": "Local rendering verified; remote integration pending. Uses ordinary GitHub-compatible flowchart syntax."
   },
-  "remoteCI": "NOT RUN; local-only authorization",
+  "remoteCI": "Pending integration; actual remote results retained in PR closure",
   "sourceSHA256": {
     ".github/workflows/main.yml": "a0195c2e7c15b502655bc41afdaabb5ef4deadaad35aed68628fc9bd6a9b99d5",
-    "apps/evt-api-go/cmd/trust-verify/main.go": "192f87c8d9f1538a058cd9c51a34a85be213d558a39d1e07ed3324f064b5b0f0",
-    "apps/evt-api-go/internal/holderpresentation/presentation.go": "1c41adc8b47be151144ace1a724c1ba24b692217e35e9f04d016abf4f5eb87fb",
+    "apps/evt-api-go/cmd/trust-verify/main.go": "dd8f26e0c3483a1278f40d17bcda8f736483c56fcdbe655411442cda44bc486e",
+    "apps/evt-api-go/internal/holderpresentation/presentation.go": "4ba15baa8f431b288446a4e7ee0dae6be7f1770abe70d359b358d44eb53c86da",
+    "apps/evt-api-go/internal/holderpresentation/presentation_test.go": "cb081908da12a23a03a60aea5788fb8f0e80d152c4e66e01d8a2607e605d1657",
     "apps/evt-api-go/internal/portabletrust/presentation.go": "46e6836b5e98b30ea45d0f44bf2247af11db862b363a709362fca5b72e2df900",
-    "apps/evt-api-go/internal/portabletrust/verify.go": "2c22ad71a725866a18540887757eafeaf59e3676c15f375018fef1be61ae1152",
-    "apps/evt-api-go/internal/portabletrust/verify_test.go": "6a18415622f122ff24db86a6c059f8df7200736b032d650ddecd5596d33b7636",
+    "apps/evt-api-go/internal/portabletrust/verify.go": "fb77bd06d7c17a95094cf17b242fe59d56b57bbf404775726bb52c501131da33",
+    "apps/evt-api-go/internal/portabletrust/verify_test.go": "a8c4bf04d1de9d196d8149b096920e522f88ce1336f489d689013fb7d6d78a34",
     "apps/evt-api-go/internal/portableverify/verify.go": "bdcc035ea42a5a1db2f7d32616e1002a2dcce49a1ca0530074ed53cd835dfb6c",
     "docs/architecture/adr/011-portable-trust-and-status.md": "6b9727be86601f8c9ca96910e76ac00703bf5ee609a91f04ddc1da7102c388cc",
-    "docs/architecture/stage4d-portable-trust-status.md": "6c20d34cc2c466b15910dcca315e2a18f0ca19643e10117dd174c4b6019f7d2e",
+    "docs/architecture/stage4d-portable-trust-status.md": "4db3821811b2a16a568a3bd1978261e161ec5a97bc386fd5c7e9932d410b6694",
     "interoperability/stage4b/verify.mjs": "7dd34f07c4876e68c7ba66e66fc529fc716292bcfc20e72911478cce0c5745ab",
-    "interoperability/stage4c/verify.mjs": "83047959e091c80b0877b0183a753b8cda4d89207f66d3df918af4076f03d3bf",
+    "interoperability/stage4c/verify.mjs": "bcf0aec840c40337f830af9dfa675d8105842d536818699bdfac0683246a29a1",
     "interoperability/stage4d/README.md": "dcb25b8db952744455b43829a9cd6fd46eb2e2828ca7cefd7dad0d6db39a8f68",
-    "interoperability/stage4d/distribution.mjs": "292971b2c5d341c1a2379c86e67ba5392371032dfe47ab897f83b30f61eed4f1",
-    "interoperability/stage4d/generate.mjs": "a6f64f1b489fdf5790d45f808149e7d6a9eb730f9c47459bef7c26de35d05e0a",
-    "interoperability/stage4d/run.py": "d7511b388c92ae1f34168e9b389730b4d430a9c240785ec3cabc62280cec30f6",
-    "interoperability/stage4d/test.mjs": "6bfc6a26dbc6a80677df0b71c9b0cf7b95de75b48bbfb6a1b7832a44afff5392",
-    "interoperability/stage4d/verify.mjs": "e4009b4814acd3e0d22ede5a60bd1d22311551bfb11530a1a7bd1cac19a944f4",
+    "interoperability/stage4d/distribution.mjs": "1201b1b5c5c6b956e8f4b70b7cfdc7dc2dda94ebb7733f18899d96fd3b679450",
+    "interoperability/stage4d/generate.mjs": "d805eb5682f530677f2788062f722860408a54ed48fe9309ea952cdefea3a313",
+    "interoperability/stage4d/run.py": "f009fd28c0516709f022b80d9a3bf9800b99857ca9c857c785780d97dbb7bcbf",
+    "interoperability/stage4d/test.mjs": "1432c14929b2b74ccf1f9430d10419dae0692c19c158382d1504dd776db77665",
+    "interoperability/stage4d/verify.mjs": "d9c308784d348efe4e87321827ec8bde73d4635d5923f7d4b7f77b1342bef4ca",
     "package.json": "3e9b51415972f0bcc21e1c4902b05aceca9cccee16d75ec442b57ed71868883e"
   }
 }

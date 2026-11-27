@@ -160,6 +160,29 @@ func (s *State) retain(scope, raw string, v, at, floor int64) bool {
 	return true
 }
 
+// retainStatus prevents in-flight work authenticated under a superseded trust
+// descriptor from poisoning the current status cache or its high-water mark.
+func (s *State) retainStatus(tk, tr, sk, raw string, v, at, floor int64) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.data[tk].Raw != tr {
+		return "TRUST_CHANGED"
+	}
+	old, ok := s.data[sk]
+	if v < floor || (ok && (v < old.Version || at < old.Iat || (v == old.Version && raw != old.Raw))) {
+		return "ROLLED_BACK"
+	}
+	s.data[sk] = entry{v, at, raw}
+	return "RETAINED"
+}
+
+// matches checks both authenticated snapshots at one decision linearization point.
+func (s *State) matches(tk, tr, sk, sr string) (bool, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.data[tk].Raw == tr, s.data[sk].Raw == sr
+}
+
 // Exact public schema, including required fields and types. No nulls or
 // case-insensitive aliases of security-critical fields are accepted.
 func shape(v any, t reflect.Type) bool {
@@ -373,25 +396,18 @@ func Verify(in Input, s *State) (Result, error) {
 	if s == nil || !number(p.Now) || p.Now == 0 || !number(max(p.MaxStatusAge)) || !number(max(p.MaxTrustAge)) || !number(p.MinTrustVersion) || !number(p.MinStatusVersion) || !uri(p.TrustURI) || p.Issuer == "" || (p.AuthorityMode != "ISSUANCE_TIME" && p.AuthorityMode != "CURRENT") || in.Anchor.Issuer == "" || in.Anchor.KID != in.Anchor.Key.KID || (in.Anchor.Synthetic && !p.AllowSynthetic) {
 		return r, errors.New("invalid trusted policy")
 	}
-	finish := func() (Result, error) {
-		r.Credential.Eligible = r.Material == "VALID" && r.Key == "AUTHENTICATED" && r.Credential.Crypto == "VALID" && r.Credential.Binding == "VALID" && r.Credential.Temporal == "VALID" && r.Credential.Authority == "AUTHORIZED" && r.Credential.Status == "GOOD"
-		if r.Credential.Eligible {
-			r.Overall = "ELIGIBLE_WITHOUT_HOLDER"
-		} else if r.Key == "INVALID" || r.Material == "INVALID" || r.Material == "ROLLED_BACK" || r.Credential.Crypto == "INVALID" || r.Credential.Binding == "INVALID" || r.Credential.Temporal == "INVALID" || r.Credential.Status == "INVALID" || r.Credential.Status == "REVOKED" || r.Credential.Authority == "UNAUTHORIZED" || r.Credential.Authority == "INVALID" {
-			r.Overall = "REJECTED"
-		}
-		r.Credential.Overall = "INDETERMINATE"
-		if r.Overall == "REJECTED" {
-			r.Credential.Overall = "REJECTED"
-		}
-		return r, nil
-	}
 	sc := scope(in)
+	var decisionTrust, decisionStatus, statusScope string
+	finish := func() (Result, error) {
+		return finalize(r, s, sc+"/trust", decisionTrust, statusScope, decisionStatus), nil
+	}
+
 	raw, availability := material(in.Trust, s, sc+"/trust")
 	if raw == "" {
 		r.Material = availability
 		return finish()
 	}
+	decisionTrust = raw
 	var m Manifest
 	if jwtPayload(raw, in.Anchor.Key, "cvera-trust-material+jwt", &m) != nil || !manifestOK(m, in) {
 		r.Material = "INVALID"
@@ -501,6 +517,8 @@ func Verify(in Input, s *State) (Result, error) {
 		r.Credential.Status = a
 		return finish()
 	}
+	decisionStatus = stRaw
+	statusScope = sc + "/status/" + m.Status.URI
 	var st StatusToken
 	if jwtPayload(stRaw, m.Status.JWK, "statuslist+jwt", &st) != nil || st.Issuer != m.Status.Issuer || st.Subject != ref.URI || st.Synthetic != in.Anchor.Synthetic || st.VCT != m.VCT || st.CredentialIssuer != m.CredentialIssuer || !times(st.Iat, st.Exp) || st.Iat > p.Now || st.TTL <= 0 || !number(st.TTL) || st.Version < 1 || !number(st.Version) || st.List.Bits != 1 {
 		r.Credential.Status = "INVALID"
@@ -523,10 +541,18 @@ func Verify(in Input, s *State) (Result, error) {
 		r.Credential.Status = "INVALID"
 		return finish()
 	}
-	if !s.retain(sc+"/status/"+m.Status.URI, stRaw, st.Version, st.Iat, p.MinStatusVersion) {
+	switch s.retainStatus(sc+"/trust", raw, sc+"/status/"+m.Status.URI, stRaw, st.Version, st.Iat, p.MinStatusVersion) {
+	case "TRUST_CHANGED":
+		r.Material = "ROLLED_BACK"
+		r.Credential.Authority = "UNKNOWN"
+		r.CurrentAuthority = "UNKNOWN"
+		r.IssuanceAuthority = "UNKNOWN"
+		return finish()
+	case "ROLLED_BACK":
 		r.Credential.Status = "INVALID"
 		return finish()
 	}
+
 	if *ref.Index >= int64(len(list))*8 {
 		r.Credential.Status = "UNKNOWN"
 		return finish()
@@ -540,4 +566,32 @@ func Verify(in Input, s *State) (Result, error) {
 		r.Credential.Status = "REVOKED"
 	}
 	return finish()
+}
+
+// finalize is the decision linearization boundary for both retained artifacts.
+func finalize(r Result, s *State, trustScope, trustRaw, statusScope, statusRaw string) Result {
+	r.Credential.Eligible = r.Material == "VALID" && r.Key == "AUTHENTICATED" && r.Credential.Crypto == "VALID" && r.Credential.Binding == "VALID" && r.Credential.Temporal == "VALID" && r.Credential.Authority == "AUTHORIZED" && r.Credential.Status == "GOOD"
+	if r.Credential.Eligible {
+		trustCurrent, statusCurrent := s.matches(trustScope, trustRaw, statusScope, statusRaw)
+		if !trustCurrent {
+			r.Material = "ROLLED_BACK"
+			r.Credential.Authority = "UNKNOWN"
+			r.CurrentAuthority = "UNKNOWN"
+			r.IssuanceAuthority = "UNKNOWN"
+		}
+		if !statusCurrent {
+			r.Credential.Status = "INVALID"
+		}
+		r.Credential.Eligible = trustCurrent && statusCurrent
+	}
+	if r.Credential.Eligible {
+		r.Overall = "ELIGIBLE_WITHOUT_HOLDER"
+	} else if r.Key == "INVALID" || r.Material == "INVALID" || r.Material == "ROLLED_BACK" || r.Credential.Crypto == "INVALID" || r.Credential.Binding == "INVALID" || r.Credential.Temporal == "INVALID" || r.Credential.Status == "INVALID" || r.Credential.Status == "REVOKED" || r.Credential.Authority == "UNAUTHORIZED" || r.Credential.Authority == "INVALID" {
+		r.Overall = "REJECTED"
+	}
+	r.Credential.Overall = "INDETERMINATE"
+	if r.Overall == "REJECTED" {
+		r.Credential.Overall = "REJECTED"
+	}
+	return r
 }
