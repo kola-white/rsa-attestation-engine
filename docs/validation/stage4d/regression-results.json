@@ -1,0 +1,54 @@
+{
+  "recordedAt": "2026-11-27T16:47:53.805857+00:00",
+  "baseline": "a60ae37328de635029227c6503f6cfdabb0fe570",
+  "scope": "local synthetic Stage4D; no production inspection/data/key operation, push, merge or deployment",
+  "goVersion": "1.26.10",
+  "GoTopLevelTestsPassed": 253,
+  "GoTestsIncludingSubtestsPassed": 556,
+  "failures": 0,
+  "skips": 0,
+  "database": "fresh local PostgreSQL16, loopback-only port, isolated tmpfs; stopped after validation",
+  "race": "PASS; concurrent version retention cannot replace known newer revocation with older GOOD material; Stage4C replay regression retained",
+  "goVet": "PASS",
+  "apiBuild": "PASS; pinned toolchain, trimpath",
+  "node20": {
+    "version": "20.20.2",
+    "clientTestsPassed": 48,
+    "UITestsPassed": 4,
+    "ExpoDiagnostics": 0,
+    "dependencies": "Unchanged root/Expo locks matched to isolated Linux dependency snapshot"
+  },
+  "stage4b": {
+    "vectors": 39,
+    "evaluations": 84,
+    "result": "PASS"
+  },
+  "stage4c": {
+    "scenarios": 75,
+    "evaluations": 156,
+    "result": "PASS"
+  },
+  "stage4d": {
+    "scenarios": 97,
+    "matchingEvaluations": 218,
+    "distributionChecks": 14,
+    "intendedIssuanceCalls": 1,
+    "sameCredentialAcrossStatusTransitions": true
+  },
+  "newProductDependencies": false,
+  "validationTool": "Mermaid CLI12.2.0 installed only in isolated temporary tool directory, existing Chrome; rendered and visually inspected",
+  "remoteCI": "NOT RUN; no push authorized",
+  "recoveredLocalEnvironmentIssues": [
+    "Sandbox blocked native loopback listener; reran with authorized local escalation",
+    "Read-only generator needed a private tmpfs for local publication rehearsal; root remains read-only and networking disabled",
+    "Previous Mermaid cache contained a dangling CLI symlink; installed an isolated pinned validation tool"
+  ],
+  "logSHA256": {
+    "cvera-stage4d-go-regression.jsonl": "f80836c08a4d328e9f8537b192b1f40c9eeb24524ee2c1dbaaa38ffd1afa9b83",
+    "cvera-stage4d-node20-regression.log": "3e71a892be269c09f48bd11acc063b0ee7d50165c64dea095fc2a24552e546ce",
+    "cvera-stage4d-race-final.log": "2478911053bcfd32f93a20358e717c1e2a053891c23f4b6b6eb40857f650e117",
+    "cvera-stage4d-race-assertions.log": "89b1705980b1d2e366ec1c72b155d4841dd0a83d1b6b20cde33af54d2c127bff",
+    "cvera-stage4d-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "apiBuildSHA256": "57f8e5334d09704b662bb1c1fa5bb768ea365e867dab545d56ee37e73f6df34a"
+}

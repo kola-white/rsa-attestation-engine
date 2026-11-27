@@ -1,0 +1,566 @@
+{
+  "contract": "cvera.stage4d.portable-trust.v1",
+  "synthetic": true,
+  "node": "v20.20.2",
+  "issuanceCalls": 1,
+  "unchangedCredential": true,
+  "distributionChecks": 14,
+  "distributionResults": [
+    {
+      "name": "publish-and-receive-good",
+      "result": "PASS"
+    },
+    {
+      "name": "publish-revocation-without-reissuance",
+      "result": "PASS"
+    },
+    {
+      "name": "reject-publication-rollback",
+      "result": "PASS"
+    },
+    {
+      "name": "bulk-http-no-index-cookie-or-auth",
+      "result": "PASS"
+    },
+    {
+      "name": "retrieval-failure-fresh-cache",
+      "result": "PASS"
+    },
+    {
+      "name": "idempotent-exact-publication",
+      "result": "PASS"
+    },
+    {
+      "name": "renew-expired-publication",
+      "result": "PASS"
+    },
+    {
+      "name": "unsafe-urls-not-fetched",
+      "result": "PASS"
+    },
+    {
+      "name": "invalid-media-type-rejected",
+      "result": "PASS"
+    },
+    {
+      "name": "prohibited-private-fields-rejected",
+      "result": "PASS"
+    },
+    {
+      "name": "missing-publication-time-rejected",
+      "result": "PASS"
+    },
+    {
+      "name": "ambiguous-commit-read-only-reconciliation",
+      "result": "PASS"
+    },
+    {
+      "name": "pointer-traversal-rejected",
+      "result": "PASS"
+    },
+    {
+      "name": "missing-referenced-file-blocks-history-reset",
+      "result": "PASS"
+    }
+  ],
+  "evaluations": 218,
+  "cases": [
+    {
+      "name": "authentic-portable-trust",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "unknown-key",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "wrong-issuer",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "wrong-profile",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "wrong-type-data",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "malformed-JWK",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "future-trust",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "prohibited-reviewer-data",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "substituted-trust-uri",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "private-evidence-field",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "key-invalid-at-issuance",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "stale-trust-keeps-crypto",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "unauthorized-authority",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "unknown-authority",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "out-of-employer-scope",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "out-of-claim-scope",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "out-of-policy-scope",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "outside-grant-time",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "missing-authority",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "overlapping-authority",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "historical-versus-current-authority",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "current-authority-policy-preserved",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "missing-trust",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "missing-status",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "unavailable-trust",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "unavailable-status",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "tampered-trust",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "tampered-status",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "unknown-anchor",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "synthetic-root-not-production",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "synthetic-marker-substitution",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "status-age-0",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "status-age-899",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "status-age-900",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "status-age-901",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "status-age-5000",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "status-age--1",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "cross-issuer-status",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "cross-profile-status",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "cross-credential-list",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "invalid-compression",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "unsupported-status-bits",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "prohibited-credential-enumeration",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "malformed-status-version",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "future-status",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "untrusted-policy-field",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "expired-status",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "signed-ttl-expires-cache",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "ttl-cannot-override-policy",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "configured-freshness-300",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "configured-freshness-301",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "missing-status-reference",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "missing-status-entry",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "wrong-status-reference",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "credential-reference-tamper",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "good-to-revoked-without-reissuance",
+      "result": "PASS",
+      "evaluations": 4
+    },
+    {
+      "name": "known-status-rollback",
+      "result": "PASS",
+      "evaluations": 4
+    },
+    {
+      "name": "known-trust-rollback",
+      "result": "PASS",
+      "evaluations": 4
+    },
+    {
+      "name": "first-contact-independent-version-floor",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "status-version-floor",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "fresh-cache-with-private-services-unavailable",
+      "result": "PASS",
+      "evaluations": 4
+    },
+    {
+      "name": "cache-age-900",
+      "result": "PASS",
+      "evaluations": 4
+    },
+    {
+      "name": "cache-age-901",
+      "result": "PASS",
+      "evaluations": 4
+    },
+    {
+      "name": "same-version-equivocation",
+      "result": "PASS",
+      "evaluations": 6
+    },
+    {
+      "name": "invalid-update-does-not-poison-cache",
+      "result": "PASS",
+      "evaluations": 6
+    },
+    {
+      "name": "unsupported-algorithm",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "cross-token-type",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "critical-null",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "portable-presentation-0",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "portable-presentation-1",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "portable-presentation-replay",
+      "result": "PASS",
+      "evaluations": 4
+    },
+    {
+      "name": "portable-denied-holder-consent",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "portable-unauthorized-verifier",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "portable-unknown-verifier",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "revoked-cannot-present",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "portable-missing-holder-proof",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "null-authority-field",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "wrong-authority-field-type",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "unknown-status-purpose",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "noncanonical-public-key",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "retired-key-remains-verifiable",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "additional-public-key",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "trailing-compressed-data",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "noncanonical-list-encoding",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "small-privacy-cohort",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "oversized-expanded-list",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "draft21-golden-bit-0",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "draft21-golden-bit-1",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "draft21-golden-bit-7",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "draft21-golden-bit-8",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "draft21-golden-bit-15",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "malformed-reference-\"malformed\"",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "malformed-reference-[]",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "malformed-reference-{\"status_list\":false}",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "signed-timestamp-rollback",
+      "result": "PASS",
+      "evaluations": 4
+    },
+    {
+      "name": "first-contact-freshness-not-absolute-rollback",
+      "result": "PASS",
+      "evaluations": 2
+    },
+    {
+      "name": "presentation-credential-context-substitution",
+      "result": "PASS",
+      "evaluations": 2
+    }
+  ],
+  "joseVersion": "6.2.3",
+  "isolation": {
+    "network": "none",
+    "readOnlyRoot": true,
+    "user": "65534:65534",
+    "mounts": "one read-only public fixture/runner directory; no repository, database, sockets or private keys",
+    "nodeImageId": "sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5",
+    "registryDigests": [
+      "node@sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5"
+    ],
+    "architecture": "arm64"
+  }
+}

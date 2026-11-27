@@ -80,6 +80,16 @@ jobs:
           path: .ci-evidence/stage4c-interoperability.json
           if-no-files-found: error
 
+      - name: Verify portable trust and status on isolated Node 20
+        run: python3 interoperability/stage4d/run.py --isolated --output .ci-evidence/stage4d-interoperability.json
+
+      - name: Preserve portable trust evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage4d-trust-${{ github.sha }}
+          path: .ci-evidence/stage4d-interoperability.json
+          if-no-files-found: error
+
       - name: Verify bounded issuance release and acceptance tooling
         shell: bash
         env:

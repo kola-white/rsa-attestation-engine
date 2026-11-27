@@ -139,14 +139,23 @@ func str(m map[string]any, k string) string { s, _ := m[k].(string); return s }
 var uuidRE = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 var hashRE = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
-func Verify(in Input) (Result, error) {
+func Verify(in Input) (Result, error) { return verify(in, true) }
+
+// VerifyCredential reuses the existing profile and claim checks, without the
+// Stage4B synthetic authority/status assertions. Resolved trust is caller policy,
+// never learned from a credential. No authority or status success is returned.
+func VerifyCredential(in Input) (Result, error) { return verify(in, false) }
+func verify(in Input, fixtures bool) (Result, error) {
 	r := Result{Contract: Contract, Synthetic: true, Crypto: "UNKNOWN", Binding: "UNKNOWN", Temporal: "UNKNOWN", Authority: "UNKNOWN", Status: "UNKNOWN", Holder: "UNKNOWN", Overall: "INDETERMINATE"}
 	maxAge := int64(900)
 	if in.Policy.MaxStatusAge != nil {
 		maxAge = *in.Policy.MaxStatusAge
 	}
-	if in.Policy.Now <= 0 || in.Policy.Now > 9007199254740991 || maxAge < 0 || maxAge > 9007199254740991 || !in.Trust.Synthetic {
+	if in.Policy.Now <= 0 || in.Policy.Now > 9007199254740991 || maxAge < 0 || maxAge > 9007199254740991 || (fixtures && !in.Trust.Synthetic) {
 		return r, errors.New("invalid verifier policy or non-synthetic trust")
+	}
+	if !fixtures {
+		r.Synthetic = in.Trust.Synthetic
 	}
 	if in.Holder == "UNSUPPORTED" {
 		r.Holder = "UNSUPPORTED"
@@ -230,6 +239,9 @@ func Verify(in Input) (Result, error) {
 	r.Temporal = "INVALID"
 	if iok && nok && eok && iat == nbf && exp > iat && in.Policy.Now >= nbf && in.Policy.Now < exp {
 		r.Temporal = "VALID"
+	}
+	if !fixtures {
+		return finish()
 	}
 	digest := ec.Digest([]byte(raw))
 	if in.Authority != "" {

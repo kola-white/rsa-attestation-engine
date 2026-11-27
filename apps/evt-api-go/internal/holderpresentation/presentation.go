@@ -229,10 +229,14 @@ func authenticate(in Input) (jwt.MapClaims, Verifier, string) {
 	return m, v, "AUTHENTICATED"
 }
 
+// CredentialEvaluator is trusted integration code, never a serialized trust hint.
+type CredentialEvaluator func(b.Input) (b.Result, error)
+
 // EvaluateHolder is an independent holder-side decision. Consent is a trusted
 // local UI decision, not a transferable proof of human consent to a verifier.
-func EvaluateHolder(in Input) Result {
-	r, m, v := initial(in)
+func EvaluateHolder(in Input) Result { return EvaluateHolderWithEvaluator(in, b.Verify) }
+func EvaluateHolderWithEvaluator(in Input, evaluate CredentialEvaluator) Result {
+	r, m, v := initial(in, evaluate)
 	if r.Authentication != "AUTHENTICATED" {
 		return r
 	}
@@ -255,8 +259,11 @@ func EvaluateHolder(in Input) Result {
 	}
 	return r
 }
-func initial(in Input) (Result, jwt.MapClaims, Verifier) {
-	br, e := b.Verify(in.Base)
+func initial(in Input, evaluate CredentialEvaluator) (Result, jwt.MapClaims, Verifier) {
+	if evaluate == nil {
+		evaluate = func(b.Input) (b.Result, error) { return b.Result{}, errors.New("missing trusted evaluator") }
+	}
+	br, e := evaluate(in.Base)
 	r := Result{Contract: Contract, Base: br, Authentication: "UNKNOWN", Authorization: "UNKNOWN", Consent: "UNKNOWN", Possession: "UNKNOWN", Transaction: "UNKNOWN", Overall: "DENIED"}
 	if e != nil {
 		return r, nil, Verifier{}
@@ -283,7 +290,10 @@ func holderKey(raw string) (*rsa.PublicKey, error) {
 // Present returns no protected bytes unless all holder-side gates pass. The
 // credential signature is verified by the reused Stage4B profile before cnf use.
 func Present(in Input, k *rsa.PrivateKey) (string, Result, error) {
-	r := EvaluateHolder(in)
+	return PresentWithEvaluator(in, k, b.Verify)
+}
+func PresentWithEvaluator(in Input, k *rsa.PrivateKey, evaluate CredentialEvaluator) (string, Result, error) {
+	r := EvaluateHolderWithEvaluator(in, evaluate)
 	if r.Overall != "AUTHORIZED_TO_PRESENT" {
 		return "", r, errors.New("disclosure denied")
 	}
@@ -304,8 +314,9 @@ func Present(in Input, k *rsa.PrivateKey) (string, Result, error) {
 
 // Verify requires verifier-owned original request and transaction inputs. No
 // assertion sent by a holder can register a transaction or grant authorization.
-func Verify(in Input, s *Store) Result {
-	r, m, v := initial(in)
+func Verify(in Input, s *Store) Result { return VerifyWithEvaluator(in, s, b.Verify) }
+func VerifyWithEvaluator(in Input, s *Store, evaluate CredentialEvaluator) Result {
+	r, m, v := initial(in, evaluate)
 	r.Consent = "NOT_OBSERVABLE"
 	if r.Authentication != "AUTHENTICATED" {
 		return r
