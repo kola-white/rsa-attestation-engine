@@ -152,10 +152,10 @@ async function authenticate(inpt) {
     return [null, null, "INVALID"];
   }
 }
-async function initial(i) {
+async function initial(i, evaluate) {
   let br;
   try {
-    br = await baseVerify(i.base);
+    br = await evaluate(i.base);
   } catch {
     return [
       {
@@ -197,8 +197,8 @@ async function initial(i) {
   r.verifierAuthentication = a;
   return [r, m, v];
 }
-export async function authorize(i) {
-  const [r, m, v] = await initial(i);
+export async function authorize(i, evaluate = baseVerify) {
+  const [r, m, v] = await initial(i, evaluate);
   if (r.verifierAuthentication !== "AUTHENTICATED") return r;
   if (
     v.allow !== true ||
@@ -234,8 +234,8 @@ function holderKey(cred) {
 }
 // Returns no protected bytes on denial; consent is trusted local state, not
 // an unsigned assertion forwarded by a verifier or an attacker.
-export async function present(i, privateKey) {
-  const r = await authorize(i);
+export async function present(i, privateKey, evaluate = baseVerify) {
+  const r = await authorize(i, evaluate);
   if (r.overall !== "AUTHORIZED_TO_PRESENT") throw Error("disclosure denied");
   const jwk = holderKey(i.base.credential),
     actual = createPublicKey(privateKey).export({ format: "jwk" });
@@ -250,6 +250,9 @@ export async function present(i, privateKey) {
   })
     .setProtectedHeader({ alg: "RS256", typ: "kb+jwt" })
     .sign(privateKey);
+  const current = await evaluate(i.base);
+  if (!current.eligibleWithoutHolder)
+    throw Error("credential trust changed before release");
   return i.base.credential + kb;
 }
 // Synchronous check-and-mark occurs after all async validation; Promise.all
@@ -262,8 +265,8 @@ export class Store {
     return true;
   }
 }
-export async function verify(i, store) {
-  const [r, m, v] = await initial(i);
+export async function verify(i, store, evaluate = baseVerify) {
+  const [r, m, v] = await initial(i, evaluate);
   r.holderAuthorization = "NOT_OBSERVABLE";
   if (r.verifierAuthentication !== "AUTHENTICATED") return r;
   if (
@@ -323,6 +326,11 @@ export async function verify(i, store) {
       !store
     )
       return r;
+    r.credential = await evaluate(i.base);
+    if (!r.credential.eligibleWithoutHolder) {
+      r.transactionBinding = "UNKNOWN";
+      return r;
+    }
     if (!store.consume(t.verifier + "/" + t.nonce)) {
       r.transactionBinding = "REPLAYED";
       return r;

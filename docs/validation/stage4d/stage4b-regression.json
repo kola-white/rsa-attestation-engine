@@ -1,0 +1,27 @@
+{
+  "contract": "cvera.stage4b.portable-verification.v1",
+  "passed": true,
+  "node": "v20.20.2",
+  "vectorCount": 39,
+  "verifierProcesses": 2,
+  "evaluations": 84,
+  "invalidPolicyProbes": 8,
+  "issuanceCalls": 1,
+  "credentialSha256": "e5999db8218afb0139a0bd2449ab266808989a7dff63b23425a4cae0ce917c0f",
+  "unchangedCredentialRepetitionsPerVerifier": 3,
+  "privateKeysAvailable": false,
+  "authority": "SYNTHETIC ONLY; no real-world mandate",
+  "holderProof": "NOT IMPLEMENTED; overall never VERIFIED",
+  "joseVersion": "6.2.3",
+  "isolation": {
+    "network": "none",
+    "readOnlyRoot": true,
+    "user": "65534:65534",
+    "mounts": "one read-only public fixture/runner directory; no repository, database, sockets or private keys",
+    "nodeImageId": "sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5",
+    "registryDigests": [
+      "node@sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5"
+    ],
+    "architecture": "arm64"
+  }
+}

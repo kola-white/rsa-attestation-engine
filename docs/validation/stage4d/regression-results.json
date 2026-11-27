@@ -1,0 +1,64 @@
+{
+  "recordedAt": "2026-11-27T17:25:13.230996+00:00",
+  "baseline": "a60ae37328de635029227c6503f6cfdabb0fe570",
+  "scope": "local final review validation before authorized integration; subsequent remote/release evidence is published on the integration PR",
+  "goVersion": "1.26.10",
+  "GoTopLevelTestsPassed": 254,
+  "GoTestsIncludingSubtestsPassed": 559,
+  "failures": 0,
+  "skips": 0,
+  "database": "fresh local PostgreSQL16, loopback-only port, isolated tmpfs; stopped after validation",
+  "race": "PASS; concurrent version retention cannot replace known newer revocation with older GOOD material; Stage4C replay regression retained",
+  "goVet": "PASS",
+  "apiBuild": "PASS; pinned toolchain, trimpath",
+  "node20": {
+    "version": "20.20.2",
+    "clientTestsPassed": 48,
+    "UITestsPassed": 4,
+    "ExpoDiagnostics": 0,
+    "dependencies": "Unchanged root/Expo locks matched to isolated Linux dependency snapshot"
+  },
+  "stage4b": {
+    "vectors": 39,
+    "evaluations": 84,
+    "result": "PASS"
+  },
+  "stage4c": {
+    "scenarios": 75,
+    "evaluations": 156,
+    "result": "PASS"
+  },
+  "stage4d": {
+    "scenarios": 98,
+    "matchingEvaluations": 220,
+    "distributionChecks": 16,
+    "intendedIssuanceCalls": 1,
+    "sameCredentialAcrossStatusTransitions": true
+  },
+  "newProductDependencies": false,
+  "validationTool": "Mermaid CLI12.2.0 installed only in isolated temporary tool directory, existing Chrome; rendered and visually inspected",
+  "remoteCI": "Pending at local validation; later results recorded in integration PR closure",
+  "recoveredLocalEnvironmentIssues": [
+    "Sandbox blocked native loopback listener; reran with authorized local escalation",
+    "Read-only generator needed a private tmpfs for local publication rehearsal; root remains read-only and networking disabled",
+    "Previous Mermaid cache contained a dangling CLI symlink; installed an isolated pinned validation tool"
+  ],
+  "logSHA256": {
+    "cvera-stage4d-go-regression.jsonl": "35d0ddc04a33f500542defb1606c0773135e50893e45e1426a65dd43ecc1bc52",
+    "cvera-stage4d-node20-regression.log": "ae2d673308e0dbf1b876770a62710b2723298d8c2f599085dbd7457f80952e67",
+    "cvera-stage4d-race-final.log": "984493fbb5f411b8aeec01faebd53b7d76d898df092b3b625c30f76c4adc3715",
+    "cvera-stage4d-race-assertions.log": "89b1705980b1d2e366ec1c72b155d4841dd0a83d1b6b20cde33af54d2c127bff",
+    "cvera-stage4d-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "apiBuildSHA256": "b1de1d9544d408d914df834148d0c7c080ea4558c2011dfe0c5f6f24845589a8",
+  "integrationReview": {
+    "findingsResolved": [
+      "Atomic final trust/status snapshot recheck prevents an in-flight superseded positive outcome",
+      "Status retention atomically checks the applicable trust descriptor, preventing superseded work from poisoning newer status state",
+      "Stage4C trusted evaluator rechecks before disclosure and nonce consumption; denial releases no presentation and preserves nonce",
+      "Successful HTTP responses with absent bodies classified INVALID; exclusive concurrent publication validated"
+    ],
+    "concurrentSnapshotCheck": "PASS",
+    "tests": "Actual finalization and superseded retention tests; no-disclosure/no-nonce-burn tests; independent shared revocation-during-presentation scenario; race tests"
+  }
+}

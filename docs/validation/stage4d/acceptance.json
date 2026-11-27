@@ -1,0 +1,142 @@
+{
+  "scope": "Stage4D local implementation acceptance, controlled synthetic validation of production-intended portable artifact capabilities; not integration closure or genuine production activation",
+  "criteria": [
+    {
+      "id": "AC-01",
+      "result": "PASS",
+      "criterion": "Existing Stage4B/4C behavior preserved",
+      "evidence": "stage4b-regression.json:39/84; stage4c-regression.json:75/156; unchanged default entry points and production profile/HTTP code"
+    },
+    {
+      "id": "AC-02",
+      "result": "PASS",
+      "criterion": "Normative requirements traceable",
+      "evidence": "../../architecture/stage4d-portable-trust-status.md: pinned draft18/draft21 and JOSE/RFC8725/OpenID/VC mapping, bounded-conformance statement"
+    },
+    {
+      "id": "AC-03",
+      "result": "PASS",
+      "criterion": "Portable material authenticated",
+      "evidence": "authentic-portable-trust; unknown-anchor,tampered-trust,unsupported-algorithm and cross-token-type negative cases"
+    },
+    {
+      "id": "AC-04",
+      "result": "PASS",
+      "criterion": "Public key issuer/profile binding",
+      "evidence": "authentic-portable-trust; unknown-key,wrong-issuer,wrong-profile,key-invalid-at-issuance,retired-key-remains-verifiable,additional-public-key"
+    },
+    {
+      "id": "AC-05",
+      "result": "PASS",
+      "criterion": "Portable issuer authority evaluation",
+      "evidence": "current and issuanceAuthority dimensions; historical-versus-current-authority and current-authority-policy-preserved"
+    },
+    {
+      "id": "AC-06",
+      "result": "PASS",
+      "criterion": "Unknown/unauthorized/out-of-scope authority rejected",
+      "evidence": "missing-authority,unknown-authority,unauthorized-authority,out-of-employer/claim/policy-scope,outside-grant-time,overlapping-authority"
+    },
+    {
+      "id": "AC-07",
+      "result": "PASS",
+      "criterion": "Compatible standard status mechanism",
+      "evidence": "draft21 golden bit vectors and JWT type/URI/index/ZLIB tests; ADR011 rationale for draft18 compatibility"
+    },
+    {
+      "id": "AC-08",
+      "result": "PASS",
+      "criterion": "Good-standing status independently validated",
+      "evidence": "authentic-portable-trust,status-age-0/899/900,configured-freshness-300; public acquisition/receive checks"
+    },
+    {
+      "id": "AC-09",
+      "result": "PASS",
+      "criterion": "Revocation without reissuance",
+      "evidence": "good-to-revoked-without-reissuance; immutable byte equality and issuanceCalls=1; publish-revocation-without-reissuance"
+    },
+    {
+      "id": "AC-10",
+      "result": "PASS",
+      "criterion": "Missing/unavailable/invalid/stale explicit",
+      "evidence": "missing/unavailable-trust/status,expired-status,missing-status-entry,invalid-compression,stale-trust-keeps-crypto"
+    },
+    {
+      "id": "AC-11",
+      "result": "PASS",
+      "criterion": "Default900 inclusive freshness",
+      "evidence": "status-age-899/900/901/5000/-1 plus cache-age-900/901,expired-status,signed-ttl-expires-cache"
+    },
+    {
+      "id": "AC-12",
+      "result": "PASS",
+      "criterion": "Trusted configurable freshness",
+      "evidence": "configured-freshness-300/301,ttl-cannot-override-policy,untrusted-policy-field; policy read only from trusted caller"
+    },
+    {
+      "id": "AC-13",
+      "result": "PASS",
+      "criterion": "Versioning and retained-state rollback controls",
+      "evidence": "known-trust/status-rollback,same-version-equivocation,signed-timestamp-rollback,first-contact-independent-version-floor,status-version-floor; Go concurrency race test"
+    },
+    {
+      "id": "AC-14",
+      "result": "PASS",
+      "criterion": "Tampering/malformed/substitution rejected",
+      "evidence": "tampered material,wrong issuer/profile/reference,malformed references/JWK/null fields/encoding/compression bounds,cross-token-type and presentation context substitution"
+    },
+    {
+      "id": "AC-15",
+      "result": "PASS",
+      "criterion": "Independent verification without private infrastructure",
+      "evidence": "isolated-interoperability.json: network none, read-only public mount, separate keyless verifier; fresh-cache-with-private-services-unavailable and distribution outage checks"
+    },
+    {
+      "id": "AC-16",
+      "result": "PASS",
+      "criterion": "Unresolved trust cannot succeed",
+      "evidence": "missing/unavailable trust/status/authority,unknown-anchor,expired cache and revoked-cannot-present; standalone never VERIFIED"
+    },
+    {
+      "id": "AC-17",
+      "result": "PASS",
+      "criterion": "Independent Go/JS matching outcomes",
+      "evidence": "98 scenarios /220 matching evaluations; isolated Node20.20.2 and native run; per-language JOSE/jwt validation and independent stores"
+    },
+    {
+      "id": "AC-18",
+      "result": "PASS",
+      "criterion": "Privacy and synthetic isolation",
+      "evidence": "public schema whitelist,prohibited reviewer/evidence/credential enumeration fields; bulk HTTP no index/cookie/auth; synthetic-root-not-production and synthetic-marker-substitution"
+    },
+    {
+      "id": "AC-19",
+      "result": "PASS",
+      "criterion": "Docs and reproducible evidence committed",
+      "evidence": "Architecture guide,ADR011,one rendered/visually inspected Mermaid diagram,validation artifacts and reproducible generators/runners"
+    },
+    {
+      "id": "AC-20",
+      "result": "PASS",
+      "criterion": "Relevant regressions/build/integrity",
+      "evidence": "regression-results.json: final full Go/PostgreSQL suite, race, vet, API build, Node20 48+4, zero Expo diagnostics; final quality-results.json"
+    },
+    {
+      "id": "AC-21",
+      "result": "PASS",
+      "criterion": "Scope and limitations explicit",
+      "evidence": "No production or genuine signing operations; no push/merge; source/lifecycle/production onboarding/durable state/custody prerequisites documented; Stage4E not commenced"
+    }
+  ],
+  "passed": 21,
+  "failed": 0,
+  "blocked": 0,
+  "limitations": [
+    "Pinned SD-JWT VC18/OAuth status-list21 subset; status-list21 remains Internet-Draft, not final RFC",
+    "Retained anti-rollback state is process-local; first contact/restart needs independently retained floors for stronger protection",
+    "Authenticated current status is not proof of lifetime truthful/irreversible lifecycle history; genuine source/index/reinstatement governance remains Stage4F",
+    "Genuine publisher authorization, public-scope consent, source adapters, index allocation/uniqueness, custody, refresh availability and durable verifier state required before real use",
+    "Stage4C synthetic presentation adapter and existing holder/replay/consent limitations retained",
+    "Local implementation evidence predates integration; no genuine production activation, data/key operations or Stage4E work"
+  ]
+}

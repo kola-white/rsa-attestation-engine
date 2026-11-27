@@ -47,13 +47,24 @@ async function assertion(raw, pem, iss, kid, typ) {
   return m;
 }
 export async function verify(input) {
+  return evaluate(input, true);
+}
+export async function verifyCredential(input) {
+  return evaluate(input, false);
+}
+async function evaluate(input, fixtures) {
   const { credential: raw, trust: t, policy: p } = input;
   const max = p?.maxStatusAgeSeconds ?? 900;
-  if (!int(p?.now) || p.now === 0 || !int(max) || t?.synthetic !== true)
+  if (
+    !int(p?.now) ||
+    p.now === 0 ||
+    !int(max) ||
+    (fixtures && t?.synthetic !== true)
+  )
     throw Error("invalid verifier policy or non-synthetic trust");
   const r = {
     contract: "cvera.stage4b.portable-verification.v1",
-    synthetic: true,
+    synthetic: fixtures ? true : t?.synthetic === true,
     cryptographicIntegrity: "UNKNOWN",
     claimBinding: "UNKNOWN",
     temporalValidity: "UNKNOWN",
@@ -165,6 +176,7 @@ export async function verify(input) {
     p.now < m.exp
       ? "VALID"
       : "INVALID";
+  if (!fixtures) return finish();
   const dh = hash(raw);
   if (input.authorityJws) {
     try {
