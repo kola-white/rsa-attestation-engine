@@ -70,6 +70,16 @@ jobs:
           docker pull node:20
           python3 interoperability/stage4b/run.py --isolated --output .ci-evidence/stage4b-interoperability.json
 
+      - name: Verify holder-bound reciprocal interoperability on isolated Node 20
+        run: python3 interoperability/stage4c/run.py --isolated --output .ci-evidence/stage4c-interoperability.json
+
+      - name: Preserve reciprocal presentation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage4c-presentation-${{ github.sha }}
+          path: .ci-evidence/stage4c-interoperability.json
+          if-no-files-found: error
+
       - name: Verify bounded issuance release and acceptance tooling
         shell: bash
         env:

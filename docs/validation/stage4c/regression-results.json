@@ -1,0 +1,56 @@
+{
+  "recordedAt": "2026-11-26T23:35:33.257048+00:00",
+  "baseline": "fd1bbfcd7150a9c39a0a334817f153e4f0e73fc4",
+  "scope": "local synthetic Stage4C implementation; no production access, push, merge or deployment",
+  "goVersion": "1.26.10",
+  "goTopLevelTestsPassed": 250,
+  "goTestsIncludingSubtestsPassed": 547,
+  "goFailures": 0,
+  "goSkipped": 0,
+  "database": "fresh disposable PostgreSQL16, loopback-only port and private tmpfs; no shared production volumes",
+  "raceTests": "PASS; 32 concurrent duplicate submissions, exactly one acceptance",
+  "goVet": "PASS",
+  "apiBuild": "PASS; go build -trimpath, CI-pinned toolchain",
+  "node20": {
+    "version": "20.20.2",
+    "clientTestsPassed": 48,
+    "uiTestsPassed": 4,
+    "ExpoTypeScriptDiagnostics": 0,
+    "dependencyLocks": "unchanged; Linux dependencies matched to repository lockfiles"
+  },
+  "stage4b": {
+    "vectors": 39,
+    "evaluations": 84,
+    "pass": true,
+    "legacyDiagnostic": "unchanged"
+  },
+  "stage4c": {
+    "scenarios": 75,
+    "evaluations": 156,
+    "issuances": 1,
+    "issuerNegativeChecks": 6,
+    "holderSigningDenialChecks": 23,
+    "sameCredentialReused": true
+  },
+  "newDependencies": false,
+  "productionBehaviorFilesChanged": false,
+  "remoteCI": "NOT RUN; push not authorized",
+  "recoveredLocalEnvironmentIssues": [
+    "Sandbox Go cache access denied; retried with authorized local escalation",
+    "Initial read-only Node20 mount failed before tests; created mount points in disposable local source copy, then reran successfully"
+  ],
+  "logSha256": {
+    "cvera-stage4c-go-regression.jsonl": "f4f7b8e19918e9229b882c0b59e40dc27d6464e65930efcfa09344fd4c190054",
+    "cvera-stage4c-node20-regression.log": "a9d68d8eeae969a0b19a1da6821d2f8fe0fc7bf1ed6719c82e69c22dd948873d",
+    "cvera-stage4c-race.log": "0d45e83f0a5dcacefd997492a7532a5f9fb6494759f314b0e0242e01ff4a2c78",
+    "cvera-stage4c-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "apiBinarySha256": "98774cb5bc0f24a89ea83c6752d6855b964ec5f54b7b5fdf203fe0bbd6e4fbf4",
+  "integrationReview": {
+    "remediation": "Reject leading text before pinned verifier PEM; reject nil RSA modulus without panic",
+    "targetedRaceTest": "PASS",
+    "vet": "PASS",
+    "interoperability": "75 scenarios,156 matching evaluations on isolated Node20 and native Node",
+    "fullGoResults": "Existing recorded 547-test baseline retained; final remote CI reruns all tests including additions"
+  }
+}

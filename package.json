@@ -16,7 +16,8 @@
     "verify": "node dist/pkg/verification/run-verify.js",
     "test:ci": "npm run validate:evt:schema && npm run validate:evt:vectors:valid && npm run validate:evt:vectors:invalid && npm run test:evidence-client",
     "test:evidence-client": "tsx --test tests/evidence-upload-lifecycle.test.ts tests/evidence-review-client.test.ts tests/request-employment-claim.test.ts tests/employer-review.test.ts tests/requestor-review-outcomes.test.ts",
-    "test:portable": "python3 interoperability/stage4b/run.py"
+    "test:portable": "python3 interoperability/stage4b/run.py",
+    "test:presentation": "python3 interoperability/stage4c/run.py"
   },
   "keywords": [],
   "author": "Nicholas Whitehouse",

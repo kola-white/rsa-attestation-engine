@@ -1,0 +1,141 @@
+{
+  "scope": "Stage4C local synthetic implementation; NOT integration closure or production readiness",
+  "criteria": [
+    {
+      "id": "AC-01",
+      "result": "PASS",
+      "criterion": "Stage4B behavior preserved",
+      "evidence": "stage4b-regression.json:39 vectors/84 evaluations; production profile files unchanged"
+    },
+    {
+      "id": "AC-02",
+      "result": "PASS",
+      "criterion": "Normative traceability",
+      "evidence": "../../architecture/stage4c-holder-bound-presentation.md: normative mapping and bounded-conformance statements"
+    },
+    {
+      "id": "AC-03",
+      "result": "PASS",
+      "criterion": "Issuer-protected holder key and possession before issuance",
+      "evidence": "IssueBound/issueBound; issuance replay/wrong key/expired/missing proof tests; signer callback denial and failure tests"
+    },
+    {
+      "id": "AC-04",
+      "result": "PASS",
+      "criterion": "Valid presentation independently verified",
+      "evidence": "isolated-interoperability.json:verifier-a and verifier-b; go-test-results.json:valid-go-presentation"
+    },
+    {
+      "id": "AC-05",
+      "result": "PASS",
+      "criterion": "Copied credential and absent/wrong proof denied",
+      "evidence": "isolated-interoperability.json:copied-credential,missing-proof,incorrect-holder-key,legacy-unbound-no-assurance"
+    },
+    {
+      "id": "AC-06",
+      "result": "PASS",
+      "criterion": "Verifier request authenticated against pinned trust",
+      "evidence": "verifier-a/b and holder-authorized; pinned pre-registered identity/key/URI verification in both libraries"
+    },
+    {
+      "id": "AC-07",
+      "result": "PASS",
+      "criterion": "Unknown/impersonated/invalid verifier denied disclosure",
+      "evidence": "unknown-verifier,verifier-key-mismatch,unsigned-request,holder-gate-unknown-verifier and holder-gate-verifier-key-mismatch"
+    },
+    {
+      "id": "AC-08",
+      "result": "PASS",
+      "criterion": "Authenticated but unauthorized verifier denied",
+      "evidence": "unauthorized-verifier and holder-gate-unauthorized-verifier:AUTHENTICATED with disclosureAuthorization DENIED"
+    },
+    {
+      "id": "AC-09",
+      "result": "PASS",
+      "criterion": "Holder consent and policy enforced",
+      "evidence": "missing/denied/expired/wrong-consent cases,excessive-disclosure,holder signing denial checks=23; Present emits no bytes on error"
+    },
+    {
+      "id": "AC-10",
+      "result": "PASS",
+      "criterion": "Audience/challenge/time/credential binding validated",
+      "evidence": "missing/wrong-audience/nonce,expired/future-proof,wrong-sd-hash,kb optional temporal claims,transaction substitution"
+    },
+    {
+      "id": "AC-11",
+      "result": "PASS",
+      "criterion": "Replay and substitution rejected atomically",
+      "evidence": "replay-sequential,concurrent-duplicate,cross-verifier,cross-transaction-replay,invalid-does-not-consume; Go race test 32 goroutines"
+    },
+    {
+      "id": "AC-12",
+      "result": "PASS",
+      "criterion": "Tampered/malformed/unsupported inputs rejected",
+      "evidence": "tampered-presentation,credential-tamper,critical-null,untrusted-header-key,malformed-verifier-root; Stage4B algorithm/profile vectors"
+    },
+    {
+      "id": "AC-13",
+      "result": "PASS",
+      "criterion": "Missing/indeterminate mandatory evidence fails closed",
+      "evidence": "missing-authority/status/registry/consent,non-synthetic-trust,invalid-trusted-policy; no unqualified VERIFIED output"
+    },
+    {
+      "id": "AC-14",
+      "result": "PASS",
+      "criterion": "One credential reused for two distinct verifiers",
+      "evidence": "issuanceCalls=1; byte equality/hash assertions and distinct authenticated requests/presentations in test.mjs"
+    },
+    {
+      "id": "AC-15",
+      "result": "PASS",
+      "criterion": "Independent implementations agree",
+      "evidence": "156 matching evaluations; Go jwt/v5 and JS JOSE; only unchanged per-language Stage4B layer reused"
+    },
+    {
+      "id": "AC-16",
+      "result": "PASS",
+      "criterion": "Isolated account/service/private-key-free verification",
+      "evidence": "isolated-interoperability.json:isolation; network none, read-only, unprivileged, public-only mount; generator exits before verifier starts"
+    },
+    {
+      "id": "AC-17",
+      "result": "PASS",
+      "criterion": "Compatibility and status freshness preserved",
+      "evidence": "stage4b-regression.json; status-age-899/900/901/5000/-1,revoked,missing-entry,untrusted-status-policy-override,trusted-custom-status-policy"
+    },
+    {
+      "id": "AC-18",
+      "result": "PASS",
+      "criterion": "Synthetic actors/keys isolated from genuine authority",
+      "evidence": "runtime ephemeral keys and public-only fixture scanner; example.invalid verifiers; synthetic trust guard; no production route or operations"
+    },
+    {
+      "id": "AC-19",
+      "result": "PASS",
+      "criterion": "Durable docs and evidence included in local commit",
+      "evidence": "docs/architecture/ADR010 and stage4c guide; docs/validation/stage4c evidence/scorecard; reproduction runner committed"
+    },
+    {
+      "id": "AC-20",
+      "result": "PASS",
+      "criterion": "Relevant tests/build/integrity checks pass",
+      "evidence": "regression-results.json:547 Go tests/subtests,48 client,4 UI,zero Expo diagnostics,race,vet,API build; quality checks recorded below"
+    },
+    {
+      "id": "AC-21",
+      "result": "PASS",
+      "criterion": "Scope honored and limitations documented",
+      "evidence": "no production changes/push/merge; no new profile or dependencies; bounded transport/consent/replay/key-custody limitations explicit"
+    }
+  ],
+  "passed": 21,
+  "failed": 0,
+  "blocked": 0,
+  "limitations": [
+    "No full OpenID4VP/OpenID4VCI/VC/Wallet conformance claim",
+    "Single-process in-memory replay model; no cross-restart/distributed persistence",
+    "Holder consent is trusted local input, not a production UI or remote proof of human consent",
+    "No production registry, genuine issuer authority, key custody, wallet transport or lifetime validity",
+    "Remote CI not executed because push/merge not authorized"
+  ]
+}
